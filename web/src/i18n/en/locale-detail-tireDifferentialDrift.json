@@ -1,0 +1,72 @@
+{
+  "tireDifferentialDrift": {
+    "brief": {
+      "scope": "Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings."
+    },
+    "coldReview": {
+      "title": "Cold tire checks",
+      "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
+      "open": "Review cold checks",
+      "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
+      "offline": "Reconnect to review your saved cold checks.",
+      "off": "Off. Save a confirmed cold gauge check to start a series.",
+      "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
+      "add": "Record a cold gauge check",
+      "observed": "Reading time ({{zone}})",
+      "ambient": "Ambient temperature ({{unit}})",
+      "wheel": "{{wheel}} ({{unit}})",
+      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.",
+      "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
+      "save": "Save cold check",
+      "remove": "Turn off and clear readings",
+      "removeMessage": "Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+      "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
+      "failure": "Could not change the series. Refresh, check the selected vehicle, and try again.",
+      "cardTitle": "Check one tire manually",
+      "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+      "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+      "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning."
+    },
+    "title": "Tire differential drift",
+    "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
+    "kpis": "Differential drift metrics",
+    "leakCorner": "Likely leak corner",
+    "leakCornerLabel": "{{corner}} · {{status}}",
+    "none": "None detected",
+    "leakScore": "evidence score {{score}}",
+    "imbalance": "Structural imbalance",
+    "imbalanceCorner": "largest offset: {{corner}}",
+    "noImbalance": "corners evenly matched",
+    "daysToThreshold": "Days to Threshold",
+    "daysToThresholdHint": "projected from the fitted trend, evidence-gated",
+    "samples": "Samples analyzed",
+    "samplesHint": "{{span}} day span · {{n}} raw rows",
+    "noData": "No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.",
+    "noDrift": "At least two usable four-corner samples at distinct times are needed to fit a drift rate.",
+    "residualTimeline": "Common-mode-removed residuals",
+    "residualTimelineHint": "Each corner's deviation from the four-tire median at every sample — shared weather swings cancel out, leaving only relative drift",
+    "residualTimelineAria": "Line chart of four tire-corner pressure residuals against the common-mode median over time",
+    "col": {
+      "time": "Time",
+      "timestamp": "Timestamp (UTC)",
+      "corner": "Corner",
+      "confidence": "Confidence",
+      "slope": "Slope",
+      "slopeUnit": "Slope ({{unit}}/day)"
+    },
+    "slopeRanking": "Per-corner drift rate",
+    "slopeRankingHint": "Theil-Sen slope of each corner's residual, per day — negative means losing pressure relative to the group",
+    "slopeRankingAria": "Bar chart of the fitted residual drift rate per day for each tire corner",
+    "reading": "Reading this inference",
+    "noReading": "The reading appears once at least one usable four-corner sample has been analyzed.",
+    "suspect": "Leak suspect",
+    "offset": "Most offset",
+    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}",
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    }
+  }
+}

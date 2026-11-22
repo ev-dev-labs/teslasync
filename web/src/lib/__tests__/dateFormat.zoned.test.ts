@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { zonedWallTimeToUtc, toZonedDatetimeStr } from '../dateConvert';
+import { zonedWallTimeToUtc, toZonedDatetimeStr, uniqueZonedMinuteToUtc } from '../dateConvert';
 
 const LA = 'America/Los_Angeles';
 
@@ -10,6 +10,22 @@ describe('zonedWallTimeToUtc', () => {
     // Noon in LA (PST) is 20:00 UTC.
     expect(zonedWallTimeToUtc('2026-01-01T12:00', LA)?.toISOString()).toBe('2026-01-01T20:00:00.000Z');
     expect(zonedWallTimeToUtc('2026-07-01T12:00:00', 'UTC')?.toISOString()).toBe('2026-07-01T12:00:00.000Z');
+  });
+
+  describe('uniqueZonedMinuteToUtc', () => {
+    it.each([
+      ['America/New_York', '2026-03-08T02:30'],
+      ['America/New_York', '2026-11-01T01:30'],
+      ['Europe/Berlin', '2026-10-25T02:30'],
+      ['Australia/Lord_Howe', '2026-04-05T01:45'],
+    ])('does not silently choose an instant for %s %s', (zone, wall) => {
+      expect(uniqueZonedMinuteToUtc(wall, zone)).toBeNull();
+    });
+
+    it('accepts a unique minute on a changeover day in the named zone', () => {
+      expect(uniqueZonedMinuteToUtc('2026-10-25T03:30', 'Europe/Berlin')?.toISOString())
+        .toBe('2026-10-25T02:30:00.000Z');
+    });
   });
 
   it('resolves a spring-forward gap to the later offset', () => {

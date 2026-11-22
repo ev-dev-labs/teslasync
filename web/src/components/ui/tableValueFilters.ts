@@ -71,6 +71,7 @@ export function buildTableFilterValues<T>(
   rows: readonly T[],
   valueFor: (row: T) => TableRawValue,
   labelFor: (value: TableRawValue, row: T) => string,
+  countFor: (row: T) => number = () => 1,
 ): TableFilterValue[] {
   const groups = new Map<string, TableFilterValue & { sortValue: TableRawValue }>();
   for (const row of rows) {
@@ -80,10 +81,10 @@ export function buildTableFilterValues<T>(
     const groupKey = JSON.stringify([value === null, label]);
     const group = groups.get(groupKey);
     if (group) {
-      group.count += 1;
+      group.count += countFor(row);
       if (!group.keys?.includes(key)) group.keys?.push(key);
     } else {
-      groups.set(groupKey, { value: groupKey, label, count: 1, keys: [key], sortValue: value });
+      groups.set(groupKey, { value: groupKey, label, count: countFor(row), keys: [key], sortValue: value });
     }
   }
   return Array.from(groups.values()).sort((left, right) => {

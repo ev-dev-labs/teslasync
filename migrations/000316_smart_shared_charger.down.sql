@@ -1,0 +1,3 @@
+DROP TABLE smart_shared_charger_swaps;
+DROP TABLE smart_shared_charger_confirmations;
+DROP TABLE smart_shared_charger_plans;

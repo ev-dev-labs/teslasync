@@ -63,8 +63,7 @@ export function StatSkeleton({ count = 4, className }: StatSkeletonProps) {
     >
       {Array.from({ length: cards }).map((_, i) => (
         <GlassPanel key={i} data-app-part="metric" data-app-metric="stat-card" data-app-state="loading" className="p-4 space-y-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-7 w-24" />
+          <Skeleton shape="fact" />
         </GlassPanel>
       ))}
     </div>

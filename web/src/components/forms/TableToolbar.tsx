@@ -23,15 +23,19 @@ export interface TableControls {
 
 export interface TableToolbarProps extends TableControls {
   heading?: ReactNode;
+  searchScope?: { picker: ReactNode; editor?: ReactNode };
   actions?: ReactNode;
+  /** Query controls that stay available without opening the overflow menu. */
+  primaryActions?: ReactNode;
   columns?: ReactNode;
   className?: string;
   collapseBelow?: 'md' | 'xl';
   /** Opt into a host card's header actions and summary, retaining inline fallback. */
   placement?: 'inline' | 'card';
+  grid?: boolean;
 }
 
-export function TableToolbar({ search, density, exports, heading, actions, columns, className, collapseBelow = 'md', placement = 'inline' }: TableToolbarProps) {
+export function TableToolbar({ search, density, exports, heading, searchScope, actions, primaryActions, columns, className, collapseBelow = 'md', placement = 'inline', grid = false }: TableToolbarProps) {
   const { t } = useTranslation();
   const hostHeader = useContext(CardHeaderContext);
   const compact = useMediaQuery(collapseBelow === 'xl' ? '(max-width: 1279px)' : '(max-width: 767px)');
@@ -41,20 +45,27 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
   }, [compact]);
   const secondaryControls = <>
     {density && <DensityToggle {...density} options={density.options ?? ['compact', 'comfortable']} />}
-    {exports && <ListExportMenu {...exports} />}
     {actions}
+    {exports && <ListExportMenu {...exports} />}
     {columns}
   </>;
   const exportDescription = exports?.description && <Text as="p" size="xs" color="muted" className="basis-full">{exports.description}</Text>;
   const searchControl = search && (
-        <div className="relative min-w-0 flex-1 basis-56" aria-busy={search.pending || undefined}>
-          <SearchInput {...search} clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />
+    <div data-grid-search-tools="" className="flex min-w-0 flex-1 basis-56 items-center gap-1.5" aria-busy={search.pending || undefined}>
+      {searchScope?.picker}
+      <div className="relative min-w-0 flex-1">
+        {searchScope?.editor && <div className="min-w-0">{searchScope.editor}</div>}
+        <div hidden={Boolean(searchScope?.editor)}>
+          <SearchInput {...search} labelPresentation="compact"
+            clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />
           {search.pending && (
             <span role="status" aria-label={t('filter.pending', 'Filtering…')}
               className="pointer-events-none absolute right-9 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin rounded-full border-2 border-status-info/40 border-t-status-info" />
           )}
         </div>
-      );
+      </div>
+    </div>
+  );
   const headerControls = (density || exports || actions || columns) && (compact ? <>
         <IconButton className="ml-auto min-h-11 min-w-11" icon={<MoreHorizontal className="h-4 w-4" aria-hidden="true" />}
           label={t('More', 'More')} aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)} />
@@ -65,6 +76,7 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
   const leadingControls = <>
     {heading && <div className="min-w-0 flex-1 basis-48">{heading}</div>}
     {searchControl}
+    {primaryActions}
   </>;
   const summary = <>
     {leadingControls}
@@ -73,11 +85,30 @@ export function TableToolbar({ search, density, exports, heading, actions, colum
   if (placement === 'card' && hostHeader?.target && hostHeader.summaryTarget) {
     return <>
       {createPortal(headerControls, hostHeader.target)}
-      {(heading || search || !compact && exportDescription) && createPortal(
+      {(heading || search || primaryActions || !compact && exportDescription) && createPortal(
         <div data-app-part="table-toolbar" data-card-table-summary className="flex min-w-0 flex-wrap items-center gap-3">{summary}</div>,
         hostHeader.summaryTarget,
       )}
     </>;
+  }
+  if (grid) {
+    return (
+      <div data-app-part="table-toolbar" data-grid-toolbar="" className={className}>
+        {heading && (
+          <div data-grid-heading="" className="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3">
+            {heading}
+          </div>
+        )}
+        {(searchControl || primaryActions || headerControls) && (
+          <div data-grid-tools="" className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2.5">
+            {searchControl}
+            {primaryActions}
+            {headerControls}
+          </div>
+        )}
+        {!compact && exportDescription && <div className="px-3 pb-2">{exportDescription}</div>}
+      </div>
+    );
   }
   return (
     <div data-app-part="table-toolbar" className={cn('flex flex-wrap items-center gap-3', className)}>

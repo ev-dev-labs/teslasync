@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Column, DataTableRowGrouping } from './DataTable'
 import { Button } from './Button'
@@ -30,7 +30,7 @@ export function buildMobileTableRow<T>(
     key, title: title ? display(title) : label, primary: primary ? display(primary) : '',
     // Additional metadata stays in full details; the card has at most three fields.
     meta: metadata.slice(0, 3).map(column => ({ key: column.key, label: column.header, value: display(column) })),
-    badge: badge ? { label: badge.header, value: display(badge) } : undefined,
+    badge: badge ? { label: badge.header, value: display(badge), variant: presentation.badgeVariant?.(row) } : undefined,
     progress: presentation.progress && permitted.some(column => column.key === presentation.progress?.columnKey)
       ? presentation.progress.value(row) : undefined,
     details: permitted.map(column => ({ key: column.key, label: column.header, value: display(column) })),
@@ -94,6 +94,7 @@ export function MobileDataTableAdapter<T>({
       ? { [grouping.config.actionsColumn]: grouping.config.actions } : undefined
   )
   const actionColumns = groupedActions ? columns.filter(column => groupedActions[column.key]) : []
+  const visibleKeys = useMemo(() => new Set(columns.map(column => column.key)), [columns])
   const actionCell = (column: Column<T>, content: ReactNode) => (
     <div key={column.key} data-mobile-action-column={column.key}
       style={column.mobileActionWidth == null ? undefined : { width: column.mobileActionWidth }}
@@ -117,6 +118,7 @@ export function MobileDataTableAdapter<T>({
               ? t('table.selection.deselectRowNamed', 'Deselect {{row}}', { row: humanLabel })
               : t('table.selection.selectRowNamed', 'Select {{row}}', { row: humanLabel })}
             onActivate={() => presentation.onOpenRow ? presentation.onOpenRow(row) : setDetailKey(key)}
+            href={presentation.rowHref?.(row)}
             onToggle={() => {}}
             onSelectionEvent={event => onToggle(key, event)}
           />
@@ -125,7 +127,7 @@ export function MobileDataTableAdapter<T>({
       </div>
       {(!grouping || presentation.inlineActions || rowActions || onToggleExpanded) && (
         <div data-mobile-row-actions="" className="flex w-full min-w-0 flex-wrap items-center gap-2 px-3 pb-3 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words">
-          {presentation.inlineActions?.(row)}
+          {presentation.inlineActions?.(row, visibleKeys)}
           {rowActions?.(row)}
           {onToggleExpanded && <Button size="sm" variant="ghost" wrapLabel
             aria-expanded={expandedKeys?.has(key) ?? false}
@@ -133,8 +135,8 @@ export function MobileDataTableAdapter<T>({
             {expandedKeys?.has(key) ? t('table.expand.collapse', 'Collapse row') : t('table.expand.expand', 'Expand row')}
           </Button>}
           <Button size="sm" variant="ghost" className="min-h-11 min-w-11" wrapLabel
-            aria-label={t('common.quickView', 'Quick view')}
-            onClick={() => setDetailKey(key)}>{t('common.quickView', 'Quick view')}</Button>
+            aria-label={presentation.quickViewLabel ?? t('common.quickView', 'Quick view')}
+            onClick={() => presentation.onQuickView ? presentation.onQuickView(row) : setDetailKey(key)}>{t('common.quickView', 'Quick view')}</Button>
         </div>
       )}
       {expandedKeys?.has(key) && <div className="p-3">{expandedContent?.(row)}</div>}
@@ -192,6 +194,7 @@ export function MobileDataTableAdapter<T>({
                 {(grouping.config.mobileSummary ?? grouping.config.summary)?.(key, members)}
               </div>
               {actionColumns.map(column => actionCell(column, groupedActions?.[column.key]?.(key, members)))}
+              {!groupedActions && grouping.config.actions?.(key, members)}
             </div>
             {grouping.isOpen(key) && members.map(renderRow)}
           </div>

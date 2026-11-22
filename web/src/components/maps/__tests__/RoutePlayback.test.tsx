@@ -239,14 +239,26 @@ describe('RoutePlayback', () => {
     });
     expect(paints.endpoint).toHaveBeenCalledWith({
       center: [trail[0].lat, trail[0].lng], radius: 7,
-      pathOptions: { color: 'rgb(56, 97, 79)', fillColor: 'rgb(56, 97, 79)', fillOpacity: 1, weight: 2 },
+      pathOptions: { color: 'rgb(56, 97, 79)', fillColor: 'rgb(56, 97, 79)', fillOpacity: 0, weight: 2 },
     });
+
     expect(paints.endpoint).toHaveBeenCalledWith({
       center: [trail[2].lat, trail[2].lng], radius: 7,
       pathOptions: { color: 'rgb(131, 70, 78)', fillColor: 'rgb(131, 70, 78)', fillOpacity: 1, weight: 2 },
     });
     expect(paints.marker).toHaveBeenLastCalledWith(expect.objectContaining({ color: 'var(--semantic-info)' }));
     expect(screen.queryByText('Route playback map: Unavailable')).not.toBeInTheDocument();
+  });
+
+  it('keys the real endpoints below the map and omits the end for one point', () => {
+    const { rerender } = render(<RoutePlayback points={trail} />);
+    const key = screen.getByText('Start').closest('[data-map-legend="route-endpoints"]');
+    expect(key).toContainElement(screen.getByText('End'));
+    expect(screen.getByRole('application')).not.toContainElement(key);
+
+    rerender(<RoutePlayback points={[trail[0]]} />);
+    expect(screen.getByText('Start')).toBeInTheDocument();
+    expect(screen.queryByText('End')).not.toBeInTheDocument();
   });
 
   it('retains explicit paint and falls back only to its declared trail role', () => {

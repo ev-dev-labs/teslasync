@@ -745,7 +745,11 @@ paths:
     get:
       operationId: listDrives
       summary: List drives
-      description: Returns a paginated list of drive sessions.
+      description: |
+        Without `view`, returns the existing array of drive sessions.
+        The optional history views require `start` and `end`. For RFC 3339
+        timestamps, start is inclusive and end is exclusive. Date-only bounds
+        cover whole UTC days.
       tags: [Drives]
       parameters:
         - name: vehicle_id
@@ -766,15 +770,82 @@ paths:
             type: integer
             default: 0
             minimum: 0
+          description: Row offset. For `view=page`, use a multiple of the page size.
+        - name: start
+          in: query
+          schema: { type: string }
+        - name: end
+          in: query
+          schema: { type: string }
+        - name: view
+          in: query
+          schema:
+            type: string
+            enum: [page, overview, values, ids]
+          description: |
+            `page` returns `items`, the exact matching `total`, and the resolved
+            one-based `page`. `overview` returns unfiltered range statistics and
+            evidence independently of pagination. `values` returns distinct
+            values and counts for one column. `ids` returns matching drive IDs,
+            up to the 500-ID bulk-action limit.
+        - name: timezone
+          in: query
+          schema: { type: string, default: UTC }
+          description: IANA time zone for history grouping and date filters.
+        - name: prior_start
+          in: query
+          schema: { type: string, format: date-time }
+          description: Optional start of the comparison period for `view=overview`, ending at `start`.
+        - name: field
+          in: query
+          schema: { type: string }
+          description: Column to enumerate for `view=values`.
+        - name: grid
+          in: query
+          schema: { type: string }
+          description: JSON-encoded sorting and filtering for `page` and `ids`; numeric conditions use canonical units.
       responses:
         "200":
-          description: List of drives
+          description: Drive array or history view
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Drive"
+                anyOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Drive"
+                  - type: object
+                    required: [items, total, page]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Drive"
+                      total: { type: integer, minimum: 0 }
+                      page: { type: integer, minimum: 1 }
+                  - type: object
+                    required: [current, prior, days, evidence, anomaly_count, notable_count, commute_count, route_context_count]
+                    properties:
+                      current: { type: object }
+                      prior: { type: object, nullable: true }
+                      days: { type: array, items: { type: object } }
+                      evidence: { type: array, items: { type: object } }
+                      anomaly_count: { type: integer }
+                      notable_count: { type: integer }
+                      commute_count: { type: integer }
+                      route_context_count: { type: integer }
+                  - type: array
+                    items:
+                      type: object
+                      required: [value, count]
+                      properties:
+                        value:
+                          anyOf:
+                            - { type: string, nullable: true }
+                            - { type: number }
+                        count: { type: integer, minimum: 1 }
+                  - type: array
+                    items: { type: integer, format: int64 }
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -2445,6 +2516,1299 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /charging-reconciliation/invoices:
+    get:
+      operationId: listChargingInvoices
+      summary: List the subject's imported statements for the selected vehicle
+      tags: [Charging]
+      parameters:
+        - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { $ref: "#/components/parameters/limitParam" }
+        - { $ref: "#/components/parameters/offsetParam" }
+      responses:
+        "200":
+          description: The selected vehicle's imported statements. Private responses are not cacheable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, limit, offset]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ChargingInvoiceRecord" } }
+                  total: { type: integer, minimum: 0 }
+                  limit: { type: integer, minimum: 1 }
+                  offset: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: importChargingInvoice
+      summary: Import an invoice and optionally enable a private evidence-based statement check
+      tags: [Charging]
+      description: An opted-in statement is allowed only with verified sign-in. Omitting variance_options leaves the statement opted out. The optional reading, rate and complete fees are entered by the subject and not sent to any provider.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChargingInvoiceInput" }
+      responses:
+        "201":
+          description: Statement and any optional review evidence saved privately.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChargingInvoiceRecord" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: A private variance check needs a verified sign-in. }
+        "409": { description: An invoice already exists with the same provider and reference, or the identity has changed. }
+
+  /charging-reconciliation/invoices/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    delete:
+      operationId: deleteChargingInvoice
+      summary: Remove the subject's imported statement and any optional review evidence
+      tags: [Charging]
+      responses:
+        "204": { description: The imported statement and related local data were removed; telemetry and provider records are unchanged. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /smart-charging/backup-charging:
+    get:
+      summary: Read the signed-in person's backup charging watch and unexpired evidence
+      parameters:
+        - in: query
+          name: vehicle_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "200":
+          description: Setup availability, read-only Tesla Energy connection status and local connection_revision when connected, server-authoritative active status, and nullable watch and decision. The decision includes observed and expiry timestamps, vehicle power in watts, and a conservative lower-bound estimate of home battery draw in watts.
+        "403": { description: A verified signed-in principal is required. }
+    post:
+      summary: Start a one-hour watch for an explicitly confirmed utility outage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [vehicle_id, connection_revision, place_id, place_updated_at, device_id, device_updated_at, same_backup_circuit_confirmed, utility_outage_confirmed]
+              properties:
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                connection_revision: { type: integer, format: int64, minimum: 1 }
+                place_id: { type: integer, format: int64, minimum: 1 }
+                place_updated_at: { type: string, format: date-time }
+                device_id: { type: integer, format: int64, minimum: 1 }
+                device_updated_at: { type: string, format: date-time, description: Revision of the verified browser selected during confirmation. }
+                same_backup_circuit_confirmed: { type: boolean, enum: [true] }
+                utility_outage_confirmed: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: Watch started; no provider write or vehicle command is made. }
+        "400": { description: Missing or invalid input or confirmation. }
+        "404": { description: The reviewed connection, place, vehicle, or verified recipient is unavailable, or a watch already exists. }
+        "503": { description: Read-only Tesla Energy or personal delivery is unavailable. }
+    delete:
+      summary: Remove the exact watch and withdraw pending recommendations
+      parameters:
+        - in: query
+          name: vehicle_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+        - in: query
+          name: watch_id
+          required: true
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "204": { description: The selected watch was removed. }
+        "404": { description: No such watch for the signed-in principal and selected vehicle. }
+  /smart-charging/shared-chargers:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+    get:
+      operationId: listSharedChargerPlanning
+      summary: List the current browser subject's charger plans and invitations
+      tags: [Charging]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 32 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        "200":
+          description: Private, non-cacheable owner refs and exact-subject invitations. No other subjects or confirmation inputs are returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [can_manage, owned, invitations]
+                    properties:
+                      can_manage: { type: boolean }
+                      owned: { type: array, items: { $ref: "#/components/schemas/SharedChargerOwnedPlan" } }
+                      invitations:
+                        type: array
+                        items:
+                          allOf:
+                            - { $ref: "#/components/schemas/SharedChargerOwnedPlan" }
+                            - type: object
+                              required: [vehicle_id, place_updated_at, reminder_offered, confirmed]
+                              properties:
+                                vehicle_id: { type: integer, format: int64 }
+                                place_updated_at: { type: string, format: date-time }
+                                reminder_offered: { type: boolean }
+                                confirmed: { type: boolean }
+        "409": { description: The expected principal no longer matches the browser. }
+    post:
+      operationId: authorizeSharedCharger
+      summary: Authorize two vehicle nominations at one reviewed charger
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedChargerAuthorization"
+      responses:
+        "201": { $ref: "#/components/responses/SharedChargerSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The reviewed charger revision or an active vehicle was not found. }
+        "409": { description: This charger already has an active plan, or the identity has changed. }
+
+  /smart-charging/shared-chargers/{planID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+    put:
+      operationId: reviseSharedCharger
+      summary: Replace the exact plan revision and clear both confirmations
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedChargerAuthorization"
+      responses:
+        "200": { $ref: "#/components/responses/SharedChargerSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision or reviewed charger is unavailable. }
+        "409": { description: A swap was already published, another active plan exists, or the identity has changed. }
+    delete:
+      operationId: revokeSharedCharger
+      summary: Revoke the exact owned revision and withdraw advice and its reminder
+      tags: [Charging]
+      responses:
+        "204": { description: Revoked without changing any vehicle or charging schedule. }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision is unavailable. }
+
+  /smart-charging/shared-chargers/{planID}/vehicles/{vehicleID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+      - { name: vehicleID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    put:
+      operationId: confirmSharedChargerVehicle
+      summary: Confirm this browser subject's nominated vehicle for the current plan
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [available_at, departure_at, energy_needed_wh, conservative_power_w, already_plugged]
+              properties:
+                available_at: { type: string, format: date-time }
+                departure_at: { type: string, format: date-time }
+                energy_needed_wh: { type: number, minimum: 0 }
+                conservative_power_w: { type: number, minimum: 0, exclusiveMinimum: true }
+                already_plugged: { type: boolean }
+                accept_reminder: { type: boolean, default: false }
+      responses:
+        "204": { description: The vehicle's plan-specific declaration and consent were recorded. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: The exact revision and nomination are unavailable for this subject. }
+        "409": { description: Already confirmed, or the identity has changed. }
+    delete:
+      operationId: withdrawSharedChargerVehicle
+      summary: Withdraw this nomination and end the shared plan
+      tags: [Charging]
+      responses:
+        "204": { description: Advice and pending reminder withdrawn without changing either vehicle. }
+        "404": { description: The exact revision and nomination are unavailable for this subject. }
+
+  /smart-charging/shared-chargers/{planID}/card:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedChargerPlanID" }
+      - { $ref: "#/components/parameters/sharedChargerRevision" }
+    get:
+      operationId: readSharedChargerCard
+      summary: Read the feasible order and any due private reminder
+      tags: [Charging]
+      responses:
+        "200":
+          description: Private, non-cacheable advice. The card is null without two current confirmations, eligible evidence, and a confirmed viewer. Only the chosen opted-in participant can see the due reminder.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [card, reminder]
+                    properties:
+                      card: { $ref: "#/components/schemas/SharedChargerCard" }
+                      reminder: { $ref: "#/components/schemas/SharedChargerReminder" }
+        "409": { description: The expected principal no longer matches the browser. }
+
+  /smart-charging/shared-trips:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+    get:
+      operationId: listSharedTripPlanning
+      summary: List the exact browser subject's shared departures and invitations
+      tags: [Charging]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 10000, default: 0 } }
+      responses:
+        "200":
+          description: Private, non-cacheable owner refs and exact-subject invitations. Subjects and confirmation evidence are never returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [can_manage, owned, invitations]
+                    properties:
+                      can_manage: { type: boolean }
+                      owned: { type: array, items: { $ref: "#/components/schemas/SharedTripRef" } }
+                      invitations:
+                        type: array
+                        items:
+                          type: object
+                          required: [trip_id, revision, vehicle_id, entry_version, departure_at, consent_expires_at]
+                          properties:
+                            trip_id: { type: integer, format: int64, minimum: 1 }
+                            revision: { type: integer, format: int64, minimum: 1 }
+                            vehicle_id: { type: integer, format: int64, minimum: 1 }
+                            entry_version: { type: integer, format: int64, minimum: 1 }
+                            departure_at: { type: string, format: date-time }
+                            consent_expires_at: { type: string, format: date-time, nullable: true }
+    post:
+      operationId: createSharedTrip
+      summary: Authorize exact vehicle invitations for an explicitly shared departure
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedTripDraft"
+      responses:
+        "201": { $ref: "#/components/responses/SharedTripSaved" }
+        "403": { description: A trusted operator browser is required. }
+
+  /smart-charging/shared-trips/{tripID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+    put:
+      operationId: replaceSharedTrip
+      summary: Replace the exact owned revision and require all participants to reconfirm
+      tags: [Charging]
+      requestBody:
+        $ref: "#/components/requestBodies/SharedTripDraft"
+      responses:
+        "200": { $ref: "#/components/responses/SharedTripSaved" }
+        "403": { description: A trusted operator browser is required. }
+        "404": { description: The exact owned revision is unavailable. }
+    delete:
+      operationId: cancelSharedTrip
+      summary: Cancel the exact owned departure revision
+      tags: [Charging]
+      parameters:
+        - { name: revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: The departure and invitations are withdrawn. }
+        "404": { description: The exact owned revision is unavailable. }
+
+  /smart-charging/shared-trips/{tripID}/vehicles/{vehicleID}:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+      - { name: vehicleID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    put:
+      operationId: confirmSharedTripVehicle
+      summary: Confirm or update the signed-in participant's exact nomination
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [revision, entry_version, trip_use_low_pct, trip_use_high_pct, reserve_pct, schedule_clear, maintenance_clear]
+              properties:
+                revision: { type: integer, format: int64, minimum: 1 }
+                entry_version: { type: integer, format: int64, minimum: 1 }
+                trip_use_low_pct: { type: number, minimum: 0, maximum: 100 }
+                trip_use_high_pct: { type: number, minimum: 0, maximum: 100 }
+                reserve_pct: { type: number, minimum: 0, maximum: 100 }
+                schedule_clear: { type: boolean }
+                maintenance_clear: { type: boolean }
+      responses:
+        "204": { description: Scoped consent and estimates saved for this nomination. }
+        "404": { description: The exact nomination is unavailable. }
+    delete:
+      operationId: withdrawSharedTripVehicle
+      summary: Revoke consent for one exact vehicle nomination
+      tags: [Charging]
+      parameters:
+        - { name: revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: entry_version, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: This nomination and its consent are withdrawn. }
+        "404": { description: The exact nomination is unavailable. }
+
+  /smart-charging/shared-trips/{tripID}/comparison:
+    parameters:
+      - { $ref: "#/components/parameters/sharedPlanningPrincipal" }
+      - { $ref: "#/components/parameters/sharedTripID" }
+    get:
+      operationId: readSharedTripComparison
+      summary: Read the requested departure's current share-safe comparison
+      tags: [Charging]
+      responses:
+        "200":
+          description: Private and non-cacheable. Comparison is null when fewer than two current eligible vehicles can be compared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [comparison]
+                    properties:
+                      comparison:
+                        type: object
+                        nullable: true
+                        required: [id, revision, departure_at, expires_at, options]
+                        properties:
+                          id: { type: integer, format: int64, minimum: 1 }
+                          revision: { type: integer, format: int64, minimum: 1 }
+                          departure_at: { type: string, format: date-time }
+                          expires_at: { type: string, format: date-time }
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: object
+                              required: [vehicle_id, return_low_pct, return_high_pct, reserve_pct, observed_at, expires_at]
+                              properties:
+                                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                                return_low_pct: { type: number, minimum: 0, maximum: 100 }
+                                return_high_pct: { type: number, minimum: 0, maximum: 100 }
+                                reserve_pct: { type: number, minimum: 0, maximum: 100 }
+                                observed_at: { type: string, format: date-time }
+                                expires_at: { type: string, format: date-time }
+        "404": { description: No current consent for this browser subject and departure. }
+
+  /smart-charging/plans:
+    post:
+      operationId: createSmartChargingPlan
+      summary: Create a charging readiness plan for a selected vehicle and place
+      tags: [Charging]
+      description: Creates a local plan only. Interruption monitoring is off by default and requires a verified sign-in; personal charging push enrollment is separate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmartChargingPlanInput" }
+      responses:
+        "201": { description: The charging readiness plan was saved. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /smart-charging/plans/{planID}:
+    put:
+      operationId: replaceSmartChargingPlan
+      summary: Edit or pause a charging readiness plan using the current plan revision
+      tags: [Charging]
+      description: Requires the check instant and consent version from the plan being edited. A concurrent earlier check invalidates a stale edit even when the consent version is unchanged. Does not reschedule vehicle charging.
+      parameters:
+        - { name: planID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/SmartChargingPlanInput"
+                - type: object
+                  required: [expected_version, expected_check_at]
+                  properties:
+                    expected_version: { type: integer, format: int64, minimum: 1 }
+                    expected_check_at: { type: string, format: date-time }
+      responses:
+        "200": { description: The updated plan. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The plan changed after it was opened. Refresh before editing. }
+    patch:
+      operationId: advanceSmartChargingCheck
+      summary: Elect the earlier check from a fresh estimate for the selected charging plan
+      tags: [Charging]
+      description: Changes only the TeslaSync check time. Revalidates the preview, owner, vehicle, plan version and measured charging evidence. Does not change a vehicle schedule or enroll a push device.
+      parameters:
+        - { name: planID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id, expected_version, expected_check_at, check_at, preview_expires_at]
+              properties:
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                expected_version: { type: integer, format: int64, minimum: 1 }
+                expected_check_at: { type: string, format: date-time }
+                check_at: { type: string, format: date-time }
+                preview_expires_at: { type: string, format: date-time }
+      responses:
+        "204": { description: The earlier local check was scheduled. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The plan, evidence or proposed time has changed. Reopen a fresh preview. }
+
+  /smart-charging/plans/{planID}/stops:
+    parameters:
+      - { name: planID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getSmartTripStops
+      summary: Read the private reviewed stops and any current comparison without calling the routing provider
+      tags: [Charging]
+      responses:
+        "200": { description: The scoped consent and result or an indication that the places need to be reviewed again. }
+        "403": { description: A verified sign-in is required. }
+    put:
+      operationId: setSmartTripStops
+      summary: Authorize comparison of the complete reviewed set of charging stops
+      tags: [Charging]
+      description: Saving consent does not call the routing provider. Every recorded wait must include a non-null wait_s. Use zero only for an observed absence of a wait.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_version, origin_updated_at, destination_place_id, destination_updated_at, capacity_wh, start_pct, limit_pct, high_usage_wh_per_m, stops, provider_consent, compatible_stops_confirmed]
+              properties:
+                plan_version: { type: integer, format: int64, minimum: 1 }
+                origin_updated_at: { type: string, format: date-time }
+                destination_place_id: { type: integer, format: int64, minimum: 1 }
+                destination_updated_at: { type: string, format: date-time }
+                capacity_wh: { type: number, minimum: 1000, maximum: 500000 }
+                start_pct: { type: number, minimum: 1, maximum: 100 }
+                limit_pct: { type: number, minimum: 1, maximum: 100 }
+                high_usage_wh_per_m: { type: number, minimum: 0.000001, maximum: 2 }
+                provider_consent: { type: boolean, enum: [true] }
+                compatible_stops_confirmed: { type: boolean, enum: [true] }
+                stops:
+                  type: array
+                  minItems: 2
+                  maxItems: 4
+                  items:
+                    type: object
+                    required: [place_id, place_updated_at, time_zone]
+                    properties:
+                      place_id: { type: integer, format: int64, minimum: 1 }
+                      place_updated_at: { type: string, format: date-time }
+                      time_zone: { type: string }
+                      waits:
+                        type: array
+                        items:
+                          type: object
+                          required: [arrived_at, wait_s]
+                          properties:
+                            arrived_at: { type: string, format: date-time }
+                            wait_s: { type: integer, minimum: 0, maximum: 14400 }
+      responses:
+        "204": { description: The complete stop set was authorized for an explicit later comparison. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: A verified sign-in is required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The plan, place revision or reserve changed. }
+    post:
+      operationId: compareSmartTripStops
+      summary: Explicitly request a comparison using only authorized places and qualified history
+      tags: [Charging]
+      responses:
+        "200": { description: The current comparison if enough evidence qualifies. Historical queue estimates are not live stall availability. }
+        "403": { description: A verified sign-in is required. }
+        "404": { description: The owned plan, complete consented station set, or place evidence is no longer available. }
+        "409": { description: A check was requested recently. }
+        "502": { description: Routing did not provide usable estimates. }
+        "503": { description: The routing provider is not configured. }
+    delete:
+      operationId: clearSmartTripStops
+      summary: Revoke comparison consent and remove local setup, waits and derived results
+      tags: [Charging]
+      responses:
+        "204": { description: No comparison remains for this scope. Source vehicle records are unchanged. }
+        "403": { description: A verified sign-in is required. }
+
+  /smart-charging/plans/{planID}/review:
+    parameters:
+      - { name: planID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getSmartTripReview
+      summary: Read a private trip baseline and comparison with unambiguous measured arrival evidence
+      tags: [Charging]
+      responses:
+        "200": { description: The scoped baseline, qualified review and separately saved allowance, when available. }
+        "403": { description: A verified sign-in is required. }
+    put:
+      operationId: setSmartTripReview
+      summary: Confirm a baseline for a planned journey before departure
+      tags: [Charging]
+      description: A planned arrival percentage is required even if it is zero. When choosing a planned charging stop, also provide its place revision and a positive planned duration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [journey_id, plan_version, origin_updated_at, destination_id, destination_updated_at, planned_arrival_pct, local_review_confirmed]
+              properties:
+                journey_id: { type: integer, format: int64, minimum: 1 }
+                plan_version: { type: integer, format: int64, minimum: 1 }
+                origin_updated_at: { type: string, format: date-time }
+                destination_id: { type: integer, format: int64, minimum: 1 }
+                destination_updated_at: { type: string, format: date-time }
+                stop_place_id: { type: integer, format: int64, minimum: 1, nullable: true }
+                stop_place_updated_at: { type: string, format: date-time, nullable: true }
+                planned_arrival_pct: { type: number, minimum: 0, maximum: 100 }
+                planned_stop_s: { type: integer, minimum: 0, maximum: 21600 }
+                local_review_confirmed: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: The private baseline was recorded. No vehicle changes were made. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: A verified sign-in is required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: saveSmartTripAdjustment
+      summary: Save a private planning allowance based on the latest qualified review
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adjustment_key]
+              properties:
+                adjustment_key: { type: string, pattern: '^[0-9a-f]{64}$' }
+      responses:
+        "204": { description: An allowance was saved for future similar trips; no plan was changed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: A verified sign-in is required. }
+        "409": { description: The completed journey or measured evidence no longer qualifies for this exact review. }
+    delete:
+      operationId: clearSmartTripReview
+      summary: Clear the private trip review and allowance without deleting original journey evidence
+      tags: [Charging]
+      responses:
+        "204": { description: The private baseline and allowance were removed. }
+        "403": { description: A verified sign-in is required. }
+
+  /smart-commute:
+    get:
+      operationId: getSmartCommute
+      summary: Read the current subject's commute settings and actionable route comparisons
+      tags: [Notifications]
+      description: Route comparisons are private to the selected vehicle and expire when its drive starts or the traffic evidence expires. Route labels are optional HERE road names and road numbers, not addresses.
+      parameters:
+        - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "200":
+          description: The scoped settings, routines, and current comparison evidence.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [settings, routines, traffic_available, traffic_decisions]
+                    properties:
+                      settings:
+                        type: object
+                        required: [vehicle_id, enabled, local_analysis_enabled, paused, time_zone]
+                        properties:
+                          vehicle_id: { type: integer, format: int64 }
+                          enabled: { type: boolean }
+                          local_analysis_enabled: { type: boolean }
+                          paused: { type: boolean }
+                          time_zone: { type: string }
+                      routines:
+                        type: array
+                        items: { type: object }
+                      traffic_available: { type: boolean }
+                      navigation_available: { type: boolean }
+                      traffic_decisions:
+                        type: array
+                        items:
+                          type: object
+                          required: [occurrence_id, routine_id, vehicle_id, routine_name, vehicle_name, time_zone, departure_at, usual_s, alternative_s, observed_at, expires_at]
+                          properties:
+                            occurrence_id: { type: string, pattern: '^[0-9a-f]{32}$' }
+                            routine_id: { type: integer, format: int64 }
+                            vehicle_id: { type: integer, format: int64 }
+                            routine_name: { type: string }
+                            vehicle_name: { type: string }
+                            time_zone: { type: string }
+                            departure_at: { type: string, format: date-time }
+                            usual_s: { type: integer, format: int64 }
+                            alternative_s: { type: integer, format: int64 }
+                            usual_route_label: { type: string, maxLength: 120 }
+                            alternative_route_label: { type: string, maxLength: 120 }
+                            observed_at: { type: string, format: date-time }
+                            expires_at: { type: string, format: date-time }
+                            arrival_deadline_at: { type: string, format: date-time }
+                            latest_departure_at: { type: string, format: date-time }
+                            route_energy: { type: object }
+                            route_energy_only: { type: boolean }
+                            navigation_outcome: { type: string, enum: [accepted, rejected, delivery_unknown, expired, not_sent, wake_required, wake_permission_required] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /smart-commute/routines/{routineID}/navigation:
+    post:
+      operationId: sendSmartCommuteNavigation
+      summary: Explicitly send a destination for one current private commute occurrence
+      tags: [Notifications]
+      description: Requires a verified operator, an active traffic comparison for the selected vehicle, and fresh evidence that the vehicle is parked near the routine origin. Tesla receives the entered address, not the HERE route. Without separate wake permission this operation only checks eligibility and reported connectivity. Tesla does not document a no-wake guarantee for destination sharing. Once a provider write is attempted, the occurrence cannot automatically or manually replay through this endpoint.
+      parameters:
+        - { name: routineID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: X-TeslaSync-Expected-Principal, in: header, required: true, schema: { type: string }, description: Browser identity race guard; not an authentication credential. }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [vehicle_id, occurrence_id, address, confirmed]
+              properties:
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                occurrence_id: { type: string, pattern: '^[0-9a-f]{32}$' }
+                address: { type: string, minLength: 1, maxLength: 400 }
+                confirmed: { type: boolean, enum: [true] }
+                wake_confirmed: { type: boolean, default: false }
+      responses:
+        "200":
+          description: The local outcome. Accepted is an acknowledgement, not proof of navigation or route choice.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [outcome]
+                    properties:
+                      outcome: { type: string, enum: [accepted, rejected, delivery_unknown, expired, not_sent, wake_required, wake_permission_required] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: A verified operator identity is required. }
+        "409": { description: The authenticated identity changed or the command connection is unavailable. }
+        "429": { description: Too many requests. No automatic replay. }
+
+  /charging-reconciliation/invoices/{id}/report:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      - name: vehicle_id
+        in: query
+        description: Required for any opted-in statement. Must match the stored statement's vehicle.
+        schema: { type: integer, format: int64, minimum: 1 }
+    get:
+      operationId: getChargingInvoiceReport
+      summary: Audit the subject's statement and return any scoped variance findings
+      tags: [Charging]
+      responses:
+        "200":
+          description: The statement's audit. An opted-in check reports signed gaps separately and does not compute a recoverable amount.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invoice, billed_total_minor, lines]
+                properties:
+                  invoice: { $ref: "#/components/schemas/ChargingInvoiceRecord" }
+                  billed_total_minor: { type: integer, format: int64, description: Sum of imported line totals. }
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      required: [line, match_state]
+                      properties:
+                        line: { $ref: "#/components/schemas/ChargingInvoiceLine" }
+                        match_state: { type: string, enum: [exact, probable, ambiguous, unmatched, duplicate, uninvoiced] }
+                        session_id: { type: integer, format: int64, nullable: true }
+                  variance_review:
+                    $ref: "#/components/schemas/ChargingInvoiceVarianceReview"
+                  dispute_packet_digest:
+                    type: string
+                    pattern: '^([a-f0-9]{64})?$'
+                    description: Fingerprint of the current review, required with the invoice revision for a private dispute. Empty when cleared.
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /charging-reconciliation/invoices/{id}/review:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    put:
+      operationId: updateChargingInvoiceReview
+      summary: Replace the scoped private review settings and optional evidence, not the statement
+      description: Requires explicit consent. Previously opted-in statements can be edited or re-enabled after clear. Omitted line evidence is removed.
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id, expected_version, variance_options, confirmed]
+              properties:
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                expected_version: { type: integer, minimum: 1 }
+                variance_options: { $ref: "#/components/schemas/ChargingInvoiceInput/properties/variance_options" }
+                confirmed: { type: boolean, description: True to authorize a private local review. }
+                lines:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [line_id, evidence]
+                    properties:
+                      line_id: { type: integer, format: int64, minimum: 1 }
+                      evidence: { $ref: "#/components/schemas/ChargingInvoiceLine/properties/variance_evidence" }
+      responses:
+        "204": { description: The review was changed and the statement revision advanced. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal or review revision changed. }
+    delete:
+      operationId: clearChargingInvoiceReview
+      summary: Stop private review and remove only its independent comparison input
+      tags: [Charging]
+      parameters:
+        - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: expected_version, in: query, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "204": { description: Check settings and evidence were removed; the original invoices, billed components, disputes and charging sessions remain. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal or review revision changed. }
+
+  /charging-reconciliation/invoices/{id}/disputes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    post:
+      operationId: recordChargingInvoiceDispute
+      summary: Record an explicitly confirmed local dispute for the subject's invoice
+      description: This does not submit anything to a billing provider. For an opted-in statement, provide the vehicle, revision and packet digest from the current actionable report.
+      tags: [Charging]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimed_minor, confirmed]
+              properties:
+                claimed_minor: { type: integer, format: int64, minimum: 0 }
+                confirmed: { type: boolean }
+                reasons: { type: array, items: { type: string }, maxItems: 12 }
+                note: { type: string, maxLength: 2000 }
+                vehicle_id: { type: integer, format: int64, minimum: 1 }
+                expected_version: { type: integer, minimum: 1 }
+                expected_digest: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        "201": { description: A local dispute record was created. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal or private review changed, or the statement was already handled. }
+
+  /analytics/tco/charging-cost-digest:
+    description: Private monthly comparison of two completed local months. Requires verified sign-in; responses are not cacheable. No push or provider call.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getMonthlyChargingCostDigest
+      summary: Read the signed-in subject's charging cost settings and current comparison
+      tags: [Analytics]
+      responses:
+        "200":
+          description: The scoped review. An empty object means the feature is off.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MonthlyChargingCostReview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal no longer matches. }
+    put:
+      operationId: saveMonthlyChargingCostDigest
+      summary: Confirm, change, resume or pause the monthly cost review
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_plan_id, time_zone, currency, material_change_minor]
+              properties:
+                expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment; otherwise the current plan ID. }
+                time_zone: { type: string, maxLength: 80, example: America/New_York }
+                currency: { type: string, pattern: '^[A-Z]{3}$', example: USD }
+                material_change_minor: { type: integer, format: int64, minimum: 1, maximum: 1000000000 }
+                paused: { type: boolean, default: false }
+                local_review_confirmed: { type: boolean, description: Must be true unless pausing. }
+      responses:
+        "204": { description: Settings replaced. A paused or replaced plan cannot publish an in-flight comparison. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Plan revision or expected principal has changed. }
+    patch:
+      operationId: dismissMonthlyChargingCostDigest
+      summary: Dismiss one current comparison without stopping future checks
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, through]
+              properties:
+                plan_id: { type: integer, format: int64, minimum: 1 }
+                through: { type: string, format: date-time, description: Exclusive end returned with the current comparison. }
+      responses:
+        "204": { description: The comparison is dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The comparison or expected principal has changed. }
+    delete:
+      operationId: deleteMonthlyChargingCostDigest
+      summary: Remove the private cost review and stop future checks
+      tags: [Analytics]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: The plan and derived comparison were cleared without changing the source records. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Plan revision or expected principal has changed. }
+
+  /analytics/mileage-budget/review:
+    description: Private, non-cacheable monthly estimate for owner-entered total vehicle distance terms. Does not read browser-local budgets or send external notifications.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getMileageTermReview
+      summary: Read the signed-in subject's allowance terms and unexpired estimate
+      tags: [Analytics]
+      responses:
+        "200":
+          description: The scoped review. Null settings mean the feature is off.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MileageTermReview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal no longer matches. }
+    put:
+      operationId: saveMileageTermReview
+      summary: Confirm, change, resume or pause a monthly mileage review
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/MileageTermInputs" }
+                - type: object
+                  required: [expected_plan_id]
+                  properties:
+                    expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment; otherwise the current plan ID. }
+                    terms_confirmed: { type: boolean, description: Must be true unless pausing. The submitted terms apply to the selected vehicle. }
+      responses:
+        "204": { description: Settings replaced. An old or paused plan cannot publish an in-flight estimate. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The plan or expected principal changed. }
+    patch:
+      operationId: dismissMileageTermEstimate
+      summary: Dismiss this month's estimate without stopping future checks
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, through]
+              properties:
+                plan_id: { type: integer, format: int64, minimum: 1 }
+                through: { type: string, format: date-time, description: Exclusive month boundary returned with the estimate. }
+      responses:
+        "204": { description: The estimate is dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The estimate or expected principal changed. }
+    delete:
+      operationId: deleteMileageTermReview
+      summary: Clear private allowance consent and estimates without deleting drives
+      tags: [Analytics]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: Future checks stopped and derived settings and estimate removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The plan or expected principal changed. }
+
+  /tariff-lab/monthly-review:
+    description: Private, non-cacheable replay of the most recent completed local month at one reviewed charging place. Uses unchanged charging times and no provider requests.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getMonthlyTariffReview
+      summary: Read the signed-in subject's settings and unexpired comparison
+      tags: [Analytics]
+      responses:
+        "200":
+          description: The scoped review. Absent settings mean the feature is off.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MonthlyTariffReview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal no longer matches. }
+    put:
+      operationId: saveMonthlyTariffReview
+      summary: Confirm, change, resume or pause a monthly tariff review
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/MonthlyTariffInputs" }
+                - type: object
+                  required: [expected_plan_id]
+                  properties:
+                    expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment; otherwise the current plan ID. }
+                    same_site_terms_confirmed: { type: boolean, description: Must be true unless pausing. Both saved tariffs must apply at the selected place without requiring a schedule change. }
+      responses:
+        "204": { description: Settings replaced. An old or paused plan cannot publish an in-flight replay. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Settings, current terms or the expected principal changed. }
+    patch:
+      operationId: dismissMonthlyTariffComparison
+      summary: Dismiss this month's comparison without stopping future checks
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, through]
+              properties:
+                plan_id: { type: integer, format: int64, minimum: 1 }
+                through: { type: string, format: date-time, description: Exclusive end returned with the current comparison. }
+      responses:
+        "204": { description: The comparison is dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The comparison or expected principal changed. }
+    delete:
+      operationId: deleteMonthlyTariffReview
+      summary: Clear the private consent and comparison without changing source records
+      tags: [Analytics]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: Future checks stopped and derived settings and comparison removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The plan or expected principal changed. }
+
+  /analytics/route-efficiency/weekly-digest:
+    description: Private opt-in review of sustained observed pack consumption on matched drives. Requires verified sign-in; responses are not cacheable.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getWeeklyDriveEfficiencyDigest
+      summary: Read the private schedule and an unexpired weekly digest
+      tags: [Analytics]
+      responses:
+        "200":
+          description: The scoped state. Null plan means off; null digest means there is no current finding.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/WeeklyDriveEfficiencyState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The expected principal changed. }
+    put:
+      operationId: saveWeeklyDriveEfficiencyDigest
+      summary: Confirm, update, resume or pause the private weekly check
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision]
+              properties:
+                expected_revision: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment only. }
+                time_zone: { type: string, maxLength: 80, example: America/New_York, description: Required unless pausing. }
+                confirmed: { type: boolean, description: Must be true unless pausing. }
+                paused: { type: boolean, default: false }
+      responses:
+        "204": { description: Private settings saved. Any previous digest and pending lease are invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The plan or expected principal changed. }
+    patch:
+      operationId: dismissWeeklyDriveEfficiencyDigest
+      summary: Dismiss a current weekly digest without changing the schedule
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision, recent_until]
+              properties:
+                expected_revision: { type: integer, format: int64, minimum: 1 }
+                recent_until: { type: string, format: date-time, description: Exclusive end of the reviewed local week. }
+      responses:
+        "204": { description: This week's digest is dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The digest or expected principal changed. }
+    delete:
+      operationId: clearWeeklyDriveEfficiencyDigest
+      summary: Clear the plan and digest without touching drives or telemetry
+      tags: [Analytics]
+      parameters:
+        - { name: expected_revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: Checks stopped and derived evidence removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The plan or expected principal changed. }
+
+  /subscription-roi/renewal:
+    description: Private review of an explicitly recorded renewal date and stored price. Observed vehicle activity is not a claim that the subscription caused it.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      - { name: subscription_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateSubscriptionRenewal
+      summary: Read the private schedule and an unexpired review for an owned subscription
+      tags: [Analytics]
+      responses:
+        "200":
+          description: The scoped renewal state. Null plan means off.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubscriptionRenewalState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The reviewed terms or expected principal changed. }
+    put:
+      operationId: savePrivateSubscriptionRenewal
+      summary: Confirm, update, resume or pause preparation of one dated renewal review
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision, subscription_version]
+              properties:
+                expected_revision: { type: string, description: Current revision UUID; empty for first enrollment only. }
+                subscription_version: { type: integer, minimum: 1 }
+                renewal_day: { type: string, format: date, description: Explicit next local renewal date; required unless pausing. }
+                time_zone: { type: string, maxLength: 80, example: America/New_York, description: Required unless pausing. }
+                lead_days: { type: integer, minimum: 1, maximum: 30, description: Number of local days before renewal; required unless pausing. }
+                confirmed: { type: boolean, description: Must be true unless pausing. }
+                paused: { type: boolean, default: false }
+      responses:
+        "204": { description: Settings saved. A replaced or paused plan cannot publish in-flight work. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The reviewed terms or expected principal changed. }
+    patch:
+      operationId: dismissPrivateSubscriptionRenewal
+      summary: Dismiss this renewal occurrence without changing the subscription
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision]
+              properties:
+                expected_revision: { type: string, format: uuid }
+      responses:
+        "204": { description: The occurrence is dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The occurrence or expected principal changed. }
+    delete:
+      operationId: clearPrivateSubscriptionRenewal
+      summary: Clear the private schedule and occurrence metadata without changing the subscription
+      tags: [Analytics]
+      parameters:
+        - { name: expected_revision, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Future checks stopped; schedule and review occurrences removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The review revision or expected principal changed. }
+
+  /ownership/trip-packet:
+    description: Private monthly evidence assembled from explicit drive purposes and matching receipt references. Requires a verified sign-in; responses are not cacheable.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateTripPacket
+      summary: Read the private settings, current packet or one completed drive's confirmed purpose
+      tags: [Analytics]
+      parameters:
+        - { name: drive_id, in: query, schema: { type: integer, format: int64, minimum: 1 }, description: Read a single entry instead of the packet. }
+      responses:
+        "200":
+          description: The scoped review. Null plan means off.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripPacketReview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The revision or expected principal changed. }
+    put:
+      operationId: savePrivateTripPacket
+      summary: Confirm, update, resume or pause private trip packet preparation
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/TripPacketExpectedVersion" }
+                - type: object
+                  required: [time_zone]
+                  properties:
+                    time_zone: { type: string, maxLength: 80, example: America/New_York }
+                    confirmed: { type: boolean, description: Must be true unless pausing. }
+                    paused: { type: boolean, default: false }
+      responses:
+        "204": { description: Settings saved. A replaced or paused plan cannot publish in-flight work. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The revision or expected principal changed. }
+    patch:
+      operationId: editPrivateTripPacket
+      summary: Record one explicit drive purpose or dismiss the current packet
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/TripPacketExpectedVersion" }
+                - type: object
+                  properties:
+                    entry: { $ref: "#/components/schemas/TripPacketEntry" }
+                    dismiss_through: { type: string, format: date-time, description: Exclusive end returned with the current packet. }
+                  oneOf:
+                    - required: [entry]
+                    - required: [dismiss_through]
+      responses:
+        "204": { description: The selected classification was replaced or the current packet was dismissed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The revision or expected principal changed. }
+    post:
+      operationId: exportPrivateTripPacket
+      summary: Return the current explicitly confirmed packet for local download
+      tags: [Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/TripPacketExpectedVersion" }
+                - type: object
+                  required: [digest, confirmed]
+                  properties:
+                    digest: { type: string, pattern: '^[0-9a-f]{64}$', description: Digest from the most recent review, checked against current evidence. }
+                    confirmed: { type: boolean, enum: [true] }
+      responses:
+        "200":
+          description: Business evidence only. Does not export identifiers of unclassified drives or send anything to a recipient.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripPacketEvidence" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The evidence, expiry, revision or expected principal changed. }
+    delete:
+      operationId: clearPrivateTripPacket
+      summary: Revoke private packet consent and remove derived entries without deleting drives
+      tags: [Analytics]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: expected_revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: Future checks stopped; private tags and receipt references removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The revision or expected principal changed. }
+
   # ─── Media ──────────────────────────────────────────────────────────
   /media:
     get:
@@ -2493,6 +3857,623 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /media/favorite-digest:
+    description: Private weekly, per-vehicle digest of repeated playback observations. No push, provider access, or inferred preferences.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateFavoriteDigest
+      summary: Read the current schedule, unexpired shortlist and explicitly confirmed local favorites
+      tags: [Media]
+      responses:
+        "200":
+          description: The selected vehicle's private digest settings; revision zero is off.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [vehicle_id, revision, favorites]
+                    properties:
+                      vehicle_id: { type: integer, format: int64 }
+                      revision: { type: integer, format: int64, minimum: 0 }
+                      time_zone: { type: string }
+                      next_at: { type: string, format: date-time, description: Absent when paused or off. }
+                      favorites:
+                        type: array
+                        maxItems: 50
+                        items: { $ref: "#/components/schemas/PrivateFavoriteRecording" }
+                      digest:
+                        type: object
+                        required: [from, until, expires_at, candidates]
+                        properties:
+                          from: { type: string, format: date-time }
+                          until: { type: string, format: date-time, description: Exclusive end of the observation week. }
+                          expires_at: { type: string, format: date-time }
+                          candidates:
+                            type: array
+                            maxItems: 5
+                            items:
+                              allOf:
+                                - { $ref: "#/components/schemas/PrivateFavoriteRecording" }
+                                - type: object
+                                  required: [observed_drives, observed_dates]
+                                  properties:
+                                    observed_drives: { type: integer, minimum: 3, maximum: 100 }
+                                    observed_dates: { type: integer, minimum: 2, maximum: 7 }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: configurePrivateFavoriteDigest
+      summary: Explicitly schedule, edit or pause the private weekly shortlist
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision, confirmed, time_zone, paused]
+              properties:
+                expected_revision: { type: integer, format: int64, minimum: 0 }
+                confirmed: { type: boolean, enum: [true] }
+                time_zone: { type: string, maxLength: 80, example: America/New_York }
+                paused: { type: boolean }
+      responses:
+        "204": { description: Settings committed; the worker checks the next local Monday at 09:00 unless paused. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Vehicle or consent revision changed. }
+        "429": { description: Too many private digest changes. }
+    post:
+      operationId: actOnPrivateFavoriteDigest
+      summary: Confirm a current suggestion, dismiss a shortlist, or remove a confirmed favorite locally
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [revision, action]
+              properties:
+                revision: { type: integer, format: int64, minimum: 1 }
+                action: { type: string, enum: [confirm, remove, dismiss] }
+                digest_until: { type: string, format: date-time, description: Required for confirm and dismiss only. }
+                key: { type: string, pattern: "^[0-9a-f]{64}$", description: Required for confirm and remove only. }
+      responses:
+        "204": { description: Explicit local choice committed. No provider traffic. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Consent revision, shortlist or candidate changed, or saved favorites reached the limit. }
+        "429": { description: Too many private digest changes. }
+    delete:
+      operationId: clearPrivateFavoriteDigest
+      summary: Disable weekly review and delete derived private suggestions and favorites
+      tags: [Media]
+      parameters:
+        - { name: revision, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: All local digest data for the exact revision cleared; playback history unchanged. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Consent revision or vehicle changed. }
+        "429": { description: Too many private digest changes. }
+
+  /media/episode-review:
+    description: Private pre-drive estimate from one manually reported or explicitly authorized episode progress snapshot. No notifications or playback controls.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateEpisodeReview
+      summary: Read the current private episode review and fit status
+      tags: [Media]
+      responses:
+        "200":
+          description: The available fit evidence, with unknown position and remaining duration never defaulted to zero.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [id, vehicle_id, reason, spotify_available]
+                    properties:
+                      id: { type: integer, format: int64, minimum: 0 }
+                      vehicle_id: { type: integer, format: int64 }
+                      reason: { type: string, enum: [off, expired, awaiting_progress, drive_unmatched, unknown_progress, completed, not_fit, fits] }
+                      spotify_available: { type: boolean }
+                      departure_at: { type: string, format: date-time }
+                      expires_at: { type: string, format: date-time }
+                      drive_duration_s: { type: integer, minimum: 300, maximum: 21600 }
+                      remaining_s: { type: integer, minimum: 1, maximum: 86400 }
+                      title: { type: string }
+                      spotify_episode: { type: string, format: uri, description: Catalog link; not a playback acknowledgment. }
+                      spotify_start_s: { type: integer, minimum: 0, maximum: 86399, description: Known saved cursor for the exact matching Spotify episode; omitted for unknown progress or local reviews. Not a playback acknowledgment. }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: confirmPrivateEpisodeReview
+      summary: Confirm one estimated drive and manual progress or start a narrowly scoped Spotify progress read
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_review_id, departure_at, drive_duration_s, confirmed]
+              properties:
+                expected_review_id: { type: integer, format: int64, minimum: 0 }
+                departure_at: { type: string, format: date-time, description: Future departure within 24 hours. }
+                drive_duration_s: { type: integer, minimum: 300, maximum: 21600 }
+                confirmed: { type: boolean, enum: [true] }
+                spotify_episode: { type: string, maxLength: 512, description: Exact Spotify episode URL. Use only if manual progress is absent or null. }
+                manual:
+                  type: object
+                  nullable: true
+                  required: [title, duration_s]
+                  properties:
+                    title: { type: string, maxLength: 256 }
+                    duration_s: { type: integer, minimum: 1, maximum: 86400 }
+                    position_s: { type: integer, minimum: 0, maximum: 86400, nullable: true }
+      responses:
+        "200":
+          description: Review saved. The authorization URL is populated only for the separate read-only Spotify path.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [authorization_url]
+                    properties:
+                      authorization_url: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Vehicle, review revision or identity changed. }
+        "429": { description: Too many review changes. }
+        "503": { description: Spotify progress authorization unavailable. }
+    delete:
+      operationId: clearPrivateEpisodeReview
+      summary: Remove the private episode review and any pending read authorization
+      tags: [Media]
+      parameters:
+        - $ref: "#/components/parameters/privateMediaReviewID"
+      responses:
+        "204": { description: Local review cleared. Provider listening history unchanged. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Review or subject changed. }
+        "429": { description: Too many review changes. }
+
+  /media/drive-track/{driveID}:
+    description: Private subject-bound lookup for one exact instant during a completed drive. Local lookup never calls a provider or sends a notification.
+    parameters:
+      - $ref: "#/components/parameters/privateTrackDriveID"
+      - $ref: "#/components/parameters/privateTrackVehicleID"
+    get:
+      operationId: getPrivateDriveTrack
+      summary: Read the current private lookup and its exact, bracketing observations
+      tags: [Media]
+      responses:
+        "200":
+          description: The selected time and its supported track, or the reason a track is unavailable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/PrivateDriveTrack" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Subject or review changed while reading. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: confirmPrivateDriveTrack
+      summary: Confirm a 30-minute local lookup of one instant in the displayed drive window
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_review_id, started_at, ended_at, offset_s, confirmed]
+              properties:
+                expected_review_id: { type: integer, format: int64, minimum: 0, description: Zero for first setup. }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+                offset_s: { type: integer, minimum: 0, maximum: 86399, description: Elapsed seconds from the drive start. The instant must precede the end. }
+                confirmed: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: Local lookup consent stored. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: The drive window, review or subject changed. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearPrivateDriveTrack
+      summary: Clear the private review without changing drive or playback history
+      tags: [Media]
+      parameters:
+        - $ref: "#/components/parameters/privateMediaReviewID"
+      responses:
+        "204": { description: Private lookup, authorization and outcome removed. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Subject or review changed, or a save is in flight. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /media/drive-track/{driveID}/spotify:
+    parameters:
+      - $ref: "#/components/parameters/privateTrackDriveID"
+      - $ref: "#/components/parameters/privateTrackVehicleID"
+      - $ref: "#/components/parameters/privateMediaReviewID"
+    post:
+      operationId: authorizePrivateSpotifyLibrary
+      summary: Start a one-use PKCE attempt for only user-library-modify
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmed]
+              properties:
+                confirmed: { type: boolean, enum: [true] }
+      responses:
+        "200":
+          description: Spotify authorization URL for this subject, review and permission.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [authorization_url]
+                    properties:
+                      authorization_url: { type: string, format: uri }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Changed or unqualified review or identity. }
+        "429": { description: Too many authorization attempts. }
+        "503": { description: Spotify connector or encryption unavailable. }
+    delete:
+      operationId: disconnectPrivateSpotifyLibrary
+      summary: Remove the local lookup's library grant and pending authorization
+      tags: [Media]
+      responses:
+        "204": { description: Local authorization removed. Previously saved tracks are unchanged. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Subject or review changed. }
+        "429": { description: Too many authorization changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /media/drive-track/{driveID}/spotify/save:
+    parameters:
+      - $ref: "#/components/parameters/privateTrackDriveID"
+      - $ref: "#/components/parameters/privateTrackVehicleID"
+      - $ref: "#/components/parameters/privateMediaReviewID"
+    post:
+      operationId: savePrivateDriveTrackToSpotify
+      summary: Verify and save a single explicitly selected track to the authorized personal library
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmed, evidence_key, spotify_track]
+              properties:
+                confirmed: { type: boolean, enum: [true] }
+                evidence_key: { type: string, pattern: "^[0-9a-f]{64}$" }
+                spotify_track: { type: string, format: uri, maxLength: 512 }
+      responses:
+        "200":
+          description: Persisted outcome of one provider write attempt. No automatic retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status: { type: string, enum: [saved, rejected, unknown] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Review, evidence or subject changed, or an active library grant is required. }
+        "422": { description: Spotify could not verify the exact recording. No save attempted. }
+        "429": { description: Too many save requests. }
+        "503": { description: Spotify connector or encryption unavailable. }
+
+  /media/journey-soundtrack/{journeyID}:
+    description: Private review of source-attested playback within completed drives fully contained in one journey. Available to a verified ForwardAuth subject for the selected vehicle. No external service or delivery channel is used.
+    parameters:
+      - { name: journeyID, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateJourneySoundtrack
+      summary: Read the authorized review and ordered local observations
+      tags: [Media]
+      responses:
+        "200":
+          description: The review status and eligible playback evidence. Off or held reviews never contain track evidence.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/PrivateJourneySoundtrack" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Subject or review changed while reading. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: confirmPrivateJourneySoundtrack
+      summary: Authorize local review of this exact completed journey interval
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_review_id, started_at, ended_at, confirmed]
+              properties:
+                expected_review_id: { type: integer, format: int64, minimum: 0, description: Zero for first setup. }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+                confirmed: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: New private consent recorded, not proof of available playback evidence. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: The journey, consent or identity changed, or the journey does not qualify. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    patch:
+      operationId: holdPrivateJourneySoundtrack
+      summary: Pause or snooze review for one day without deleting history
+      tags: [Media]
+      parameters:
+        - $ref: "#/components/parameters/privateMediaReviewID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, snooze] }
+      responses:
+        "204": { description: Private review held. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Subject or review changed, expired or is already paused. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearPrivateJourneySoundtrack
+      summary: Remove the private review without changing drive or media history
+      tags: [Media]
+      parameters:
+        - $ref: "#/components/parameters/privateMediaReviewID"
+      responses:
+        "204": { description: Private consent deleted. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Subject or review changed. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /media/playlist-review:
+    description: Private on-demand playlist preview for a verified ForwardAuth subject and selected active vehicle. No provider calls occur during preview.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getPrivateDrivePlaylist
+      summary: Read the current private preview, outcome and connection status
+      tags: [Media]
+      responses:
+        "200":
+          description: The current preview or null when off.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [draft, spotify_available, spotify_connected]
+                    properties:
+                      draft: { $ref: "#/components/schemas/PrivatePlaylistDraft" }
+                      spotify_available: { type: boolean }
+                      spotify_connected: { type: boolean }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Signed-in subject changed. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: buildPrivateDrivePlaylist
+      summary: Confirm a drive and analyze bounded local playback evidence
+      tags: [Media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_draft_id, departure_at, target_duration_s, confirmed]
+              properties:
+                expected_draft_id: { type: integer, format: int64, minimum: 0, description: Zero for first setup. }
+                departure_at: { type: string, format: date-time }
+                target_duration_s: { type: integer, minimum: 300, maximum: 21600 }
+                confirmed: { type: boolean, enum: [true], description: Confirmed departure and permission to use this vehicle's local playback evidence. }
+      responses:
+        "204": { description: Local preview recorded; may have no sufficiently supported candidates. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Subject or preview changed. }
+        "429": { description: Too many review changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    patch:
+      operationId: holdPrivateDrivePlaylist
+      summary: Pause or snooze local playlist review
+      tags: [Media]
+      parameters:
+        - { $ref: "#/components/parameters/privatePlaylistDraftID" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, snooze] }
+      responses:
+        "204": { description: Review held; no external changes. }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Review changed or departed. }
+    delete:
+      operationId: clearPrivateDrivePlaylist
+      summary: Turn off and clear local playlist preview and outcome
+      tags: [Media]
+      parameters:
+        - { $ref: "#/components/parameters/privatePlaylistDraftID" }
+      responses:
+        "204": { description: Local preview cleared; source and provider records are unchanged. }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Review changed or its save is still in progress. }
+
+  /media/playlist-review/save:
+    post:
+      operationId: savePrivateDrivePlaylist
+      summary: Verify explicitly selected tracks and save one private Spotify playlist
+      description: Requires active authorization and unexpired local preview. The server never retries either provider write or performs playback.
+      tags: [Media]
+      parameters:
+        - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { $ref: "#/components/parameters/privatePlaylistDraftID" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, selection, confirmed]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                confirmed: { type: boolean, enum: [true] }
+                selection:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [position, spotify_track_link]
+                    properties:
+                      position: { type: integer, minimum: 1, maximum: 100 }
+                      spotify_track_link: { type: string, format: uri, maxLength: 512 }
+      responses:
+        "200":
+          description: Recorded outcome. An outcome other than saved is not confirmation of playlist contents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status: { type: string, enum: [saved, rejected, created_only, unknown] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: Subject, preview or authorization changed, or already dispatched. }
+        "422": { description: Track identity, artist and duration could not be verified; no provider write. }
+        "429": { description: Too many requests. }
+        "503": { description: Spotify connector unavailable. }
+
+  /media/spotify/connection:
+    post:
+      operationId: beginPrivateSpotifyPlaylistAuthorization
+      summary: Start a one-use Spotify PKCE flow for private playlist permission
+      tags: [Media]
+      parameters:
+        - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmed]
+              properties:
+                confirmed: { type: boolean, enum: [true] }
+      responses:
+        "200":
+          description: Spotify authorization URL; no playlist write has occurred.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [authorization_url]
+                    properties:
+                      authorization_url: { type: string, format: uri }
+        "403": { description: Verified private sign-in required. }
+        "503": { description: Connector or encrypted storage unavailable. }
+    delete:
+      operationId: disconnectPrivateSpotifyPlaylistAuthorization
+      summary: Remove the current subject's authorization and unused state
+      tags: [Media]
+      responses:
+        "204": { description: Local connection removed; provider playlists unchanged. }
+        "403": { description: Verified private sign-in required. }
+
+  /media/spotify/callback:
+    get:
+      operationId: completePrivateSpotifyPlaylistAuthorization
+      summary: Redeem a playlist, library or episode progress one-use PKCE state for the same signed-in subject
+      tags: [Media]
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string } }
+        - { name: code, in: query, schema: { type: string } }
+        - { name: error, in: query, schema: { type: string } }
+      responses:
+        "303": { description: Returns to Media player or Drive Detail according to the purpose-bound state, without forwarding the code or state. }
+        "403": { description: Verified private sign-in required. }
 
   # ─── Vehicle Config ────────────────────────────────────────────────
   /vehicle-config:
@@ -2729,6 +4710,638 @@ paths:
                       format: date-time
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /security/window-rain:
+    description: Private outdoor parking watch for a verified ForwardAuth subject, selected vehicle and verified browser revision. Responses are not cacheable.
+    parameters:
+      - name: vehicle_id
+        in: query
+        required: true
+        schema: { type: integer, format: int64, minimum: 1 }
+    get:
+      operationId: getWindowRainWatch
+      summary: Read the current private window rain watch and any still-valid evidence
+      tags: [Notifications]
+      responses:
+        "200":
+          description: The watch, or null when off. Does not fetch a forecast or operate a vehicle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan, available]
+                    properties:
+                      available: { type: boolean }
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, created_at, watch_until, paused, reason, device_ready]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          created_at: { type: string, format: date-time }
+                          watch_until: { type: string, format: date-time }
+                          paused: { type: boolean }
+                          device_ready: { type: boolean }
+                          reason:
+                            type: string
+                            enum: [monitoring, unknown_state, park_changed, no_fresh_open_window, weather_unavailable, no_rain_risk, window_rain_risk, expired]
+                          risk:
+                            $ref: "#/components/schemas/PrivateWindowRainRisk"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The authenticated subject changed. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: confirmWindowRainWatch
+      summary: Confirm this outdoor park, coarse Open-Meteo sharing and private browser push
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_plan_id, duration_s, device_id, outdoor_confirmed, forecast_consent, free_terms_apply, push_title, push_body]
+              properties:
+                expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for a new watch. }
+                duration_s: { type: integer, minimum: 900, maximum: 14400 }
+                device_id: { type: integer, format: int64, minimum: 1 }
+                outdoor_confirmed: { type: boolean, enum: [true] }
+                forecast_consent: { type: boolean, enum: [true] }
+                free_terms_apply: { type: boolean, enum: [true] }
+                push_title: { type: string, minLength: 1, maxLength: 200 }
+                push_body: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Watch confirmed using already observed parking data. No provider request during setup. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The revision, verified browser or current parking evidence did not match. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { description: Distributed telemetry and private browser push must be configured. }
+    patch:
+      operationId: pauseWindowRainWatch
+      summary: Pause this watch and invalidate its evidence and pending deliveries
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateWindowRainPlan"
+      responses:
+        "204": { description: Watch paused and stored location discarded. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or watch revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearWindowRainWatch
+      summary: Turn off and clear this watch without touching source telemetry
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateWindowRainPlan"
+      responses:
+        "204": { description: Watch deleted and pending deliveries invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or watch revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /software-updates/window-review:
+    description: Private one-departure review for a verified ForwardAuth subject and active vehicle. No push, wake, scheduling or install.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getSoftwareWindowReview
+      summary: Read the private update plan and check contemporaneous local parked evidence
+      tags: [Notifications]
+      responses:
+        "200":
+          description: The current plan or null when off. No external provider call.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan, available]
+                    properties:
+                      available: { type: boolean }
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, vehicle_id, departure_at, confirmed_at, version, estimated_duration_s, paused, reason]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          vehicle_id: { type: integer, format: int64 }
+                          departure_at: { type: string, format: date-time }
+                          confirmed_at: { type: string, format: date-time }
+                          version: { type: string, example: "2026.40.2" }
+                          estimated_duration_s: { type: integer, minimum: 60, maximum: 43200 }
+                          paused: { type: boolean }
+                          snoozed_until: { type: string, format: date-time }
+                          reason: { type: string, enum: [missing_evidence, update_not_ready, not_observed_idle, insufficient_margin, held, expired, fits] }
+                          review:
+                            type: object
+                            required: [margin_s, parked_at, idle_observed_from, last_idle_observed_at, update_observed_at, action_until]
+                            properties:
+                              margin_s: { type: integer, minimum: 1800 }
+                              parked_at: { type: string, format: date-time }
+                              idle_observed_from: { type: string, format: date-time }
+                              last_idle_observed_at: { type: string, format: date-time }
+                              update_observed_at: { type: string, format: date-time, description: Time the user attested that the update was ready and not already scheduled. }
+                              action_until: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The signed-in subject changed. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: putSoftwareWindowReview
+      summary: Confirm or replace an update and departure for private review only
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_plan_id, departure_at, version, estimated_duration_s, checked_ready_unscheduled]
+              properties:
+                expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for first setup. }
+                departure_at: { type: string, format: date-time }
+                version: { type: string, example: "2026.40.2" }
+                estimated_duration_s: { type: integer, minimum: 60, maximum: 43200 }
+                checked_ready_unscheduled: { type: boolean, enum: [true] }
+      responses:
+        "204": { description: Saved only the local review plan. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { description: Distributed telemetry is not enabled. }
+    patch:
+      operationId: holdSoftwareWindowReview
+      summary: Pause or snooze the review without changing the vehicle
+      tags: [Notifications]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, snooze] }
+      responses:
+        "204": { description: Updated the private review revision. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: deleteSoftwareWindowReview
+      summary: Turn off and delete the private update window plan
+      tags: [Notifications]
+      parameters:
+        - { name: plan_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        "204": { description: Deleted only the local review plan. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Verified private sign-in required. }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /security/parked-unlock:
+    description: Private parked unlock reminders for a verified ForwardAuth subject, active vehicle, one saved place revision, and verified browser. Responses are not cacheable.
+    parameters:
+      - { name: vehicle_id, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    get:
+      operationId: getParkedUnlockReminders
+      summary: Read the private reminder settings and still-valid local observations
+      tags: [Notifications]
+      responses:
+        "200":
+          description: The current plan, or null when off. Does not read directly from the vehicle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan, available]
+                    properties:
+                      available: { type: boolean }
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, place_id, place_revision, place_ready, paused, reason, device_ready]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          place_id: { type: integer, format: int64 }
+                          place_revision: { type: string, format: date-time }
+                          place_name: { type: string }
+                          place_ready: { type: boolean }
+                          paused: { type: boolean }
+                          device_ready: { type: boolean }
+                          snoozed_until: { type: string, format: date-time }
+                          reason:
+                            type: string
+                            enum: [monitoring, place_changed, unknown_state, outside_place, locked, grace_period, parked_unlocked]
+                          risk:
+                            type: object
+                            required: [park_id, parked_at, unlocked_since, last_observed_at, expires_at]
+                            properties:
+                              park_id: { type: integer, format: int64 }
+                              parked_at: { type: string, format: date-time }
+                              unlocked_since: { type: string, format: date-time }
+                              last_observed_at: { type: string, format: date-time }
+                              expires_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The authenticated subject changed. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: enableParkedUnlockReminders
+      summary: Confirm or replace private unlock reminder consent
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_plan_id, place_id, place_revision, device_id, confirmed, push_title, push_body]
+              properties:
+                expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for a new plan. }
+                place_id: { type: integer, format: int64, minimum: 1 }
+                place_revision: { type: string, format: date-time, description: The exact updated_at value of the selected saved place. }
+                device_id: { type: integer, format: int64, minimum: 1 }
+                confirmed: { type: boolean, enum: [true] }
+                push_title: { type: string, minLength: 1, maxLength: 200 }
+                push_body: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Confirmed. Checks start with new evidence after consent. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject, active vehicle, verified browser, saved place or plan revision did not match. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { description: Distributed telemetry and private browser push must be configured. }
+    patch:
+      operationId: holdParkedUnlockReminders
+      summary: Invalidate current evidence and pause until new consent or snooze for 15 minutes
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateParkingReviewPlan"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, snooze] }
+      responses:
+        "204": { description: Held and pending delivery claims invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearParkedUnlockReminders
+      summary: Turn off unlock reminders and clear their derived evidence
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateParkingReviewPlan"
+      responses:
+        "204": { description: Private plan deleted and delivery claims invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /security/parked-closure:
+    description: Private parked door and trunk reminders for one verified ForwardAuth subject, active vehicle, and browser revision. Responses are not cacheable.
+    parameters:
+      - name: vehicle_id
+        in: query
+        required: true
+        schema: { type: integer, format: int64, minimum: 1 }
+    get:
+      operationId: getParkedClosureReminders
+      summary: Read the private reminder settings and still-valid closure observation
+      tags: [Notifications]
+      responses:
+        "200":
+          description: The current plan, or null when off. Does not read directly from the vehicle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan, available]
+                    properties:
+                      available: { type: boolean }
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, grace_s, paused, reason, device_ready]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          grace_s: { type: integer, enum: [300, 600, 900, 1200] }
+                          paused: { type: boolean }
+                          device_ready: { type: boolean }
+                          snoozed_until: { type: string, format: date-time }
+                          reason:
+                            type: string
+                            enum: [monitoring, unknown_state, active_use, all_closed, grace_period, parked_closure_open]
+                          risk:
+                            type: object
+                            required: [park_id, position, parked_at, open_since, last_observed_at, expires_at]
+                            properties:
+                              park_id: { type: integer, format: int64 }
+                              position:
+                                type: string
+                                enum: [driver_front_door, passenger_front_door, driver_rear_door, passenger_rear_door, front_trunk, rear_trunk]
+                              parked_at: { type: string, format: date-time }
+                              open_since: { type: string, format: date-time }
+                              last_observed_at: { type: string, format: date-time }
+                              expires_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The authenticated subject changed. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: enableParkedClosureReminders
+      summary: Opt in, change, or resume private closure reminders for a verified browser
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_plan_id, grace_s, device_id, confirmed, push_title, push_body]
+              properties:
+                expected_plan_id: { type: integer, format: int64, minimum: 0, description: Zero for a new plan. }
+                grace_s: { type: integer, enum: [300, 600, 900, 1200] }
+                device_id: { type: integer, format: int64, minimum: 1 }
+                confirmed: { type: boolean, enum: [true] }
+                push_title: { type: string, minLength: 1, maxLength: 200 }
+                push_body: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Confirmed. Checks start with new evidence after consent. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject, active vehicle, verified browser or plan revision did not match. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503": { description: Distributed telemetry and private browser push must be configured. }
+    patch:
+      operationId: holdParkedClosureReminders
+      summary: Invalidate current evidence and pause until new consent or snooze for 15 minutes
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateParkingReviewPlan"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [pause, snooze] }
+      responses:
+        "204": { description: Held and pending delivery claims invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearParkedClosureReminders
+      summary: Turn off and clear closure reminders without removing source telemetry
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateParkingReviewPlan"
+      responses:
+        "204": { description: Private plan deleted and delivery claims invalidated. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The subject or plan revision changed. }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /battery/capacity-digest:
+    description: Private per-person monthly analysis. Requires verified ForwardAuth sign-in; not available in open mode.
+    parameters:
+      - $ref: "#/components/parameters/privateBatteryReviewVehicle"
+    get:
+      operationId: getCapacityDigest
+      summary: Read the current private monthly battery digest
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Private settings, with an unexpired estimate when there is a lasting change. Not a diagnosis.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan]
+                    properties:
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, time_zone, paused]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          time_zone: { type: string }
+                          paused: { type: boolean }
+                          digest:
+                            $ref: "#/components/schemas/PrivateCapacityDigest"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: saveCapacityDigestPlan
+      summary: Confirm, revise or pause a private digest plan
+      tags: [Notifications]
+      requestBody:
+        $ref: "#/components/requestBodies/PrivateBatteryReviewPlan"
+      responses:
+        "204": { description: Plan saved; does not query or operate a vehicle. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    patch:
+      operationId: dismissCapacityDigest
+      summary: Dismiss this monthly digest
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, recent_to]
+              properties:
+                plan_id: { type: integer, format: int64, minimum: 1 }
+                recent_to: { type: string, format: date-time }
+      responses:
+        "204": { description: Digest dismissed for the selected period. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearCapacityDigestPlan
+      summary: Turn off and clear derived digest data for this vehicle
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateBatteryReviewPlan"
+      responses:
+        "204": { description: Deleted settings and derived digest; source telemetry is retained. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /battery/overnight-drain-review:
+    description: Private per-person overnight analysis. Requires verified ForwardAuth sign-in; not available in open mode.
+    parameters:
+      - $ref: "#/components/parameters/privateBatteryReviewVehicle"
+    get:
+      operationId: getOvernightDrainReview
+      summary: Read the current private overnight drain review
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Private settings, with a review only when observed loss is unusually high and same-window evidence exists.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [plan]
+                    properties:
+                      plan:
+                        type: object
+                        nullable: true
+                        required: [id, time_zone, paused]
+                        properties:
+                          id: { type: integer, format: int64 }
+                          time_zone: { type: string }
+                          paused: { type: boolean }
+                          review:
+                            $ref: "#/components/schemas/PrivateOvernightDrainReview"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      operationId: saveOvernightDrainPlan
+      summary: Confirm, revise or pause a private overnight review plan
+      tags: [Notifications]
+      requestBody:
+        $ref: "#/components/requestBodies/PrivateBatteryReviewPlan"
+      responses:
+        "204": { description: Plan saved; does not query or operate a vehicle. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    patch:
+      operationId: dismissOvernightDrainReview
+      summary: Dismiss this morning's review
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, morning_at]
+              properties:
+                plan_id: { type: integer, format: int64, minimum: 1 }
+                morning_at: { type: string, format: date-time }
+      responses:
+        "204": { description: Review dismissed for the selected morning. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      operationId: clearOvernightDrainPlan
+      summary: Turn off and clear the derived overnight review for this vehicle
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/privateBatteryReviewPlan"
+      responses:
+        "204": { description: Deleted settings and derived review; source telemetry is retained. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/PrivateBatteryReviewChanged" }
+        "429": { description: Too many settings changes. }
+        "500": { $ref: "#/components/responses/InternalError" }
 
   # ─── Vampire Drain ─────────────────────────────────────────────────
   /vampire-drain:
@@ -5699,6 +8312,67 @@ paths:
 # ═══════════════════════════════════════════════════════════════════════
 components:
   parameters:
+    sharedPlanningPrincipal:
+      name: X-TeslaSync-Expected-Principal
+      in: header
+      required: true
+      description: Current browser identity race guard, not an authentication credential.
+      schema: { type: string }
+    sharedChargerPlanID:
+      name: planID
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    sharedChargerRevision:
+      name: revision
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    sharedTripID:
+      name: tripID
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateTrackDriveID:
+      name: driveID
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateTrackVehicleID:
+      name: vehicle_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateMediaReviewID:
+      name: review_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privatePlaylistDraftID:
+      name: draft_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateParkingReviewPlan:
+      name: plan_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateWindowRainPlan:
+      name: plan_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateBatteryReviewVehicle:
+      name: vehicle_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    privateBatteryReviewPlan:
+      name: plan_id
+      in: query
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
     automationHistoryTimezone:
       name: timezone
       in: query
@@ -5818,6 +8492,73 @@ components:
         minimum: 0
 
   requestBodies:
+    SharedTripDraft:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [departure_at, nominations]
+            properties:
+              revision: { type: integer, format: int64, minimum: 1, description: Required on replacement and omitted on creation. }
+              departure_at: { type: string, format: date-time }
+              nominations:
+                type: array
+                minItems: 2
+                maxItems: 16
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [vehicle_id, subject]
+                  properties:
+                    vehicle_id: { type: integer, format: int64, minimum: 1 }
+                    subject: { type: string, minLength: 1, maxLength: 256, description: Exact verified subject. At most 256 UTF-8 bytes. }
+    SharedChargerAuthorization:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [place_id, place_updated_at, participants, expires_at]
+            properties:
+              place_id: { type: integer, format: int64, minimum: 1 }
+              place_updated_at: { type: string, format: date-time }
+              expires_at: { type: string, format: date-time }
+              reminder_vehicle_id: { type: integer, format: int64, minimum: 0, default: 0, description: "One nominated vehicle, or zero to offer no reminder." }
+              participants:
+                type: array
+                minItems: 2
+                maxItems: 2
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [vehicle_id, subject]
+                  properties:
+                    vehicle_id: { type: integer, format: int64, minimum: 1 }
+                    subject: { type: string, minLength: 1, maxLength: 256, description: Exact verified subject. At most 256 UTF-8 bytes. }
+    PrivateBatteryReviewPlan:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [expected_plan_id, time_zone]
+            properties:
+              expected_plan_id:
+                type: integer
+                format: int64
+                minimum: 0
+                description: Zero for first enrollment, otherwise the currently loaded plan ID.
+              time_zone:
+                type: string
+                maxLength: 80
+                description: IANA time zone (not server-local "Local").
+              paused: { type: boolean, default: false }
+              local_review_confirmed:
+                type: boolean
+                description: Must be true unless pausing an existing plan.
     DataRepairReason:
       required: true
       content:
@@ -5833,6 +8574,31 @@ components:
                 maxLength: 1000
 
   responses:
+    SharedTripSaved:
+      description: Scoped departure created or revised. No vehicle command or schedule change was made.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: "#/components/schemas/SharedTripRef" }
+    SharedChargerSaved:
+      description: Private plan revision saved. No vehicle command or schedule change was made.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [id, revision]
+                properties:
+                  id: { type: integer, format: int64, minimum: 1 }
+                  revision: { type: integer, format: int64, minimum: 1 }
+    PrivateBatteryReviewChanged:
+      description: Plan, review, or signed-in identity changed. Refresh and confirm again; do not retry an old write automatically.
     AutomationHistory:
       description: Execution page and unpaginated summary and daily trend
       content:
@@ -5976,6 +8742,116 @@ components:
             category: internal
 
   schemas:
+    SharedTripRef:
+      type: object
+      required: [id, revision, departure_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        departure_at: { type: string, format: date-time }
+    SharedChargerOwnedPlan:
+      type: object
+      required: [id, revision, place_id, expires_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        place_id: { type: integer, format: int64, minimum: 1 }
+        expires_at: { type: string, format: date-time }
+    SharedChargerSlot:
+      type: object
+      required: [vehicle_id, starts_at, ends_at]
+      properties:
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+    SharedChargerCard:
+      type: object
+      nullable: true
+      required: [id, revision, place_id, expires_at, first, second, swap_at, evaluated_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        place_id: { type: integer, format: int64, minimum: 1 }
+        expires_at: { type: string, format: date-time }
+        first: { $ref: "#/components/schemas/SharedChargerSlot" }
+        second: { $ref: "#/components/schemas/SharedChargerSlot" }
+        swap_at: { type: string, format: date-time }
+        evaluated_at: { type: string, format: date-time }
+    SharedChargerReminder:
+      type: object
+      nullable: true
+      required: [id, revision, vehicle_id, swap_at, expires_at]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        revision: { type: integer, format: int64, minimum: 1 }
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        swap_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+    PrivateFavoriteRecording:
+      type: object
+      required: [key, title, artist, source, duration_s]
+      properties:
+        key: { type: string, pattern: "^[0-9a-f]{64}$" }
+        title: { type: string }
+        artist: { type: string }
+        source: { type: string, enum: [spotify, youtube_music, apple_music, tidal, bluetooth, usb] }
+        duration_s: { type: integer, minimum: 30, maximum: 1800 }
+
+    PrivateWindowRainRisk:
+      type: object
+      required: [window, forecast_at, risk_start_at, risk_end_at, expires_at]
+      properties:
+        window:
+          type: object
+          required: [position, observed_at]
+          properties:
+            position: { type: string, enum: [front_driver, front_passenger, rear_driver, rear_passenger] }
+            observed_at: { type: string, format: date-time }
+        forecast_at: { type: string, format: date-time }
+        risk_start_at: { type: string, format: date-time }
+        risk_end_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+    PrivateCapacityDigest:
+      type: object
+      required: [baseline_from, recent_from, recent_to, observed_to, expires_at, baseline, recent, change, baseline_days, recent_days]
+      properties:
+        baseline_from: { type: string, format: date-time }
+        recent_from: { type: string, format: date-time }
+        recent_to: { type: string, format: date-time }
+        observed_to: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        baseline: { $ref: "#/components/schemas/PrivateCapacityRange" }
+        recent: { $ref: "#/components/schemas/PrivateCapacityRange" }
+        change: { $ref: "#/components/schemas/PrivateCapacityRange" }
+        baseline_days: { type: integer, minimum: 8 }
+        recent_days: { type: integer, minimum: 8 }
+    PrivateCapacityRange:
+      type: object
+      required: [low_wh, high_wh]
+      properties:
+        low_wh: { type: number, format: double }
+        high_wh: { type: number, format: double }
+    PrivateOvernightDrainReview:
+      type: object
+      required: [morning_at, expires_at, start_at, end_at, measured_loss_pct, typical_loss_low_pct, typical_loss_high_pct, comparable_nights, factors]
+      properties:
+        morning_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        measured_loss_pct: { type: number, format: double }
+        typical_loss_low_pct: { type: number, format: double }
+        typical_loss_high_pct: { type: number, format: double }
+        comparable_nights: { type: integer, minimum: 4 }
+        factors:
+          type: array
+          description: Same-window observations, not proof of cause.
+          items:
+            type: object
+            required: [kind, observed_at]
+            properties:
+              kind: { type: string, enum: [sentry, climate, wake_requested] }
+              observed_at: { type: string, format: date-time }
     TeslaUsageAmounts:
       type: object
       required: [signals, commands, data_requests, wakes, estimated_usd]
@@ -6929,6 +9805,436 @@ components:
           nullable: true
           example: 22.5
 
+    ChargingInvoiceInput:
+      type: object
+      required: [vehicle_id, provider, invoice_ref, currency, period_start, period_end, billed_total_minor, lines]
+      properties:
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        provider: { type: string, maxLength: 160 }
+        invoice_ref: { type: string, maxLength: 160 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time, description: Exclusive end for opted-in checks. }
+        billed_total_minor: { type: integer, format: int64, minimum: 0, description: Total as printed on the statement. }
+        lines: { type: array, minItems: 1, maxItems: 500, items: { $ref: "#/components/schemas/ChargingInvoiceLine" } }
+        variance_options:
+          type: object
+          required: [material_amount_minor]
+          properties:
+            material_amount_minor: { type: integer, format: int64, minimum: 1, maximum: 1000000000000 }
+            complete_statement: { type: boolean, default: false, description: Every line entered and no omitted adjustments or credits. }
+
+    SmartChargingPlanInput:
+      type: object
+      required: [vehicle_id, enabled, notify_at, departure_at, trip_use_low_pct, trip_use_high_pct, reserve_pct]
+      properties:
+        vehicle_id: { type: integer, format: int64, minimum: 1 }
+        charging_place_id: { type: integer, format: int64, minimum: 1, description: Required when creating or enabling a plan. }
+        enabled: { type: boolean }
+        notify_at: { type: string, format: date-time }
+        departure_at: { type: string, format: date-time }
+        trip_use_low_pct: { type: number, minimum: 0, maximum: 100 }
+        trip_use_high_pct: { type: number, minimum: 0, maximum: 100 }
+        reserve_pct: { type: number, minimum: 0, maximum: 100 }
+        early_stop_watch:
+          type: boolean
+          default: false
+          description: For a verified signed-in subject, use recent charging evidence during this plan's readiness window. False or omitted disables this check. Personal push enrollment is separate.
+
+    ChargingInvoiceRecord:
+      allOf:
+        - { $ref: "#/components/schemas/ChargingInvoiceInput" }
+        - type: object
+          required: [id, status, line_count, version, created_at, updated_at]
+          properties:
+            id: { type: integer, format: int64, minimum: 1 }
+            status: { type: string, enum: [open, reconciled, disputed, settled] }
+            line_count: { type: integer, minimum: 1 }
+            version: { type: integer, minimum: 1 }
+            variance_review_cleared: { type: boolean, description: The owner explicitly cleared the private check; no automatic comparison is performed. }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+
+    ChargingInvoiceLine:
+      type: object
+      required: [occurred_at, billed_energy_wh, billed_total_minor]
+      properties:
+        id: { type: integer, format: int64, minimum: 0 }
+        line_ref: { type: string, maxLength: 160 }
+        occurred_at: { type: string, format: date-time, description: Recorded session start is used for an opted-in check. }
+        location: { type: string, maxLength: 240 }
+        billed_energy_wh: { type: number, minimum: 0 }
+        billed_energy_minor: { type: integer, format: int64, minimum: 0, nullable: true, description: Omit or pass null when unknown on import. Explicit zero is a documented zero. }
+        billed_idle_minor: { type: integer, format: int64, minimum: 0, nullable: true, description: Omit or pass null when unknown on import. Explicit zero is a documented zero. }
+        billed_tax_minor: { type: integer, format: int64, minimum: 0, nullable: true, description: Omit or pass null when unknown on import. Explicit zero is a documented zero. }
+        billed_total_minor: { type: integer, format: int64, minimum: 0 }
+        variance_evidence:
+          type: object
+          description: Independently entered evidence. Omitted values remain unknown; no current vehicle state or nominal SoC estimate is used.
+          properties:
+            billed_boundary: { type: string, enum: [station, battery] }
+            meter:
+              type: object
+              required: [observed_boundary, observed_energy_wh]
+              properties:
+                observed_boundary: { type: string, enum: [station, battery] }
+                observed_energy_wh: { type: number, minimum: 0, exclusiveMinimum: true, maximum: 1000000 }
+                max_loss_wh: { type: number, minimum: 0, description: Independently documented upper bound; required to compare different meter boundaries. }
+            rate:
+              type: object
+              required: [boundary, amount_minor, energy_wh]
+              properties:
+                boundary: { type: string, enum: [station, battery] }
+                amount_minor: { type: integer, format: int64, minimum: 0, description: Applicable flat energy rate in the invoice currency; excludes taxes and fees. }
+                energy_wh: { type: integer, format: int64, minimum: 1, maximum: 1000000 }
+            other_fees_minor: { type: integer, format: int64, minimum: 0, description: Explicit zero means no other fees. Line-total comparison also requires all three billed charge amounts. }
+
+    MileageTermInputs:
+      type: object
+      required: [time_zone, first_day, end_day, opening_odometer_m, allowance_m, minimum_overage_m]
+      properties:
+        time_zone: { type: string, maxLength: 80, example: America/New_York }
+        first_day: { type: string, format: date, description: First local day of the allowance term. }
+        end_day: { type: string, format: date, description: First local day excluded from the allowance term. }
+        opening_odometer_m: { type: number, format: double, minimum: 0, maximum: 10000000000 }
+        allowance_m: { type: number, format: double, minimum: 1000, maximum: 10000000 }
+        minimum_overage_m: { type: number, format: double, minimum: 100, maximum: 10000000 }
+        paused: { type: boolean, default: false }
+    MileageTermReview:
+      type: object
+      required: [settings, digest, last_checked_at, next_check_at]
+      properties:
+        settings:
+          type: object
+          nullable: true
+          allOf:
+            - { $ref: "#/components/schemas/MileageTermInputs" }
+            - type: object
+              required: [id]
+              properties:
+                id: { type: integer, format: int64, minimum: 1 }
+        last_checked_at: { type: string, format: date-time, nullable: true }
+        next_check_at: { type: string, format: date-time, nullable: true }
+        digest:
+          type: object
+          nullable: true
+          required: [through, checked_at, expires_at, projection]
+          properties:
+            through: { type: string, format: date-time }
+            checked_at: { type: string, format: date-time }
+            expires_at: { type: string, format: date-time }
+            projection:
+              type: object
+              required: [evidence_from, observed_at, observed_days, used_m, allowed_to_date_m, lower_m, upper_m]
+              properties:
+                evidence_from: { type: string, format: date-time }
+                observed_at: { type: string, format: date-time }
+                observed_days: { type: integer, minimum: 8, maximum: 91 }
+                used_m: { type: number, format: double, minimum: 0 }
+                allowed_to_date_m: { type: number, format: double, minimum: 0 }
+                lower_m: { type: number, format: double, minimum: 0 }
+                upper_m: { type: number, format: double, minimum: 0 }
+    WeeklyDriveEfficiencyState:
+      type: object
+      required: [plan, digest, dismissed, review_allowed_until]
+      properties:
+        review_allowed_until: { type: string, format: date-time, nullable: true, description: Expiry of fresh parked evidence. Null keeps the review passive. }
+        plan:
+          type: object
+          nullable: true
+          required: [revision, time_zone, paused, next_check_at]
+          properties:
+            revision: { type: integer, format: int64, minimum: 1 }
+            time_zone: { type: string }
+            paused: { type: boolean }
+            next_check_at: { type: string, format: date-time, nullable: true }
+        digest:
+          type: object
+          nullable: true
+          required: [reference_drive_id, baseline_from, recent_from, recent_until, observed_until, expires_at, baseline_days, recent_days, baseline, recent, higher]
+          properties:
+            reference_drive_id: { type: integer, format: int64, minimum: 1 }
+            baseline_from: { type: string, format: date-time }
+            recent_from: { type: string, format: date-time }
+            recent_until: { type: string, format: date-time }
+            observed_until: { type: string, format: date-time }
+            expires_at: { type: string, format: date-time }
+            baseline_days: { type: integer, minimum: 4, maximum: 42 }
+            recent_days: { type: integer, minimum: 4, maximum: 7 }
+            baseline: { $ref: "#/components/schemas/ObservedDriveIntensity" }
+            recent: { $ref: "#/components/schemas/ObservedDriveIntensity" }
+            higher: { type: boolean, description: True only for a material observed increase across both parts of the week. }
+        dismissed: { type: boolean }
+    ObservedDriveIntensity:
+      type: object
+      required: [low_wh_per_m, high_wh_per_m]
+      properties:
+        low_wh_per_m: { type: number, format: double }
+        high_wh_per_m: { type: number, format: double }
+    SubscriptionRenewalState:
+      type: object
+      required: [plan, review, needs_review, dismissed]
+      properties:
+        plan:
+          type: object
+          nullable: true
+          required: [revision, subscription_version, renewal_day, time_zone, lead_days, paused, next_check_at]
+          properties:
+            revision: { type: string, format: uuid }
+            subscription_version: { type: integer, minimum: 1 }
+            renewal_day: { type: string, format: date }
+            time_zone: { type: string, maxLength: 80 }
+            lead_days: { type: integer, minimum: 1, maximum: 30 }
+            paused: { type: boolean }
+            next_check_at: { type: string, format: date-time, nullable: true }
+        review:
+          type: object
+          nullable: true
+          required: [renewal_day, expires_at, name, price_minor, currency, billing_period, evidence]
+          properties:
+            renewal_day: { type: string, format: date }
+            expires_at: { type: string, format: date-time, description: Midnight at the start of the recorded local renewal date. }
+            name: { type: string }
+            price_minor: { type: integer, format: int64, minimum: 0 }
+            currency: { type: string, pattern: '^[A-Z]{3}$' }
+            billing_period: { type: string, enum: [monthly, annual] }
+            evidence:
+              type: object
+              required: [from, through, metric, quantity, observed_days, excluded, coverage]
+              properties:
+                from: { type: string, format: date-time }
+                through: { type: string, format: date-time, description: Exclusive end for observation starts. }
+                metric: { type: string, enum: [driving_distance, drive_count, charging_sessions, connectivity_time, supercharging_energy, none] }
+                quantity:
+                  type: number
+                  format: double
+                  minimum: 0
+                  nullable: true
+                  description: Meters for driving_distance, counts for drive_count and charging_sessions; otherwise null.
+                observed_days: { type: integer, minimum: 0, maximum: 30 }
+                excluded: { type: integer, minimum: 0, description: Completed drives missing valid distance. }
+                coverage: { type: string, enum: [observed_only, no_evidence, not_measured, uncertain_coverage] }
+        needs_review: { type: boolean }
+        dismissed: { type: boolean }
+    TripPacketExpectedVersion:
+      type: object
+      required: [plan_id, expected_revision]
+      properties:
+        plan_id: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment only. }
+        expected_revision: { type: integer, format: int64, minimum: 0, description: Zero for first enrollment only. }
+    TripPacketReceipt:
+      type: object
+      required: [drive_id, receipt_day, reference, currency, amount_minor]
+      properties:
+        drive_id: { type: integer, format: int64, minimum: 1 }
+        receipt_day: { type: string, format: date, description: Date on the receipt within the local start and end days of the matched drive. }
+        reference: { type: string, minLength: 1, maxLength: 120 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        amount_minor: { type: integer, format: int64, minimum: 1, maximum: 1000000000 }
+    TripPacketEntry:
+      type: object
+      required: [drive_id, purpose]
+      properties:
+        drive_id: { type: integer, format: int64, minimum: 1 }
+        purpose: { type: string, enum: ['', business, commute, personal], description: Empty removes the confirmed purpose. }
+        receipts:
+          type: array
+          maxItems: 10
+          nullable: true
+          description: Only accepted for a drive explicitly marked business.
+          items: { $ref: "#/components/schemas/TripPacketReceipt" }
+    TripPacketEvidence:
+      type: object
+      required: [from, through, business_drives, matched_receipts, unclassified_drive_count, business_drives_without_distance, unmatched_receipts, observed_business_distance_m]
+      properties:
+        from: { type: string, format: date-time, description: Inclusive local month start. }
+        through: { type: string, format: date-time, description: Exclusive local month end for drive starts. }
+        business_drives:
+          type: array
+          maxItems: 1024
+          items:
+            type: object
+            required: [drive_id, started_at, ended_at, distance_m]
+            properties:
+              drive_id: { type: integer, format: int64, minimum: 1 }
+              started_at: { type: string, format: date-time }
+              ended_at: { type: string, format: date-time }
+              distance_m: { type: number, format: double, minimum: 0, nullable: true }
+        matched_receipts:
+          type: array
+          maxItems: 2048
+          items: { $ref: "#/components/schemas/TripPacketReceipt" }
+        unclassified_drive_count: { type: integer, minimum: 0 }
+        business_drives_without_distance: { type: integer, minimum: 0 }
+        unmatched_receipts: { type: integer, minimum: 0 }
+        observed_business_distance_m: { type: number, format: double, minimum: 0 }
+    TripPacketReview:
+      type: object
+      required: [plan, entry, packet]
+      properties:
+        plan:
+          type: object
+          nullable: true
+          required: [id, revision, paused, time_zone, next_check_at]
+          properties:
+            id: { type: integer, format: int64, minimum: 1 }
+            revision: { type: integer, format: int64, minimum: 1 }
+            paused: { type: boolean }
+            time_zone: { type: string, maxLength: 80 }
+            next_check_at: { type: string, format: date-time, nullable: true }
+        entry:
+          type: object
+          nullable: true
+          allOf:
+            - { $ref: "#/components/schemas/TripPacketEntry" }
+        packet:
+          type: object
+          nullable: true
+          allOf:
+            - { $ref: "#/components/schemas/TripPacketEvidence" }
+            - type: object
+              properties:
+                unclassified_drive_ids:
+                  type: array
+                  maxItems: 1024
+                  items: { type: integer, format: int64, minimum: 1 }
+        digest: { type: string, pattern: '^[0-9a-f]{64}$' }
+        expires_at: { type: string, format: date-time }
+    MonthlyTariffInputs:
+      type: object
+      required: [site_id, site_revision, current_tariff_id, current_version, alternative_tariff_id, alternative_version, time_zone, minimum_savings_minor, switch_fee_minor]
+      properties:
+        site_id: { type: integer, format: int64, minimum: 1 }
+        site_revision: { type: string, format: date-time }
+        current_tariff_id: { type: integer, format: int64, minimum: 1 }
+        current_version: { type: integer, minimum: 1 }
+        alternative_tariff_id: { type: integer, format: int64, minimum: 1 }
+        alternative_version: { type: integer, minimum: 1 }
+        time_zone: { type: string, maxLength: 80, example: America/New_York }
+        minimum_savings_minor: { type: integer, format: int64, minimum: 1, maximum: 1000000000 }
+        switch_fee_minor: { type: integer, format: int64, minimum: 0, maximum: 1000000000 }
+        paused: { type: boolean, default: false }
+    MonthlyTariffReview:
+      type: object
+      required: [needs_review]
+      properties:
+        settings:
+          allOf:
+            - { $ref: "#/components/schemas/MonthlyTariffInputs" }
+            - type: object
+              required: [id]
+              properties:
+                id: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        site_name: { type: string }
+        current_name: { type: string }
+        alternative_name: { type: string }
+        needs_review: { type: boolean, description: The selected place or saved terms no longer match the approved versions. }
+        last_checked_at: { type: string, format: date-time }
+        digest:
+          type: object
+          required: [from, through, checked_at, expires_at, comparison]
+          properties:
+            from: { type: string, format: date-time }
+            through: { type: string, format: date-time, description: Exclusive end of the compared local month. }
+            checked_at: { type: string, format: date-time }
+            expires_at: { type: string, format: date-time }
+            comparison:
+              type: object
+              required: [days, sessions, energy_wh, current, alternative, current_fixed_minor, alternative_fixed_minor, switch_fee_minor, net_savings]
+              properties:
+                days: { type: integer, minimum: 28, maximum: 31 }
+                sessions: { type: integer, minimum: 4, maximum: 512 }
+                energy_wh: { type: number, format: double }
+                current: { $ref: "#/components/schemas/MonthlyTariffCostRange" }
+                alternative: { $ref: "#/components/schemas/MonthlyTariffCostRange" }
+                current_fixed_minor: { type: integer, format: int64, minimum: 0 }
+                alternative_fixed_minor: { type: integer, format: int64, minimum: 0 }
+                switch_fee_minor: { type: integer, format: int64, minimum: 0 }
+                net_savings: { $ref: "#/components/schemas/MonthlyTariffCostRange" }
+    MonthlyTariffCostRange:
+      type: object
+      required: [lower_minor, upper_minor]
+      properties:
+        lower_minor: { type: integer, format: int64 }
+        upper_minor: { type: integer, format: int64 }
+    MonthlyChargingCostReview:
+      type: object
+      properties:
+        settings:
+          type: object
+          required: [id, time_zone, currency, material_change_minor, paused]
+          properties:
+            id: { type: integer, format: int64, minimum: 1 }
+            time_zone: { type: string }
+            currency: { type: string }
+            material_change_minor: { type: integer, format: int64, minimum: 1 }
+            paused: { type: boolean }
+        last_checked_at: { type: string, format: date-time }
+        digest:
+          type: object
+          required: [prior_from, current_from, through, checked_at, expires_at, attribution]
+          properties:
+            prior_from: { type: string, format: date-time }
+            current_from: { type: string, format: date-time }
+            through: { type: string, format: date-time, description: Exclusive end of the recent completed month. }
+            checked_at: { type: string, format: date-time }
+            expires_at: { type: string, format: date-time }
+            attribution:
+              type: object
+              description: Estimated contributions to the change in known spend, in minor currency units, not evidence of cause.
+              required: [currency, prior, current, comparable_sites, distance_minor, purchase_intensity_minor, site_mix_minor, effective_price_minor, unattributed_minor]
+              properties:
+                currency: { type: string }
+                prior: { $ref: "#/components/schemas/MonthlyChargingCostCoverage" }
+                current: { $ref: "#/components/schemas/MonthlyChargingCostCoverage" }
+                comparable_sites: { type: integer, minimum: 1 }
+                distance_minor: { type: integer, format: int64 }
+                purchase_intensity_minor: { type: integer, format: int64 }
+                site_mix_minor: { type: integer, format: int64 }
+                effective_price_minor: { type: integer, format: int64 }
+                unattributed_minor: { type: integer, format: int64, description: Uncompared known spend and rounding. }
+
+    MonthlyChargingCostCoverage:
+      type: object
+      required: [sessions, recorded_costs, compared_sessions, recorded_spend_minor, compared_spend_minor]
+      properties:
+        sessions: { type: integer, minimum: 0 }
+        recorded_costs: { type: integer, minimum: 0 }
+        compared_sessions: { type: integer, minimum: 0 }
+        recorded_spend_minor: { type: integer, format: int64, minimum: 0 }
+        compared_spend_minor: { type: integer, format: int64, minimum: 0 }
+        recorded_distance_m: { type: number, format: double, minimum: 0 }
+
+    ChargingInvoiceVarianceReview:
+      type: object
+      required: [state, matched_lines, comparable_lines, findings]
+      properties:
+        state: { type: string, enum: [off, insufficient, no_material_difference, review, handled] }
+        matched_lines: { type: integer, minimum: 0 }
+        comparable_lines: { type: integer, minimum: 0 }
+        unexplained_statement_minor: { type: integer, format: int64, description: Printed total minus sum of complete entered lines. Not an overbilling determination. }
+        findings:
+          type: array
+          maxItems: 500
+          items:
+            type: object
+            required: [line_id, assessment]
+            properties:
+              line_id: { type: integer, format: int64, minimum: 1 }
+              session_id: { type: integer, format: int64, minimum: 1 }
+              session_started_at: { type: string, format: date-time }
+              assessment:
+                type: object
+                properties:
+                  expected_energy_lower_wh: { type: number, minimum: 0 }
+                  expected_energy_upper_wh: { type: number, minimum: 0 }
+                  unexplained_energy_wh: { type: number, description: Billed energy minus the nearest comparable meter bound. }
+                  expected_energy_minor: { type: integer, format: int64, minimum: 0 }
+                  unexplained_rate_minor: { type: integer, format: int64 }
+                  components_total_minor: { type: integer, format: int64, minimum: 0 }
+                  unexplained_total_minor: { type: integer, format: int64 }
+
     ChargingSession:
       type: object
       properties:
@@ -7340,6 +10646,96 @@ components:
         timestamp:
           type: string
           format: date-time
+
+    PrivateDriveTrack:
+      type: object
+      required: [id, drive_id, vehicle_id, started_at, ended_at, reason, track, library_available, library_connected]
+      properties:
+        id: { type: integer, format: int64, minimum: 0, description: Zero when no lookup is stored for the subject. }
+        drive_id: { type: integer, format: int64 }
+        vehicle_id: { type: integer, format: int64 }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time, nullable: true }
+        selected_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        reason: { type: string, enum: [off, drive_unmatched, drive_changed, expired, missing_evidence, evidence_limit, observed] }
+        evidence_key: { type: string, pattern: "^[0-9a-f]{64}$" }
+        save_status: { type: string, enum: [review, saving, saved, rejected, unknown] }
+        library_available: { type: boolean }
+        library_connected: { type: boolean }
+        track:
+          type: object
+          nullable: true
+          required: [title, artist, source, identity_at, observed_from, last_observed_at, last_elapsed_s]
+          properties:
+            title: { type: string }
+            artist: { type: string }
+            source: { type: string, enum: [spotify, youtube_music, apple_music, tidal, bluetooth, usb] }
+            identity_at: { type: string, format: date-time }
+            observed_from: { type: string, format: date-time }
+            last_observed_at: { type: string, format: date-time }
+            duration_s: { type: integer, minimum: 10 }
+            last_elapsed_s: { type: number, minimum: 0 }
+
+    PrivateJourneySoundtrack:
+      type: object
+      required: [id, journey_id, vehicle_id, started_at, ended_at, paused, reason, matched_drives, observed_drives, plays]
+      properties:
+        id: { type: integer, format: int64, minimum: 0, description: Zero when no review is stored for the subject. }
+        journey_id: { type: integer, format: int64 }
+        vehicle_id: { type: integer, format: int64 }
+        started_at: { type: string, format: date-time, nullable: true }
+        ended_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time }
+        paused: { type: boolean }
+        snoozed_until: { type: string, format: date-time }
+        reason: { type: string, enum: [off, journey_unmatched, journey_changed, expired, held, missing_evidence, evidence_limit, observed] }
+        matched_drives: { type: integer, minimum: 0, maximum: 30 }
+        observed_drives: { type: integer, minimum: 0, maximum: 30 }
+        plays:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            required: [title, artist, source, identity_at, observed_from, last_observed_at, last_elapsed_s]
+            properties:
+              title: { type: string }
+              artist: { type: string }
+              source: { type: string, enum: [spotify, youtube_music, apple_music, tidal, bluetooth, usb] }
+              identity_at: { type: string, format: date-time }
+              observed_from: { type: string, format: date-time }
+              last_observed_at: { type: string, format: date-time }
+              duration_s: { type: integer, minimum: 10 }
+              last_elapsed_s: { type: number, minimum: 0 }
+
+    PrivatePlaylistDraft:
+      type: object
+      nullable: true
+      required: [id, vehicle_id, departure_at, target_duration_s, created_at, expires_at, paused, status, candidates]
+      properties:
+        id: { type: integer, format: int64 }
+        vehicle_id: { type: integer, format: int64 }
+        departure_at: { type: string, format: date-time }
+        target_duration_s: { type: integer, minimum: 300, maximum: 21600 }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        paused: { type: boolean }
+        snoozed_until: { type: string, format: date-time }
+        status: { type: string, enum: [preview, saving, saved, rejected, created_only, unknown] }
+        playlist_id: { type: string, description: Spotify confirmed a private playlist with this ID. Items may not have been confirmed. }
+        candidates:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [position, title, artist, duration_s, observed_at, suggested]
+            properties:
+              position: { type: integer, minimum: 1, maximum: 100 }
+              title: { type: string }
+              artist: { type: string }
+              duration_s: { type: integer }
+              observed_at: { type: string, format: date-time }
+              suggested: { type: boolean }
 
     MediaReading:
       type: object

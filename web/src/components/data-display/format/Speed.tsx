@@ -1,21 +1,21 @@
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface SpeedProps {
+interface SpeedProps extends FormattedReadingOptions {
   /** Caller-supplied speed in mph. Normalised to SI m/s before display. */
   mph?: number | null;
   /** Alternative caller-supplied speed in km/h. Normalised to SI m/s before display. */
   kmh?: number | null;
   precision?: number;
-  className?: string;
 }
 
 /**
  * Speed renderer that respects the user's metric/imperial preference.
  * Hover title shows the source-unit value at the requested display precision.
  */
-export function Speed({ mph, kmh, precision, className }: SpeedProps) {
+export function Speed({ mph, kmh, precision, label, className }: SpeedProps) {
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -34,13 +34,13 @@ export function Speed({ mph, kmh, precision, className }: SpeedProps) {
   }
 
   if (sourceMps == null) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
 
   const display = fmtNumber(toSpeedDisplay(sourceMps), precision);
   return (
-    <span className={className} title={title}>
-      {display} {speedUnit}
-    </span>
+    <FormattedReading label={label} className={className} title={title}>
+      {`${display} ${speedUnit}`}
+    </FormattedReading>
   );
 }

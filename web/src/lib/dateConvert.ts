@@ -271,6 +271,22 @@ export function toZonedDatetimeStr(d: Date, timeZone: string): string {
   }
 }
 
+/** Match one actual wall-clock minute, rejecting both skipped and repeated local times. */
+export function uniqueZonedMinuteToUtc(wall: string, timeZone: string): Date | null {
+  const tz = safeTimeZone(timeZone)
+  if (!tz || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(wall)) return null
+  const instant = zonedWallTimeToUtc(wall, tz)
+  if (!instant || toZonedDatetimeStr(instant, tz) !== wall) return null
+  const ms = instant.getTime()
+  const offset = zoneOffsetMs(ms, tz)
+  const day = 86_400_000
+  for (const neighbor of [ms - day, ms + day]) {
+    const alternate = ms + offset - zoneOffsetMs(neighbor, tz)
+    if (alternate !== ms && toZonedDatetimeStr(new Date(alternate), tz) === wall) return null
+  }
+  return instant
+}
+
 /**
  * User-facing hour-of-day bucket name ("12 AM", "3 PM", or "3:00 PM"
  * with `showMinutes`) for the given hour 0-23. Hour buckets are bucket

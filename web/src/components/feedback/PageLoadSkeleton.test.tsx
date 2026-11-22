@@ -25,4 +25,17 @@ describe('PageLoadSkeleton', () => {
     const panels = container.querySelectorAll('[data-print-card]')
     expect(panels.length).toBe(3)
   })
+
+  it('keeps the visible loading label and panel outlines when the real page header is already present', () => {
+    render(<PageLoadSkeleton panels={1} showHeader={false} />)
+
+    const status = screen.getByRole('status', { name: 'Loading…' })
+    expect(screen.getByText('Loading…')).toBeVisible()
+    expect(status.querySelector(':scope > div > [aria-hidden="true"]')).toBeNull()
+    const panel = status.querySelector('[data-print-card]')
+    expect(panel).toHaveAttribute('aria-hidden', 'true')
+    const metrics = panel?.querySelector('[data-app-part="metric-grid"]')
+    expect(metrics?.querySelectorAll('[data-app-skeleton="fact"]')).toHaveLength(3)
+    expect(metrics?.nextElementSibling).toHaveAttribute('data-app-part', 'skeleton')
+  })
 })

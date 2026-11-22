@@ -19,10 +19,18 @@ export interface MobileDataTablePresentation<T> {
   /** Privacy mask applies to summaries AND details. Hidden layout columns are otherwise available in details. */
   canShowField?: (columnKey: string, row: T) => boolean
   allDetails?: (row: T) => readonly MobileDataTableDetail[]
-  inlineActions?: (row: T) => ReactNode
+  inlineActions?: (row: T, visibleColumns: ReadonlySet<string>) => ReactNode
   onOpenRow?: (row: T) => void
+  rowHref?: (row: T) => string
+  onQuickView?: (row: T) => void
+  quickViewLabel?: string
+  /** Use cards through this allocated width when a record needs more room. */
+  cardMaxWidth?: number
+  badgeVariant?: (row: T) => 'neutral' | 'success' | 'warning' | 'info' | 'danger'
   /** Place mobile column controls in the shared table toolbar instead of a separate row. */
   controlsInToolbar?: boolean
+  /** Use the compact column picker instead of repeating controls above the cards. */
+  columnToolsInPicker?: boolean
   /** Set false when a surrounding summary already supplies the row count. */
   showRowCount?: boolean
   /** Let card rows follow the table's compact-density setting. */

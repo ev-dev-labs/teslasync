@@ -68,6 +68,8 @@ export function EmptyStateThreshold({
   return (
     <div
       data-testid={testId}
+      data-app-part="feedback empty"
+      data-app-feedback-kind="threshold"
       role="status"
       aria-live="polite"
       className={cn(
@@ -84,7 +86,7 @@ export function EmptyStateThreshold({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {sectionLabel}
+              <span data-app-part="feedback-title" className="[overflow-wrap:anywhere]">{sectionLabel}</span>
             </h3>
             <Info
               className="h-3 w-3 text-[var(--text-muted)]"
@@ -96,10 +98,10 @@ export function EmptyStateThreshold({
               {description}
             </Text>
           )}
-          <Text as="p" variant="bodySm" className="mt-2 text-[var(--text-muted)] leading-relaxed">
+          <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mt-2 text-[var(--text-muted)] leading-relaxed [overflow-wrap:anywhere]">
             {message ?? defaultMessage}
           </Text>
-          {action && <div className="mt-3">{action}</div>}
+          {action && <div data-app-part="feedback-actions" className="mt-3 border-t border-[var(--border-subtle)] pt-3">{action}</div>}
         </div>
       </div>
     </div>

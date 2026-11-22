@@ -48,21 +48,26 @@ describe('AlertBanner', () => {
     expect(container.querySelector('p')).toBeNull()
   })
 
-  it('maps each variant to theme-safe border, title, and body colours', () => {
-    const cases: Array<[AlertVariant, string]> = [
-      ['info', 'info'],
-      ['success', 'success'],
-      ['warning', 'warning'],
-      ['danger', 'danger'],
+  it('shows a severity label and a matching icon rail without tinting the message', () => {
+    const cases: Array<[AlertVariant, string, string]> = [
+      ['info', 'info', 'Info'],
+      ['success', 'success', 'Success'],
+      ['warning', 'warning', 'Warning'],
+      ['danger', 'danger', 'Critical'],
     ]
-    for (const [variant, tone] of cases) {
+    for (const [variant, tone, label] of cases) {
       const { container, unmount } = render(
         <AlertBanner variant={variant} title="T">
           body
         </AlertBanner>,
       )
       const banner = container.firstElementChild as HTMLElement
-      expect(banner).toHaveClass(`border-[var(--semantic-${tone}-border)]`, `bg-[var(--semantic-${tone}-bg)]`)
+      const rail = banner.querySelector('[data-app-part="feedback-icon"]')
+      expect(banner).toHaveClass(`border-[var(--semantic-${tone}-border)]`, 'bg-[var(--surface-1)]')
+      expect(rail).toHaveClass(`bg-[var(--semantic-${tone}-bg)]`)
+      expect(rail).toHaveAttribute('aria-hidden', 'true')
+      expect(rail?.querySelector('svg')).toBeInTheDocument()
+      expect(screen.getByText(label)).toBeVisible()
       expect(screen.getByText('T')).toHaveClass('text-[var(--text-primary)]', 'font-semibold')
       expect(screen.getByText('body')).toHaveClass('text-[var(--text-primary)]')
       expect(banner.className).not.toMatch(/neon|backdrop-blur|shadow-e/)
@@ -79,6 +84,7 @@ describe('AlertBanner', () => {
     const icon = screen.getByTestId('lead-icon')
     expect(icon).toBeInTheDocument()
     expect(icon.parentElement?.getAttribute('aria-hidden')).toBe('true')
+    expect(icon.parentElement?.children).toHaveLength(1)
   })
 
   it('omits the dismiss button when onClose is not provided', () => {
@@ -147,6 +153,8 @@ describe('AlertBanner', () => {
     expect(screen.getByText('resilient body')).toBeInTheDocument()
     const banner = container.firstElementChild as HTMLElement
     expect(banner).toHaveClass('border-[var(--semantic-info-border)]')
+    expect(banner).toHaveAttribute('data-app-tone', 'info')
+    expect(screen.getByText('Info')).toBeVisible()
   })
 
   it('keeps static notices quiet without inventing live-region severity', () => {
@@ -185,7 +193,7 @@ describe('AlertBanner', () => {
         <p>Persistent context</p><a href="/details">All details</a>
       </AlertBanner>,
     )
-    expect(screen.getByText(longTitle).parentElement).toHaveClass('min-w-0', 'break-words')
+    expect(screen.getByText(longTitle).parentElement).toHaveClass('min-w-0', '[overflow-wrap:anywhere]')
     expect(screen.getByText('Persistent context')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'All details' })).toBeInTheDocument()
     const dismiss = screen.getByRole('button', { name: 'Dismiss' })

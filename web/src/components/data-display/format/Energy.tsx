@@ -1,12 +1,12 @@
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface EnergyProps {
+interface EnergyProps extends FormattedReadingOptions {
   /** Canonical input in kWh. */
   kwh?: number | null;
   /** Alternative input in Wh; converted to kWh before display. */
   wh?: number | null;
   precision?: number;
-  className?: string;
   /** Force a display unit. Defaults to auto: Wh when |kWh| < 1, else kWh. */
   unit?: 'kWh' | 'Wh';
 }
@@ -15,7 +15,7 @@ interface EnergyProps {
  * Energy renderer that auto-picks Wh vs kWh for readability and exposes
  * the canonical kWh value via `title`.
  */
-export function Energy({ kwh, wh, precision, className, unit }: EnergyProps) {
+export function Energy({ kwh, wh, precision, label, className, unit }: EnergyProps) {
   const { fmtNumber } = useNumberFormatting();
   let sourceKwh: number | null = null;
   if (kwh != null && Number.isFinite(kwh)) {
@@ -25,15 +25,15 @@ export function Energy({ kwh, wh, precision, className, unit }: EnergyProps) {
   }
 
   if (sourceKwh == null) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
 
   const useWh = unit === 'Wh' || (unit !== 'kWh' && Math.abs(sourceKwh) < 1);
   const value = useWh ? sourceKwh * 1000 : sourceKwh;
   const display = fmtNumber(value, precision);
   return (
-    <span className={className} title={`${fmtNumber(sourceKwh, precision)} kWh`}>
-      {display} {useWh ? 'Wh' : 'kWh'}
-    </span>
+    <FormattedReading label={label} className={className} title={`${fmtNumber(sourceKwh, precision)} kWh`}>
+      {`${display} ${useWh ? 'Wh' : 'kWh'}`}
+    </FormattedReading>
   );
 }

@@ -1,4 +1,5 @@
 import { forwardRef, useId, type SelectHTMLAttributes } from 'react';
+import { Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
@@ -50,6 +51,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     className,
     id,
     required,
+    multiple,
     'aria-describedby': ariaDescribedBy,
     ...props
   }, ref) => {
@@ -63,8 +65,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         ? `${selectId}-hint`
         : undefined;
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
+    const showIcon = Boolean(label) && !multiple;
     return (
-      <div data-app-part="field" className="min-w-0 space-y-1">
+      <div data-app-part="field" className={cn(
+        'min-w-0 space-y-1',
+        showIcon && 'rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] p-2',
+      )}>
         {label && (
           <div className="flex min-w-0 items-center gap-1">
             <Label
@@ -86,33 +92,40 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             )}
           </div>
         )}
-        <select
-          ref={ref}
-          data-app-part="field-control"
-          data-app-size={size}
-          data-app-native-popup="true"
-          id={selectId}
-          required={required}
-          aria-required={required ? 'true' : undefined}
-          className={cn(
-            'min-w-0 w-full rounded-shape-sm border border-[var(--control-border)] bg-[var(--control-bg)] text-[var(--text-primary)] transition-colors duration-fast motion-reduce:transition-none',
-            sizeClasses[size],
-            'focus-visible:border-[var(--focus-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]',
-            'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-[var(--semantic-danger)]',
-            className,
+        <div className="relative min-w-0">
+          {showIcon && (
+            <Layers aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
           )}
-          aria-invalid={error ? 'true' : undefined}
-          aria-describedby={describedBy}
-          {...props}
-        >
-          {placeholder && <option value="">{placeholder}</option>}
-          {(options ?? []).map((opt) => (
-            <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          <select
+            ref={ref}
+            data-app-part="field-control"
+            data-app-size={size}
+            data-app-native-popup="true"
+            id={selectId}
+            required={required}
+            multiple={multiple}
+            aria-required={required ? 'true' : undefined}
+            className={cn(
+              'min-w-0 w-full rounded-shape-sm border border-[var(--control-border)] bg-[var(--control-bg)] text-[var(--text-primary)] transition-colors duration-fast motion-reduce:transition-none',
+              sizeClasses[size],
+              showIcon && 'ps-9',
+              'focus-visible:border-[var(--focus-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]',
+              'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
+              error && 'border-[var(--semantic-danger)]',
+              className,
+            )}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={describedBy}
+            {...props}
+          >
+            {placeholder && <option value="">{placeholder}</option>}
+            {(options ?? []).map((opt) => (
+              <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
         {error && <p data-app-part="status" data-app-field-feedback="error" id={`${selectId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
         {hint && !error && <p data-app-part="status" data-app-field-feedback="hint" id={`${selectId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>

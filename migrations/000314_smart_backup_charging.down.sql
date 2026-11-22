@@ -1,0 +1,4 @@
+DROP TRIGGER smart_backup_charging_device_revoked ON smart_push_devices;
+DROP FUNCTION revoke_backup_charging_device_consent();
+DROP TABLE smart_push_backup_charging_deliveries;
+DROP TABLE smart_backup_charging_watches;

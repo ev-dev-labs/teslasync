@@ -2,14 +2,14 @@ import { createElement } from 'react';
 import { TrendingUp, Route, Gauge, Clock } from 'lucide-react';
 import { formatDurationMinutes } from '@/lib/dateConvert';
 import type { useDrivesListPageData } from '../../hooks/useDrivesListPageData';
-import type { useDrivesListPageFilters } from '../../hooks/useDrivesListPageFilters';
+import type { useDrivesListRange } from '../../hooks/useDrivesListRange';
 
 type HighlightsInput = ReturnType<typeof useDrivesListPageData>
-  & ReturnType<typeof useDrivesListPageFilters>;
+  & ReturnType<typeof useDrivesListRange>;
 
 export function buildDrivesListHighlights(input: HighlightsInput) {
   const {
-    currentStats, dateFilteredDrives, t, fmtInt, toSpeedDisplay, speedUnit,
+    currentStats, t, fmtInt, toSpeedDisplay, speedUnit,
     fmtNumber, toDistanceDisplay, distanceUnit,
   } = input;
   /* ---- Highlights rows — "fold-down" period stats (top speed, longest,
@@ -20,14 +20,14 @@ export function buildDrivesListHighlights(input: HighlightsInput) {
       key: 'topSpeed',
       icon: createElement(TrendingUp, { className: 'h-3.5 w-3.5 text-[var(--text-muted)]', 'aria-hidden': 'true' }),
       label: t('drives.topSpeed', 'Top speed'),
-      value: dateFilteredDrives.some((drive) => drive.maxSpeedMps != null && Number.isFinite(drive.maxSpeedMps))
+      value: currentStats.topSpeedMps != null
         ? `${fmtInt(toSpeedDisplay(currentStats.topSpeedMps))} ${speedUnit}` : '—',
     },
     {
       key: 'longest',
       icon: createElement(Route, { className: 'h-3.5 w-3.5 text-[var(--text-muted)]', 'aria-hidden': 'true' }),
       label: t('drives.longest', 'Longest'),
-      value: `${fmtNumber(toDistanceDisplay(currentStats.longest?.distanceM ?? 0))} ${distanceUnit}`,
+      value: `${fmtNumber(toDistanceDisplay(currentStats.longestDistanceM ?? 0))} ${distanceUnit}`,
     },
     {
       key: 'avgTrip',

@@ -110,6 +110,27 @@ describe('DateTime', () => {
   });
 });
 
+describe('standalone formatted readings', () => {
+  it('retains the same reading and precision when a localized label is supplied', () => {
+    mockSettings();
+    const { container, rerender } = render(<Currency value={1234.56} precision={2} />);
+    const amount = container.firstElementChild?.textContent;
+    expect(amount).toBe('$1,234.56');
+    rerender(<Currency value={1234.56} precision={2} label="Trip cost" />);
+    expect(container.firstElementChild?.children[0]).toHaveTextContent('Trip cost');
+    expect(container.firstElementChild?.children[1]?.textContent).toBe(amount);
+  });
+
+  it('keeps zero and missing readings distinct without producing an invented title', () => {
+    mockSettings();
+    const { container, rerender } = render(<Currency value={0} precision={2} label="Trip cost" />);
+    expect(container.firstElementChild?.children[1]).toHaveTextContent('$0.00');
+    rerender(<Currency value={null} label="Trip cost" />);
+    expect(container.firstElementChild?.children[1]).toHaveTextContent('—');
+    expect(container.firstElementChild?.children[1]).not.toHaveAttribute('title');
+  });
+});
+
 describe('Distance', () => {
   it('renders metric distance from km input', () => {
     mockSettings({

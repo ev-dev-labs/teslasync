@@ -214,6 +214,7 @@ interface RenderOpts {
   routePoints?: RoutePoint[];
   fsdEvidence?: FsdEvidenceInterval[];
   embedded?: boolean;
+  localEvidence?: boolean;
 }
 
 function renderSection(opts: RenderOpts = {}) {
@@ -228,6 +229,7 @@ function renderSection(opts: RenderOpts = {}) {
       routePoints={opts.routePoints}
       fsdEvidence={opts.fsdEvidence}
       embedded={opts.embedded}
+      localEvidence={opts.localEvidence}
     />,
   );
 }
@@ -571,6 +573,15 @@ describe('RouteMapSection — imperial preference', () => {
 
 /* ── LAYER SWITCHER INTERACTION ────────────────────────────────────────────── */
 describe('RouteMapSection — layer switcher', () => {
+  it('draws the recorded private route without mounting an external tile layer', () => {
+    renderSection({
+      drive: makeDrive({ positions: [makePos(...START), makePos(...END)] }),
+      trail: SPREAD_TRAIL, startPos: START, endPos: END, speedSegments: SEGMENTS, localEvidence: true,
+    });
+    expect(screen.getByRole('region', { name: 'Route map' })).toHaveAttribute('data-route-mode', 'path');
+    expect(screen.queryByTestId('tile-layer')).not.toBeInTheDocument();
+  });
+
   it('drives the tile-layer style when a layer button is clicked', () => {
     renderMeaningfulRoute();
 

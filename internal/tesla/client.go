@@ -26,6 +26,7 @@ import (
 // Client is a resilient Tesla Fleet API client with circuit breaker and rate limiter.
 type Client struct {
 	httpClient       *http.Client
+	privateClient    *http.Client
 	proxyClient      *http.Client
 	baseURL          string
 	commandProxyURL  string
@@ -55,7 +56,7 @@ type EndpointControlsReader interface {
 }
 
 // SetEndpointControlsReader is called by the composition root before requests
-// begin. A nil reader leaves standalone Tesla clients unrestricted.
+// begin. A nil reader leaves standalone Tesla clients unrestricted except for Smart Features.
 func (c *Client) SetEndpointControlsReader(reader EndpointControlsReader) {
 	c.budgetMu.Lock()
 	c.endpointControls = reader
@@ -106,7 +107,13 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	}
 
 	c := &Client{
-		httpClient:      &http.Client{Timeout: cfg.Timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)},
+		httpClient: &http.Client{Timeout: cfg.Timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)},
+		privateClient: &http.Client{
+			Timeout: cfg.Timeout,
+			// Private requests use a templated span instead of a transport span containing the concrete URL.
+			Transport:     otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithFilter(func(*http.Request) bool { return false })),
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		},
 		proxyClient:     proxyClient,
 		baseURL:         cfg.BaseURL,
 		commandProxyURL: cfg.CommandProxyURL,
@@ -300,16 +307,30 @@ func (c *Client) RevokeVehicleInvitation(ctx context.Context, vin, invitationID 
 var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 
 // doRequest performs an authenticated API request through the circuit breaker.
-func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) (respBody []byte, statusCode int, err error) {
+func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
+	return c.doFleetRequest(ctx, method, path, body, "", "")
+}
+
+func (c *Client) doFleetRequest(ctx context.Context, method, path string, body io.Reader, privatePath, privateToken string) ([]byte, int, error) {
+	return c.doFleetRequestAdmitted(ctx, method, path, body, privatePath, privateToken, nil)
+}
+
+func (c *Client) doFleetRequestAdmitted(
+	ctx context.Context, method, path string, body io.Reader, privatePath, privateToken string, admit func(context.Context) error,
+) (respBody []byte, statusCode int, err error) {
 	if err := c.checkEndpointControls(ctx, method, path); err != nil {
 		return nil, http.StatusForbidden, err
 	}
-	ctx, span := startSpan(ctx, "tesla.HTTP "+method+" "+path,
+	telemetryPath, client := path, c.httpClient
+	if privatePath != "" {
+		telemetryPath, client = privatePath, c.privateClient
+	}
+	ctx, span := startSpan(ctx, "tesla.HTTP "+method+" "+telemetryPath,
 		attribute.String("http.request.method", method),
-		attribute.String("tesla.api.path", path),
+		attribute.String("tesla.api.path", telemetryPath),
 	)
 	defer func() {
-		recordHTTPStatus(span, method, c.baseURL+path, statusCode)
+		recordHTTPStatus(span, method, c.baseURL+telemetryPath, statusCode)
 		endSpan(span, &err)
 	}()
 
@@ -318,6 +339,11 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 	}
 	if budgetErr := c.reserveBudget(ctx, method, path); budgetErr != nil {
 		return nil, budgetHTTPStatus(budgetErr), budgetErr
+	}
+	if admit != nil {
+		if err := admit(ctx); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	url := c.baseURL + path
@@ -328,29 +354,58 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 		reqBodyBytes, _ = io.ReadAll(body)
 		body = bytes.NewReader(reqBodyBytes)
 	}
+	if isSmartFeaturesRequest(ctx) {
+		// Rate, budget and feature admission may have taken time.
+		if err := c.checkEndpointControls(ctx, method, path); err != nil {
+			return nil, http.StatusForbidden, err
+		}
+	}
 
 	result, cbErr := c.cb.Execute(func() (interface{}, error) {
 		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
 		if reqErr != nil {
+			if privatePath != "" {
+				return nil, &privateFleetRequestError{cause: reqErr}
+			}
 			return nil, fmt.Errorf("create request: %w", reqErr)
 		}
 
-		c.mu.RLock()
-		token := c.accessToken
-		c.mu.RUnlock()
+		token := privateToken
+		if privatePath == "" {
+			c.mu.RLock()
+			token = c.accessToken
+			c.mu.RUnlock()
+		}
 
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
+		if admit != nil {
+			req.GetBody = nil
+		}
 
-		resp, doErr := c.httpClient.Do(req)
+		resp, doErr := client.Do(req)
 		if doErr != nil {
+			if privatePath != "" {
+				return nil, &privateFleetRequestError{cause: doErr}
+			}
 			return nil, fmt.Errorf("do request: %w", doErr)
 		}
 		defer resp.Body.Close()
 
-		data, readErr := io.ReadAll(resp.Body)
+		var response io.Reader = resp.Body
+		const maxPrivateResponseBytes = 1 << 20
+		if privatePath != "" {
+			response = io.LimitReader(response, maxPrivateResponseBytes+1)
+		}
+		data, readErr := io.ReadAll(response)
 		if readErr != nil {
+			if privatePath != "" {
+				return nil, &privateFleetRequestError{cause: readErr}
+			}
 			return nil, fmt.Errorf("read body: %w", readErr)
+		}
+		if privatePath != "" && len(data) > maxPrivateResponseBytes {
+			return nil, errors.New("private Tesla response exceeds size limit")
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -380,9 +435,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 				errRespBody = resp.Body
 			}
 		}
-		if c.logCallback != nil {
-			c.logCallback(method, url, errStatus, reqBodyBytes, errRespBody, durationMs, cbErr)
-		}
+		c.auditRequest(method, telemetryPath, errStatus, reqBodyBytes, errRespBody, durationMs, cbErr, privatePath != "")
 		err = cbErr
 		statusCode = errStatus
 		respBody = errRespBody
@@ -391,16 +444,29 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 
 	resp := result.(*apiResponse)
 
-	if c.logCallback != nil {
-		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
-	}
+	c.auditRequest(method, telemetryPath, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil, privatePath != "")
 
 	respBody = resp.Body
 	statusCode = resp.StatusCode
 	return respBody, statusCode, nil
 }
 
+func (c *Client) auditRequest(method, path string, status int, request, response []byte, duration int, err error, private bool) {
+	if c.logCallback == nil {
+		return
+	}
+	if private {
+		request, response = nil, nil
+	}
+	c.logCallback(method, c.baseURL+path, status, request, response, duration, err)
+}
+
 type apiResponse struct {
 	StatusCode int
 	Body       []byte
 }
+
+type privateFleetRequestError struct{ cause error }
+
+func (e *privateFleetRequestError) Error() string { return "private Tesla request failed" }
+func (e *privateFleetRequestError) Unwrap() error { return e.cause }

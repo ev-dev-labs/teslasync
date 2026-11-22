@@ -13,6 +13,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -24,12 +25,19 @@ type drivingStatsRangeReader interface {
 	GetStatsInRange(context.Context, int64, time.Time, time.Time) (drivedb.DrivingStats, error)
 }
 
+type driveHistoryReader interface {
+	HistoryPage(context.Context, int64, int, int, time.Time, time.Time) ([]*drivemodel.Drive, error)
+	HistoryCount(context.Context, int64, time.Time, time.Time) (int, error)
+	HistoryRange(context.Context, int64, time.Time, time.Time) ([]*drivemodel.Drive, error)
+}
+
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
 	db                *database.DB
 	driveRepo         *drivedb.DriveRepo
 	statsRepo         drivingStatsReader
 	statsRangeRepo    drivingStatsRangeReader
+	historyRepo       driveHistoryReader
 	posRepo           *positiondb.PositionRepo
 	signalLogReader   *signaldb.SignalLogReader
 	live              signal.LiveStateReader
@@ -49,6 +57,7 @@ func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler
 		driveRepo:       driveRepo,
 		statsRepo:       driveRepo,
 		statsRangeRepo:  driveRepo,
+		historyRepo:     driveRepo,
 		posRepo:         positiondb.NewPositionRepo(db),
 		signalLogReader: signaldb.NewSignalLogReader(db),
 		live:            live,

@@ -18,8 +18,8 @@ export interface KVListProps {
   items: readonly KVItem[] | null | undefined;
   /** 1 = stacked rows (default); 2 = two-column grid. */
   columns?: 1 | 2;
-  /** Row presentation. Responsive stacks below 24rem per allocated column. */
-  layout?: 'inline' | 'stacked' | 'responsive';
+  /** Responsive stacks below 24rem per allocated column; tiles fit the available width. */
+  layout?: 'inline' | 'stacked' | 'responsive' | 'tiles';
   /** Allow inline labels/values to wrap. Stacked/responsive always wrap. */
   wrap?: boolean;
   className?: string;
@@ -64,8 +64,10 @@ export function KVList({
       data-app-part="list"
       data-app-list="definitions"
       className={cn(
-        'divide-y divide-gray-200 dark:divide-gray-700',
-        columns === 2 && 'grid grid-cols-2 gap-x-6',
+        layout === 'tiles'
+          ? 'grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-2'
+          : 'divide-y divide-gray-200 dark:divide-gray-700',
+        columns === 2 && layout !== 'tiles' && 'grid grid-cols-2 gap-x-6',
         layout === 'responsive' && '@container/kv-list',
         className,
       )}
@@ -81,6 +83,7 @@ export function KVList({
             layout === 'inline' && 'flex justify-between',
             layout === 'inline' && wrapping && 'min-w-0 gap-3',
             layout === 'stacked' && 'flex min-w-0 flex-col gap-1',
+            layout === 'tiles' && 'flex min-w-0 flex-col gap-2 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3',
             layout === 'responsive' && 'grid min-w-0 grid-cols-1 gap-x-3 gap-y-1',
             // The named query measures this list, not a wide viewport or outer widget.
             layout === 'responsive' && (columns === 2
@@ -115,6 +118,7 @@ export function KVList({
             className={cn(
               cellClasses,
               layout === 'inline' && wrapping && 'flex-1 text-end',
+              layout === 'tiles' && 'mt-auto tabular-nums',
               layout === 'responsive' && (columns === 2
                 ? '@[49.5rem]/kv-list:text-end'
                 : '@[24rem]/kv-list:text-end'),

@@ -9,7 +9,7 @@
 import '@/i18n';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { parse, type Rule } from 'postcss';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, cleanup, act, waitFor } from '@testing-library/react';
@@ -111,15 +111,25 @@ describe('ConfirmDialog — silenceKey', () => {
           details={<p>All affected resources are listed here.</p>}
           onConfirm={vi.fn()} onCancel={vi.fn()} />,
       );
+      const dialog = screen.getByRole('dialog', { name: 'Review warning' });
+      const [header, body, footer] = Array.from(dialog.children);
+      const message = screen.getByText('A warning remains meaningful.');
+      const details = screen.getByText('All affected resources are listed here.');
       const confirm = screen.getByRole('button', { name: confirmLabel });
       const cancel = screen.getByRole('button', { name: cancelLabel });
+      expect(dialog).toHaveAccessibleDescription('A warning remains meaningful.');
+      expect(header).toContainElement(screen.getByRole('heading', { name: 'Review warning' }));
+      expect(body).toHaveAttribute('data-modal-scroll-body', 'true');
+      expect(body).toContainElement(message);
+      expect(body).toContainElement(details);
+      expect(message.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(footer).toHaveAttribute('data-modal-footer', 'true');
+      expect(footer).toContainElement(confirm);
+      expect(footer).toContainElement(cancel);
       expect(confirm).toHaveClass('bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]');
       expect(confirm).not.toHaveClass('bg-amber-500');
       expect(confirm).toHaveClass('whitespace-normal', 'min-h-11');
       expect(cancel).toHaveClass('whitespace-normal', 'min-h-11');
-      expect(confirm.closest('[data-modal-footer]')).toContainElement(cancel);
-      expect(screen.getByText('All affected resources are listed here.')).toBeInTheDocument();
-      expect(screen.getByRole('dialog', { name: 'Review warning' })).toBeInTheDocument();
     });
 
     it('blocks loading confirmation, cancellation, close and Escape without changing silence', () => {
@@ -151,7 +161,19 @@ describe('ConfirmDialog — silenceKey', () => {
         title: 'Delete?', message: 'Cannot be undone.', requireTypedConfirmation: 'DELETE',
         typedConfirmationLabel: 'Enter the exact safety phrase', onConfirm, onCancel: vi.fn(),
       };
-      const { rerender } = render(<ConfirmDialog {...props} open confirmDisabled />);
+      const onOpenCommit = vi.fn();
+      function Probe({ open, confirmDisabled }: { open: boolean; confirmDisabled?: boolean }) {
+        useLayoutEffect(() => {
+          if (open) {
+            const input = screen.getByRole<HTMLInputElement>('textbox', { name: props.typedConfirmationLabel });
+            const confirm = screen.getByRole<HTMLButtonElement>('button', { name: 'Confirm' });
+            onOpenCommit(input.value, confirm.disabled);
+          }
+        }, [open]);
+        return <ConfirmDialog {...props} open={open} confirmDisabled={confirmDisabled} />;
+      }
+
+      const { rerender } = render(<Probe open confirmDisabled />);
       const input = screen.getByRole('textbox', { name: props.typedConfirmationLabel });
       expect(input).toHaveAttribute('autocomplete', 'off');
       expect(input).toHaveAttribute('spellcheck', 'false');
@@ -159,12 +181,13 @@ describe('ConfirmDialog — silenceKey', () => {
       expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
       fireEvent.change(input, { target: { value: 'DELETE' } });
       expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
-      rerender(<ConfirmDialog {...props} open />);
+      rerender(<Probe open />);
       fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
-      rerender(<ConfirmDialog {...props} open={false} />);
+      rerender(<Probe open={false} />);
       expect(screen.queryByRole('dialog')).toBeNull();
-      rerender(<ConfirmDialog {...props} open />);
+      rerender(<Probe open />);
+      expect(onOpenCommit).toHaveBeenNthCalledWith(2, '', true);
       expect(screen.getByRole('textbox', { name: props.typedConfirmationLabel })).toHaveValue('');
       expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
     });

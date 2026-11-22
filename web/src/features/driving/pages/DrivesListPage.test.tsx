@@ -3,7 +3,7 @@
  *
  * The page exposes a single default export (the drive-history page). This suite
  * drives it through every meaningful branch by mocking its data hooks
- * (`useDrives` / `useBulkDeleteDrives`), the selected vehicle, and the unit
+ * (Drive grid reads and `useBulkDeleteDrives`), the selected vehicle, and the unit
  * preference. The SI → display converters (`@/lib/unitConversion`), number
  * formatters (`@/lib/numberFormat`), date helpers (`@/lib/dateFormat`), and the
  * pure aggregation library (`@/lib/drivesAggregation`) are the REAL
@@ -17,7 +17,7 @@
  *     "no drives" empty state (regression guard for the loading branch).
  *   - primary-resource error surfaces the message + withholds the drive list.
  *   - populated (km): honest KPI tiles, the no-prior-period comparison label,
- *     the period-highlights read-outs, grouped drive rows, and hook wiring.
+ *     the period-highlights read-outs, shared grid rows, and hook wiring.
  *   - unit boundary (mi): re-labels headers + runs the real SI converter.
  *   - collections: pill counts (all/anomalies/notable/commutes) + filtering.
  *   - anomaly callout links into the anomalies collection.
@@ -183,7 +183,9 @@ vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: vi.fn(() => false) }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useCrossTabRefresh', () => ({ useCrossTabRefresh: vi.fn() }));
 
-import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { useDriveGridPage, useDriveGridOverview, type DriveGridScope, type DriveGridQuery } from '@/api/hooks/useDriveGrid';
+import { driveGridFixture } from '../../../../e2e/driveGridFixture';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -191,7 +193,15 @@ import { useUnits } from '@/hooks/useUnits';
 import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import DrivesListPage from './DrivesListPage';
 
-const mockDrives = useDrives as unknown as ReturnType<typeof vi.fn>;
+vi.mock('@/api/hooks/useDriveGrid', () => ({
+  useDriveGridPage: vi.fn(),
+  useDriveGridOverview: vi.fn(),
+  useDriveGridValues: vi.fn((_vehicle, scope, field) => driveQuery(scope, fixture => fixture.facets(field))),
+  DRIVE_GRID_MAX_SELECTION: 500,
+}));
+const mockDrives = vi.fn();
+const mockGridPage = vi.mocked(useDriveGridPage);
+const mockOverview = vi.mocked(useDriveGridOverview);
 const mockBulkDelete = useBulkDeleteDrives as unknown as ReturnType<typeof vi.fn>;
 const mockFsdInsights = useFsdInsightsRange as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -212,6 +222,12 @@ function makeQuery(over: Record<string, unknown> = {}) {
     refetch: vi.fn(),
     ...over,
   };
+}
+
+function driveQuery(scope: DriveGridScope, select: (fixture: ReturnType<typeof driveGridFixture>) => unknown) {
+  const query = mockDrives();
+  const fsd = mockFsdInsights()?.data?.drive_analytics?.contributing_drives ?? [];
+  return { ...query, data: Array.isArray(query.data) ? select(driveGridFixture(query.data, scope, fsd)) : query.data };
 }
 
 let mutateAsyncSpy: ReturnType<typeof vi.fn>;
@@ -288,7 +304,7 @@ const TOTAL_WH = 7500 * 3 + 26250; // 48.75 kWh
 const AVG_EFF_WH_KM = TOTAL_WH / (TOTAL_M / 1000); // distance weighted
 const COST_PER_KWH = 0.12; // matches the global useSettings stub
 
-const FLEET = [{ id: 7, display_name: 'Model 3', vin: 'VIN7' }] as unknown as Vehicle[];
+const FLEET = [{ id: 7, display_name: 'Model 3', displayName: 'Model 3', vin: 'VIN7' }] as unknown as Vehicle[];
 
 function selected(vehicleId: number | null) {
   return {
@@ -338,7 +354,31 @@ function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
 const kpiRegion = () => screen.getByRole('region', { name: 'Overview' });
 const listRegion = () => screen.getByRole('region', { name: 'Drive list' });
 const analysisRegion = () => screen.getByRole('region', { name: 'Trends and highlights' });
-const filtersBar = () => screen.getByRole('group', { name: 'Filter drives by collection · Filter drives by FSD evidence' });
+const evidenceTable = () => within(listRegion()).getByRole('table', { name: 'Drive evidence' });
+const driveCheckbox = (date: string) => within(evidenceTable()).getByRole('checkbox', { name: new RegExp(`Select ${date}`) });
+const defaultColumns = ['route', 'date', 'distance', 'duration', 'energy', 'status', 'actions'];
+const driveLayoutKey = 'teslasync.table.drives:evidence.columns';
+function showDriveColumns(...keys: string[]) {
+  localStorage.setItem(driveLayoutKey, JSON.stringify({ order: [...defaultColumns, ...keys], hidden: [] }));
+}
+function allocatedGridWidth(width: number) {
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(target: HTMLElement) {
+      if (target.hasAttribute('data-grid-frame')) {
+        this.callback([{ target, contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+    }
+    disconnect() {}
+    unobserve() {}
+  });
+}
+function openColumnTools(column: string) {
+  fireEvent.click(screen.getByRole('button', { name: 'Filter & sort' }));
+  const picker = screen.getByRole('dialog', { name: 'Filter & sort' });
+  fireEvent.change(within(picker).getByRole('combobox', { name: 'Column' }), { target: { value: column } });
+  return within(picker);
+}
 
 /** Read the validated value belonging to this overview metric, not its detail. */
 function cardValue(region: HTMLElement, label: string): string {
@@ -347,6 +387,8 @@ function cardValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  localStorage.removeItem(driveLayoutKey);
+  localStorage.removeItem('teslasync.table.drives:evidence.visible');
   timezoneState.tz = 'UTC';
   mockDrives.mockReset();
   mockBulkDelete.mockReset();
@@ -364,6 +406,9 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(makeUnits('km'));
   mockDrives.mockReturnValue(makeQuery({ data: DRIVES }));
+  mockGridPage.mockImplementation((_vehicle, scope, grid: DriveGridQuery, page, size) =>
+    driveQuery(scope, fixture => fixture.page(grid, page, size)));
+  mockOverview.mockImplementation((_vehicle, scope, prior) => driveQuery(scope, fixture => fixture.overview(prior)));
   mockFsdInsights.mockReturnValue(makeQuery({
     data: { drive_analytics: { contributing_drives: [] } },
   }));
@@ -371,6 +416,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe('DrivesListPage — no vehicle selected', () => {
@@ -447,7 +493,7 @@ describe('DrivesListPage — primary error', () => {
     // …the page-level error surface stays away…
     expect(screen.queryByText("Can't reach server")).toBeNull();
     // …and a non-blocking notice explains why the numbers may lag.
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
   });
 
   it('retains both sources and selected IDs through failed background refreshes', async () => {
@@ -459,19 +505,19 @@ describe('DrivesListPage — primary error', () => {
     });
     mockDrives.mockReturnValue(historyQuery);
     mockFsdInsights.mockReturnValue(fsdQuery);
+    showDriveColumns('fsd');
     const { rerender } = renderPage();
-    const selections = within(listRegion()).getAllByRole('checkbox');
-    fireEvent.click(selections[0]);
+    fireEvent.click(driveCheckbox('Apr 24'));
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
     mockDrives.mockReturnValue({ ...historyQuery, isError: true, error: new Error('drive refresh') });
     mockFsdInsights.mockReturnValue({ ...fsdQuery, isError: true, error: new Error('FSD refresh') });
     // Reuse the mounted tree so selection is genuinely retained.
     rerender(<><DrivesListPage /><LocationProbe /></>);
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
     expect(screen.getByText('1 selected')).toBeInTheDocument();
-    expect(within(listRegion()).getAllByRole('checkbox')[0]).toBeChecked();
+    expect(within(evidenceTable()).getByRole('checkbox', { name: /Deselect Apr 24/ })).toBeChecked();
     expect(within(listRegion()).getByText('Home → Beach')).toBeInTheDocument();
-    expect(within(listRegion()).getByText('FSD 50.00%')).toBeInTheDocument();
+    expect(within(listRegion()).getByText('50.00%')).toBeInTheDocument();
     expect(mutateAsyncSpy).not.toHaveBeenCalled();
   });
 
@@ -601,7 +647,7 @@ describe('DrivesListPage — populated (km)', () => {
     expect(within(analysis).getByText(formatDurationMinutes(75))).toBeInTheDocument();
   });
 
-  it('renders grouped drive rows and wires the hook with the vehicle id', () => {
+  it('renders the six core grid columns and wires the hook with the vehicle id', () => {
     renderPage();
     const list = listRegion();
 
@@ -611,23 +657,16 @@ describe('DrivesListPage — populated (km)', () => {
     // Route addresses render.
     expect(within(list).getByText(/Beach/)).toBeInTheDocument();
     expect(within(list).getAllByText(/Office/).length).toBeGreaterThanOrEqual(1);
-    // Day-group headers (UTC bucketing via the global useTimezone stub).
-    expect(screen.getByText('Apr 24, 2026')).toBeInTheDocument();
-    expect(screen.getByText('Apr 20, 2026')).toBeInTheDocument();
-    // Hook wiring: stringified vehicle id plus a server-side window.
-    // The window must span the prior comparison period (Mar 2 – Mar 31 for
-    // this April range) and is padded a day either side because the API
-    // filters in UTC while this page buckets by the vehicle's local day.
-    // Without the explicit limit the API's 50-row default page silently
-    // truncated the list no matter what range or page size was requested.
-    expect(mockDrives).toHaveBeenCalledWith('7', {
-      start: '2026-03-01',
-      end: '2026-05-01',
-      limit: 1000,
-    });
+    expect(Array.from(evidenceTable().querySelectorAll('thead [data-column-key]'), cell => cell.getAttribute('data-column-key')))
+      .toEqual(defaultColumns);
+    expect(within(evidenceTable()).getByRole('link', { name: /Apr 24/ })).toHaveAttribute('href', '/drives/1');
+    expect(within(evidenceTable()).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
+    const scope = { start: '2026-04-01T00:00:00.000Z', end: '2026-05-01T00:00:00.000Z', timezone: 'UTC' };
+    expect(mockGridPage).toHaveBeenCalledWith(7, scope, expect.objectContaining({ sort: 'date' }), 1, 50);
+    expect(mockOverview).toHaveBeenCalledWith(7, scope, '2026-03-02T00:00:00.000Z');
   });
 
-  it('labels the current vehicle-local day as Today after UTC has rolled over', () => {
+  it('keeps the displayed date vehicle-local after UTC has rolled over', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-28T02:23:00Z'));
     timezoneState.tz = 'America/Los_Angeles';
@@ -642,12 +681,10 @@ describe('DrivesListPage — populated (km)', () => {
       ],
     }));
 
-    renderPage(['/drives?from=2026-08-27&to=2026-08-27']);
+    renderPage(['/drives?from=2026-08-27&to=2026-08-27&grid_date=2026-08-27']);
 
     const list = listRegion();
-    expect(within(list).getByText('Aug 27, 2026')).toBeInTheDocument();
-    expect(within(list).getByText(/· Today/)).toBeInTheDocument();
-    expect(within(list).queryByText(/· Yesterday/)).not.toBeInTheDocument();
+    expect(within(list).getByRole('link', { name: /Aug 27/ })).toHaveAttribute('href', '/drives/27');
   });
 });
 
@@ -711,39 +748,29 @@ describe('DrivesListPage — unit boundary (miles)', () => {
 });
 
 describe('DrivesListPage — collections', () => {
-  it('presents collection filters as pressed buttons, not document tabs', async () => {
+  it('filters review status from the column without a second Drive history heading', () => {
+    mockMediaQuery.mockReturnValue(true);
+    allocatedGridWidth(1100);
     renderPage();
-    const list = filtersBar();
-    expect(list).toHaveAttribute('role', 'group');
-    expect(within(list).queryByRole('tablist')).toBeNull();
-    const all = within(list).getByRole('button', { name: /All/ });
-    expect(all).toHaveAttribute('aria-pressed', 'true');
-    expect(all).not.toHaveAttribute('aria-selected');
-    expect(within(list).queryByRole('button', { name: /All FSD data/ })).toBeNull();
-    fireEvent.keyDown(all, { key: 'ArrowRight' });
-    expect(all).toHaveAttribute('aria-pressed', 'true');
-    const notable = within(list).getByRole('button', { name: /Notable/ });
-    expect(notable).toHaveAttribute('tabindex', '0');
-    fireEvent.click(notable);
-    expect(screen.getByTestId('location')).toHaveTextContent('coll=notable');
-    await waitFor(() => expect(within(filtersBar()).getByRole('button', { name: /Notable/ })).toHaveAttribute('aria-pressed', 'true'));
-    expect(within(filtersBar()).getAllByRole('button', { pressed: true })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: /^Drive history$/i })).toHaveLength(1);
+    expect(within(listRegion()).queryByRole('button', { name: 'Longest drives' })).not.toBeInTheDocument();
+    const table = within(evidenceTable());
+    fireEvent.change(table.getByRole('combobox', { name: 'Filter drive status' }), { target: { value: 'needsReview' } });
+    expect(screen.getByTestId('location')).toHaveTextContent('grid_status=needsReview');
+    expect(table.getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
+    expect(table.getByRole('link', { name: /Apr 20/ })).toBeInTheDocument();
   });
 
   it('counts each collection and filters the list when one is chosen', async () => {
     renderPage();
-    const bar = filtersBar();
-
-    expect(within(bar).getByRole('button', { name: /All/ })).toHaveTextContent('(4)');
-    expect(within(bar).getByRole('button', { name: /Anomalies/ })).toHaveTextContent('(1)');
-    expect(within(bar).getByRole('button', { name: /Commutes/ })).toHaveTextContent('(3)');
-    expect(bar.querySelector('svg')).toBeNull();
-    expect(within(bar).getByRole('button', { name: /All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(bar).getByRole('button', { name: /Anomalies/ })).toHaveClass('border-[var(--control-border)]');
-    // Tagged is not implemented yet → disabled.
-    expect(within(bar).getByRole('button', { name: /Tagged/ })).toBeDisabled();
-
-    fireEvent.click(within(bar).getByRole('button', { name: /Commutes/ }));
+    const picker = openColumnTools('date');
+    fireEvent.click(picker.getByRole('button', { name: 'Other conditions' }));
+    const collection = within(picker.getByRole('combobox', { name: 'Filter drives by collection' }));
+    expect(collection.getByRole('option', { name: 'All drives (4)', selected: true })).toBeInTheDocument();
+    expect(collection.getByRole('option', { name: 'Anomalies (1)' })).toBeInTheDocument();
+    expect(collection.getByRole('option', { name: 'Tagged (0)' })).toBeDisabled();
+    fireEvent.change(picker.getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'commutes' } });
+    fireEvent.click(picker.getByRole('button', { name: 'Done' }));
 
     await waitFor(() => {
       expect(within(listRegion()).queryByText(/Beach/)).toBeNull();
@@ -755,8 +782,18 @@ describe('DrivesListPage — collections', () => {
 });
 
 describe('DrivesListPage — desktop evidence grid', () => {
+  it('shows the route without repeating the selected vehicle name', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage();
+
+    const routeLink = within(evidenceTable()).getByRole('link', { name: /Home → Office.*Apr 24/ });
+    expect(routeLink).toHaveAttribute('href', '/drives/1');
+    expect(routeLink.closest('td')).not.toHaveTextContent('Model 3');
+  });
+
   it('filters Start and Destination independently before pagination', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('start', 'destination');
     renderPage([`${DEFAULT_RANGE}&grid_start=HOME&grid_destination=office&size=1&page=2`]);
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
@@ -767,6 +804,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('splits battery readings and sorts consumed percentage points in both directions', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('startBattery', 'battery', 'batteryUsed');
     renderPage([`${DEFAULT_RANGE}&grid_start_battery=85&sort=batteryUsed`]);
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     expect(within(table).getAllByRole('link', { name: /Apr/ })[0]).toHaveAttribute('href', '/drives/4');
@@ -780,6 +818,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('filters power in display units and accepts negative outdoor temperatures', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('avgPower', 'outsideTemp');
     mockDrives.mockReturnValue(makeQuery({ data: [
       { ...DRIVES[0], avgPowerW: 12000, outsideTempAvgC: -5, regenEnergyWh: 1000 },
       { ...DRIVES[1], avgPowerW: 9000, outsideTempAvgC: -10, regenEnergyWh: 500 },
@@ -794,6 +833,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('accepts battery gains in the numeric condition without treating them as invalid', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('batteryUsed');
     mockDrives.mockReturnValue(makeQuery({ data: [
       { ...DRIVES[0], endBatteryPct: 85 },
       { ...DRIVES[1], endBatteryPct: 80 },
@@ -806,9 +846,10 @@ describe('DrivesListPage — desktop evidence grid', () => {
     expect(within(screen.getByRole('dialog', { name: 'Battery used (pp) filter' })).getByRole('spinbutton')).not.toHaveAttribute('min');
   });
 
-  it('keeps column filters hidden until opened and filters the whole result before pagination', async () => {
+  it('filters the whole result before pagination directly from a wide column heading', async () => {
     mockMediaQuery.mockReturnValue(true);
-    renderPage();
+    allocatedGridWidth(1100);
+    renderPage([`${DEFAULT_RANGE}&size=1&page=2`]);
 
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     const frame = table.closest('[data-grid-frame]');
@@ -817,25 +858,21 @@ describe('DrivesListPage — desktop evidence grid', () => {
     expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
     expect(screen.getByRole('button', { name: 'Next page' })).toBe(footer?.querySelector('[aria-label="Next page"]'));
     expect(screen.queryByRole('tablist')).toBeNull();
-    expect(screen.queryByPlaceholderText('Min')).toBeNull();
-    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
-    fireEvent.click(within(table).getByRole('button', { name: 'Distance (km) filter' }));
-    const filter = screen.getByRole('dialog', { name: 'Distance (km) filter' });
-    fireEvent.click(within(filter).getByRole('button', { name: 'Number condition' }));
-    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '50' } });
+    expect(within(table).getByRole('link', { name: /Apr 23/ })).toHaveAttribute('href', '/drives/2');
+    const filter = within(table).getByRole('spinbutton', { name: 'Minimum Distance (km)' });
+    fireEvent.change(filter, { target: { value: '50' } });
 
     await waitFor(() => {
       expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(1);
       expect(within(table).getByRole('link', { name: /Apr 20/ })).toHaveAttribute('href', '/drives/4');
     });
+    expect(screen.getByTestId('location')).not.toHaveTextContent('page=2');
     expect(within(table).getByRole('button', { name: 'Distance (km) filter' })).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '500' } });
+    fireEvent.change(filter, { target: { value: '500' } });
     expect(within(table).getByText('No drives match these filters')).toBeInTheDocument();
-    fireEvent.change(within(filter).getByRole('spinbutton', { name: 'Minimum Distance (km)' }), { target: { value: '' } });
-    expect(within(table).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'Distance (km) filter' })).toBeNull();
+    fireEvent.change(filter, { target: { value: '' } });
+    expect(within(table).getByRole('link', { name: /Apr 24/ })).toHaveAttribute('href', '/drives/1');
   });
 
   it('sorts from column headers in both directions and keeps selection and preview', async () => {
@@ -859,6 +896,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('selects collections and FSD confidence from header filters without another filter rail', async () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('fsd');
     mockFsdInsights.mockReturnValue(makeQuery({
       data: { drive_analytics: { contributing_drives: [
         { drive_id: 1, fsd_distance_m: 28_800, fsd_share_pct: 72, confidence: 'high', reset_affected: false },
@@ -882,6 +920,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('uses concise headings and only meaningful indicators', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('regen', 'fsd', 'startBattery', 'efficiency');
     renderPage();
     const table = screen.getByRole('table', { name: 'Drive evidence' });
     for (const label of ['Energy', 'Regen', 'FSD']) {
@@ -922,6 +961,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('combines value selections and preserves another column when clearing', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('start', 'destination');
     const values = encodeURIComponent(JSON.stringify({ start: ['"Home"'], destination: ['"Beach"'] }));
     renderPage([`${DEFAULT_RANGE}&grid_values=${values}`]);
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
@@ -947,6 +987,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
   it('shows an explicit error for malformed saved filters and recovers', () => {
     mockMediaQuery.mockReturnValue(true);
+    showDriveColumns('start');
     renderPage([`${DEFAULT_RANGE}&grid_values=${encodeURIComponent('{broken')}`]);
     expect(screen.getAllByText('This saved value filter is invalid. Clear it to reset.').length).toBeGreaterThan(0);
     const table = () => screen.getByRole('table', { name: 'Drive evidence' });
@@ -972,6 +1013,7 @@ describe('DrivesListPage — desktop evidence grid', () => {
 
 describe('DrivesListPage — FSD evidence', () => {
   it('shows badges and filters drives by attribution confidence', async () => {
+    allocatedGridWidth(390);
     mockFsdInsights.mockReturnValue(makeQuery({
       data: {
         drive_analytics: {
@@ -986,14 +1028,16 @@ describe('DrivesListPage — FSD evidence', () => {
     }));
     renderPage();
 
-    expect(within(listRegion()).getByText('FSD 72.00%')).toBeInTheDocument();
+    expect(within(listRegion()).getByText('72.00%')).toBeInTheDocument();
     expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
-    const bar = filtersBar();
-    expect(within(bar).getByRole('button', { name: /^All/ })).toHaveClass('bg-[var(--theme-primary)]');
-    expect(within(bar).getByRole('button', { name: /High confidence/ })).toHaveTextContent('(1)');
-    expect(within(bar).getByRole('button', { name: /Unknown/ })).toHaveTextContent('(1)');
-    fireEvent.click(within(bar).getByRole('button', { name: /High confidence/ }));
+    const tools = openColumnTools('fsd');
+    fireEvent.click(tools.getByRole('button', { name: 'Conditions' }));
+    const confidence = tools.getByRole('combobox', { name: 'Filter drives by FSD evidence' });
+    expect(within(confidence).getByRole('option', { name: 'High confidence (1)' })).toBeInTheDocument();
+    expect(within(confidence).getByRole('option', { name: 'Unknown (1)' })).toBeInTheDocument();
+    fireEvent.change(confidence, { target: { value: 'high' } });
+    fireEvent.click(tools.getByRole('button', { name: 'Done' }));
 
     await waitFor(() => {
       expect(listRegion().querySelector('a[href="/drives/1"]')).not.toBeNull();
@@ -1001,10 +1045,11 @@ describe('DrivesListPage — FSD evidence', () => {
       expect(listRegion().querySelector('a[href="/drives/3"]')).toBeNull();
       expect(listRegion().querySelector('a[href="/drives/4"]')).toBeNull();
     });
-    expect(within(filtersBar()).getAllByRole('button', { pressed: true })).toHaveLength(1);
-    fireEvent.click(within(filtersBar()).getByRole('button', { name: /Anomalies/ }));
-    await waitFor(() => expect(within(filtersBar()).getByRole('button', { name: /Anomalies/ })).toHaveAttribute('aria-pressed', 'true'));
-    expect(within(filtersBar()).getByRole('button', { name: /High confidence/ })).toHaveAttribute('aria-pressed', 'false');
+    const collectionTools = openColumnTools('date');
+    fireEvent.click(collectionTools.getByRole('button', { name: 'Other conditions' }));
+    fireEvent.change(collectionTools.getByRole('combobox', { name: 'Filter drives by collection' }), { target: { value: 'anomalies' } });
+    expect(screen.getByTestId('location')).toHaveTextContent('coll=anomalies');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('fsd=high');
   });
 
   it('keeps drive rows visible and does not classify missing query data as unknown', () => {
@@ -1024,12 +1069,12 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    const unknown = within(filtersBar()).getByRole('button', { name: /Unknown/ });
-    expect(unknown).not.toHaveTextContent('(0)');
-    expect(unknown).toBeDisabled();
-
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetchFsd).toHaveBeenCalledOnce();
+    const tools = openColumnTools('fsd');
+    fireEvent.click(tools.getByRole('button', { name: 'Conditions' }));
+    expect(tools.getByRole('combobox', { name: 'Filter drives by FSD evidence' })).toBeDisabled();
+    expect(tools.getByRole('option', { name: 'Unknown' })).toBeDisabled();
   });
 
   it('ignores persisted FSD filters when an older API omits drive analytics', () => {
@@ -1047,8 +1092,8 @@ describe('DrivesListPage — FSD evidence', () => {
         .map((link) => link.getAttribute('href')),
     );
     expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
-    expect(within(filtersBar()).getByRole('button', { name: /Unknown/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
+    const tools = openColumnTools('fsd');
+    expect(tools.queryByRole('button', { name: /Sort (ascending|descending)/ })).toBeNull();
   });
 
   it('refreshes drive history and FSD evidence locally and across tabs', async () => {
@@ -1070,7 +1115,7 @@ describe('DrivesListPage — FSD evidence', () => {
     });
 
     expect(refreshAcrossTabsSpy).toHaveBeenCalledOnce();
-    expect(refetchDrives).toHaveBeenCalledOnce();
+    expect(refetchDrives).toHaveBeenCalledTimes(2);
     expect(refetchFsd).toHaveBeenCalledOnce();
   });
 
@@ -1084,8 +1129,10 @@ describe('DrivesListPage — FSD evidence', () => {
       expect.any(String),
       'UTC',
     );
-    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
-    expect(within(filtersBar()).getByRole('button', { name: /High confidence/ })).toBeDisabled();
+    const tools = openColumnTools('fsd');
+    expect(tools.queryByRole('button', { name: /Sort (ascending|descending)/ })).toBeNull();
+    fireEvent.click(tools.getByRole('button', { name: 'Conditions' }));
+    expect(tools.getByRole('option', { name: 'High confidence' })).toBeDisabled();
   });
 });
 
@@ -1139,23 +1186,17 @@ describe('DrivesListPage — search', () => {
 });
 
 describe('DrivesListPage — sort controls', () => {
-  it('toggles aria-pressed and moves the active sort off the default', () => {
+  it('changes field and direction from the shared query row', () => {
+    allocatedGridWidth(1100);
     renderPage();
-
-    const recent = screen.getByRole('button', { name: 'Sort by Recent' });
-    const distance = screen.getByRole('button', { name: 'Sort by Distance' });
-    const fsd = screen.getByRole('button', { name: 'Sort by FSD share' });
-    expect(recent).toHaveAttribute('aria-pressed', 'true');
-    expect(distance).toHaveAttribute('aria-pressed', 'false');
-    expect(fsd).toHaveAttribute('aria-pressed', 'false');
-
-    fireEvent.click(distance);
-
-    expect(screen.getByRole('button', { name: 'Sort by Distance' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Sort by Recent' })).toHaveAttribute('aria-pressed', 'false');
-
-    fireEvent.click(fsd);
-    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toHaveAttribute('aria-pressed', 'true');
+    const sortField = screen.getByRole('combobox', { name: 'Sort by' });
+    expect(sortField).toHaveValue('date');
+    fireEvent.change(sortField, { target: { value: 'distance' } });
+    expect(within(evidenceTable()).getByRole('columnheader', { name: 'Distance (km)' })).toHaveAttribute('aria-sort', 'descending');
+    fireEvent.click(screen.getByRole('button', { name: 'Sort ascending' }));
+    expect(within(evidenceTable()).getByRole('columnheader', { name: 'Distance (km)' })).toHaveAttribute('aria-sort', 'ascending');
+    fireEvent.change(sortField, { target: { value: 'fsd' } });
+    expect(screen.getByTestId('location')).toHaveTextContent('sort=fsd');
   });
 
   it('sorts measured shares ahead of missing shares instead of comparing percentages with metres', () => {
@@ -1226,11 +1267,10 @@ describe('DrivesListPage — bulk delete', () => {
   it('opens comparison with exactly two selected drives encoded in the URL', async () => {
     renderPage();
 
-    const checkboxes = within(listRegion()).getAllByRole('checkbox');
-    fireEvent.click(checkboxes[0]);
+    fireEvent.click(driveCheckbox('Apr 24'));
     expect(await screen.findByRole('button', { name: 'Compare selected' })).toBeDisabled();
 
-    fireEvent.click(within(listRegion()).getAllByRole('checkbox')[1]);
+    fireEvent.click(driveCheckbox('Apr 23'));
     const compare = screen.getByRole('button', { name: 'Compare selected' });
     await waitFor(() => expect(compare).toBeEnabled());
     fireEvent.click(compare);
@@ -1245,9 +1285,7 @@ describe('DrivesListPage — bulk delete', () => {
   it('selects a drive, confirms, and calls the mutation with numeric ids', async () => {
     renderPage();
 
-    const checkboxes = within(listRegion()).getAllByRole('checkbox');
-    // Rows render newest-first; the last checkbox belongs to the 100 km drive (id 4).
-    fireEvent.click(checkboxes[checkboxes.length - 1]);
+    fireEvent.click(driveCheckbox('Apr 20'));
 
     // The bulk toolbar appears with the selection count.
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
@@ -1282,11 +1320,13 @@ describe('DrivesListPage — standard controls', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
       downloads.push(this);
     });
+    allocatedGridWidth(desktop ? 1100 : 390);
     renderPage([`${DEFAULT_RANGE}&q=Office&size=1`]);
     if (desktop) {
       fireEvent.click(within(screen.getByRole('table', { name: 'Drive evidence' })).getByRole('checkbox', { name: /Select.*Apr/ }));
     } else {
-      fireEvent.click(within(listRegion()).getByRole('checkbox'));
+      fireEvent.click(within(listRegion()).getByRole('button', { name: 'Select', exact: true }));
+      fireEvent.click(within(listRegion()).getByRole('checkbox', { name: /Select Apr/ }));
       fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
     }
     expect(screen.getByText('Exports include every drive in the selected vehicle and date range, without list filters or selection.')).toBeInTheDocument();
@@ -1304,7 +1344,7 @@ describe('DrivesListPage — standard controls', () => {
     expect(csvHref).toContain('format=csv');
     expect(csvHref).toContain('vehicle_id=7');
     expect(csvHref).toContain('start=2026-04-01');
-    expect(csvHref).toContain('end=2026-04-30');
+    expect(new URL(csvHref).searchParams.get('end')).toBe('2026-05-01T00:00:00.000Z');
     // Never double-prefixed, and never camelCase.
     expect(csvHref).not.toContain('/api/v1/api/v1');
     expect(csvHref.split('?')[1] ?? '').not.toMatch(/[?&]?[a-z]+[A-Z]/);
@@ -1323,10 +1363,12 @@ describe('DrivesListPage — standard controls', () => {
     const frame = table.closest('[data-grid-frame]') as HTMLElement;
     const search = screen.getByRole('combobox', { name: /Search drives/ });
     expect(frame).toContainElement(search);
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
     expect(screen.getAllByRole('radiogroup', { name: 'List density' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }));
     expect(screen.getByTestId('location')).toHaveTextContent('density=comfortable');
     expect(table.querySelector('tbody td[data-column-key="date"]')).toHaveClass('py-3.5');
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Reorder or hide columns' })).getByRole('button', { name: 'Done' }));
     fireEvent.change(search, { target: { value: 'Beach' } });
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('q=Beach'));
     expect(screen.getByTestId('location')).not.toHaveTextContent('page=2');
@@ -1335,22 +1377,23 @@ describe('DrivesListPage — standard controls', () => {
 
   it('keeps mobile cards and all their evidence when choosing compact density', () => {
     mockMediaQuery.mockImplementation((query: string) => query.startsWith('(max-width:'));
+    allocatedGridWidth(390);
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Compact' }));
     expect(screen.getByTestId('location')).toHaveTextContent('density=compact');
-    const row = within(listRegion()).getByText('100.00 km');
-    expect(row.closest('[data-drive-list-density]')).toHaveAttribute('data-drive-list-density', 'compact');
-    expect(row).toBeInTheDocument();
+    const row = document.querySelector('[data-mobile-table] [data-row-key="4"]');
+    expect(row).toHaveClass('!min-h-16', '!py-2');
+    expect(row).toHaveTextContent('100.00 km');
+    expect(row).toHaveTextContent('Apr 20');
+    expect(document.querySelector('[data-drive-evidence-grid] table')).toBeNull();
   });
 });
 
-describe('DrivesListPage — fetch truncation', () => {
-  // The page fetches one 1,000-row page. When the range holds at least that
-  // many drives the list is necessarily a subset, so say so instead of
-  // silently presenting it as the complete range.
-  it('warns when the range fills a whole fetch page', () => {
-    const many = Array.from({ length: 1000 }, (_, i) =>
+describe('DrivesListPage — large ranges', () => {
+  it('requests the selected page and keeps the full range count beyond 1,000', () => {
+    const many = Array.from({ length: 1004 }, (_, i) =>
       makeDrive({
         id: 1000 + i,
         startTs: `2026-04-${String((i % 30) + 1).padStart(2, '0')}T12:00:00Z`,
@@ -1358,14 +1401,13 @@ describe('DrivesListPage — fetch truncation', () => {
       }),
     );
     mockDrives.mockReturnValue(makeQuery({ data: many }));
-    renderPage();
-
-    expect(screen.getByText(/Showing the 1000 most recent drives/)).toBeInTheDocument();
-  });
-
-  it('stays silent when the range fits in one page', () => {
-    renderPage();
+    renderPage([`${DEFAULT_RANGE}&size=25&page=41`]);
+    expect(mockGridPage).toHaveBeenLastCalledWith(7, expect.anything(), expect.anything(), 41, 25);
+    expect(within(evidenceTable()).getAllByRole('link', { name: /Apr/ })).toHaveLength(4);
+    expect(screen.getByText('1,004 matching / 1,004 in range')).toBeInTheDocument();
     expect(screen.queryByText(/most recent drives in this range/)).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), { target: { value: '50' } });
+    expect(mockGridPage).toHaveBeenLastCalledWith(7, expect.anything(), expect.anything(), 1, 50);
   });
 });
 

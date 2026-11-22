@@ -370,6 +370,7 @@ export function GeneralSettings() {
                   }}
                 >
                   <CurrencyInput
+                    showLabel={false}
                     ariaLabel={t('app.electricityCost', 'Electricity cost (per kWh)')}
                     currency={symbolToIsoCode(form.currency_symbol)}
                     locale={form.locale ?? 'en-US'}
@@ -386,6 +387,7 @@ export function GeneralSettings() {
                   <div className="flex min-w-0 flex-wrap gap-2">
                     <div className="min-w-0 flex-1 basis-40">
                       <CurrencyInput
+                        showLabel={false}
                         ariaLabel={t('app.gasPrice', 'Gas price (for EV vs ICE comparison)')}
                         currency={symbolToIsoCode(form.currency_symbol)}
                         locale={form.locale ?? 'en-US'}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../Badge';
 import { Checkbox } from '../Checkbox';
@@ -15,72 +16,51 @@ interface Props {
   selected: boolean;
   onActivate: () => void;
   onToggle: () => void;
+  href?: string;
   actions?: ReactNode;
   onSelectionEvent?: (event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => void;
   selectionLabel?: string;
   compact?: boolean;
 }
-export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, actions, onSelectionEvent, selectionLabel, compact = false }: Props) {
+export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, href, actions, onSelectionEvent, selectionLabel, compact = false }: Props) {
   const { t } = useTranslation();
   const activate = selecting ? onToggle : onActivate;
   const keyValue = variant === 'keyValue';
+  const cardClass = cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
+    keyValue ? 'mgr-kv' : 'mgr-card', !keyValue && compact && '!min-h-16 !py-2');
+  const cardData = {
+    'data-app-part': 'card',
+    'data-card': keyValue ? undefined : '',
+    'data-kv-row': keyValue ? '' : undefined,
+    'data-row-key': row.key,
+    className: cardClass,
+  };
   if (rowMappingIssues(row).length > 0) return (
     <EmptyState className="mgr-state !py-8 [&_button]:min-h-11"
       message={t('developerReference.mobileGrid.gaps.mapping', 'Invalid mobile mapping: provide at most three unique metadata fields and unique detail fields.')}
       action={{ label: t('developerReference.mobileGrid.desktop.details', 'Open reference details and actions'), onClick: onActivate }} />
   );
-  return (
-    <div data-app-part="table-row" data-selected={selected || undefined} className="mgr-row-wrap flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0">
-      {selecting && (
-        <Checkbox
-          checked={selected}
-          onChange={onSelectionEvent ? () => {} : onToggle}
-          onClick={onSelectionEvent ? event => { event.stopPropagation(); onSelectionEvent(event); } : undefined}
-          aria-label={selectionLabel ?? t('developerReference.mobileGrid.selection.row', 'Select {{title}}', { title: row.title })}
-          className="mgr-checkbox min-h-11 min-w-11 justify-center"
-        />
-      )}
-      <div
-        data-app-part="card"
-        role="button"
-        tabIndex={0}
-        aria-label={row.title}
-        aria-pressed={selecting ? selected : undefined}
-        data-card={keyValue ? undefined : ''}
-        data-kv-row={keyValue ? '' : undefined}
-        data-row-key={row.key}
-        className={cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
-          keyValue ? 'mgr-kv' : 'mgr-card', !keyValue && compact && '!min-h-16 !py-2')}
-        onClick={event => selecting && onSelectionEvent ? onSelectionEvent(event) : activate()}
-        onKeyDown={event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            if (selecting && onSelectionEvent) onSelectionEvent(event);
-            else activate();
-          }
-        }}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>
-            {keyValue && row.rawLabel && <Text variant="caption" mono className="block truncate" title={row.rawLabel}>{row.rawLabel}</Text>}
-          </div>
-          {actions && <div className="shrink-0 p-2">{actions}</div>}
-          {!keyValue && row.tag && <Badge variant="neutral" className="max-w-20 truncate">{row.tag}</Badge>}
-          <Text data-card-primary="" title={row.primary} className="mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{row.primary}</Text>
+  const contents = <>
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>
+          {keyValue && row.rawLabel && <Text variant="caption" mono className="block truncate" title={row.rawLabel}>{row.rawLabel}</Text>}
         </div>
-        {!keyValue && (
-          <div className="mt-2 flex min-w-0 items-center gap-2">
-            {row.meta.map(field => (
-              <div data-app-part="table-cell" key={field.key} data-card-meta="" data-field-key={field.key} className="min-w-0 flex-1">
-                <Text className="mgr-meta-label block truncate">{field.label}</Text>
-                <Text title={field.value} className="mgr-meta-value block truncate">{field.value}</Text>
-              </div>
-            ))}
-            {row.badge && <Badge variant="neutral" aria-label={row.badge.label} className="shrink-0">{row.badge.value}</Badge>}
-          </div>
-        )}
-        {!keyValue && row.progress && (
+        {!keyValue && row.tag && <Badge variant="neutral" className="max-w-20 truncate">{row.tag}</Badge>}
+        <Text data-card-primary="" title={row.primary} className="mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{row.primary}</Text>
+      </div>
+      {!keyValue && (
+        <div className="mgr-card-metadata mt-2 flex min-w-0 items-start gap-2">
+          {row.meta.map(field => (
+            <div data-app-part="table-cell" key={field.key} data-card-meta="" data-field-key={field.key} className="min-w-0 flex-1">
+              <Text className="mgr-meta-label block truncate">{field.label}</Text>
+              <Text title={field.value} className="mgr-meta-value block truncate">{field.value}</Text>
+            </div>
+          ))}
+          {row.badge && <Badge variant={row.badge.variant ?? 'neutral'} aria-label={row.badge.label} className="max-w-[45%] shrink-0 truncate">{row.badge.value}</Badge>}
+        </div>
+      )}
+      {!keyValue && row.progress && (
           <div
             data-app-part="metric" data-app-metric="bar" data-metric-track
             role="img"
@@ -93,8 +73,31 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
               style={{ left: `${safeProgress(Math.min(row.progress.from, row.progress.to))}%`,
                 width: `${Math.abs(safeProgress(row.progress.to) - safeProgress(row.progress.from))}%` }} />
           </div>
-        )}
-      </div>
+      )}
+  </>;
+  return (
+    <div data-app-part="table-row" data-selected={selected || undefined} className="mgr-row-wrap flex min-w-0 items-center border-b border-[var(--border-subtle)] last:border-b-0">
+      {selecting && (
+        <Checkbox checked={selected}
+          onChange={onSelectionEvent ? () => {} : onToggle}
+          onClick={onSelectionEvent ? event => { event.stopPropagation(); onSelectionEvent(event); } : undefined}
+          aria-label={selectionLabel ?? t('developerReference.mobileGrid.selection.row', 'Select {{title}}', { title: row.title })}
+          className="mgr-checkbox min-h-11 min-w-11 justify-center" />
+      )}
+      {href && !selecting ? <Link {...cardData} to={href}>{contents}</Link> : (
+        <div {...cardData} role="button" tabIndex={0} aria-label={row.title} aria-pressed={selecting ? selected : undefined}
+          onClick={event => selecting && onSelectionEvent ? onSelectionEvent(event) : activate()}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              if (selecting && onSelectionEvent) onSelectionEvent(event);
+              else activate();
+            }
+          }}>
+          {contents}
+        </div>
+      )}
+      {actions && <div className="shrink-0 p-1">{actions}</div>}
     </div>
   );
 }

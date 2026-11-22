@@ -1,21 +1,21 @@
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface TemperatureProps {
+interface TemperatureProps extends FormattedReadingOptions {
   /** Canonical input in °C. */
   c?: number | null;
   /** Alternative input in °F; converted to °C before display. */
   f?: number | null;
   precision?: number;
-  className?: string;
 }
 
 /**
  * Temperature renderer that respects the user's °C/°F preference.
  * Hover title shows the source-unit value at the requested display precision.
  */
-export function Temperature({ c, f, precision, className }: TemperatureProps) {
+export function Temperature({ c, f, precision, label, className }: TemperatureProps) {
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
@@ -32,13 +32,13 @@ export function Temperature({ c, f, precision, className }: TemperatureProps) {
   }
 
   if (sourceC == null) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
 
   const display = fmtNumber(toTemperatureDisplay(sourceC), precision);
   return (
-    <span className={className} title={title}>
-      {display}{tempUnit}
-    </span>
+    <FormattedReading label={label} className={className} title={title}>
+      {`${display}${tempUnit}`}
+    </FormattedReading>
   );
 }

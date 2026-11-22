@@ -229,6 +229,7 @@
     "resultsCountOne": "1 result"
   },
   "common": {
+    "any": "Any",
     "clearSearch": "Clear search",
     "invalidNumber": "Enter a valid number",
     "unitListHint": "Separate values with semicolons",
@@ -438,6 +439,7 @@
       "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
       "decline": "Decline non-essential",
       "hideDetails": "Hide details",
+      "loading": "Loading privacy choices...",
       "manage": "Manage preferences",
       "title": "Cookies & analytics"
     },
@@ -971,6 +973,7 @@
       "commands": "Command center",
       "automations": "Alerts & automation",
       "notifications_inbox": "Notification center",
+      "settings_smart_commute": "Smart notifications",
       "security_access": "Safety & security",
       "tesla_account": "Tesla account & services",
       "chatbot": "Helix tools",
@@ -1349,6 +1352,9 @@
       "service-intelligence": "Recall & service intelligence",
       "settings": "General settings",
       "settings_fleet-setup": "Fleet setup",
+      "settings_smart-commute": "Smart Commute",
+      "settings_smart-charging": "Charging readiness",
+      "settings_smart-features": "Smart Features",
       "share-card": "Share card studio",
       "signal-change-points": "Signal change points",
       "signal-correlation": "Signal correlation",
@@ -1847,6 +1853,9 @@
     "sleepEfficiency": "Sleep efficiency",
     "slowQueries": "Slow queries",
     "smartCharge": "Smart charge",
+    "smartChargingPage": "Charging readiness",
+    "smartCommutePage": "Smart Commute",
+    "smartFeaturesPage": "Smart Features",
     "softwareUpdates": "Software updates",
     "speedProfile": "Speed profile",
     "speedSweetSpot": "Speed sweet spot",
@@ -1942,6 +1951,12 @@
       "reconnect": "Reconnect",
       "title": "App connection expired"
     }
+  },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical",
+    "success": "Success"
   },
   "shortcuts": {
     "close": "Close modal / cancel",
@@ -2146,6 +2161,7 @@
       "invalidValues": "This saved value filter is invalid. Clear it to reset.",
       "loadedRowCount": "{{filtered}} matching / {{loaded}} loaded rows",
       "noValues": "No matching values",
+      "rangeRowCount": "{{matching}} matching / {{total}} in range",
       "resetSearch": "Clear search",
       "searchValues": "Search values",
       "selectShown": "Select all shown values",
@@ -2154,6 +2170,24 @@
       "values": "Available values"
     },
     "genericName": "Data table",
+    "grid": {
+      "allColumns": "All columns",
+      "ascending": "Ascending",
+      "clearColumn": "Clear {{column}} filter",
+      "column": "Column",
+      "columnTools": "Filter & sort",
+      "compareSelected": "Compare selected",
+      "descending": "Descending",
+      "exportScopes": "Choose matching rows, the full loaded catalog, or your selection.",
+      "filterBy": "Filter by column",
+      "fullExport": "Full catalog ({{count}})",
+      "matchingExport": "Matching ({{count}})",
+      "quickFilter": "Filter {{column}} by value",
+      "savedViews": "Saved views",
+      "sortAscending": "Sort ascending",
+      "sortBy": "Sort by",
+      "sortDescending": "Sort descending"
+    },
     "search": {
       "loadedRows": "Search loaded rows"
     },
@@ -2205,42 +2239,6 @@
       },
       "unpinned": {
         "error": "Failed to unpin"
-      }
-    }
-  },
-  "tour": {
-    "tours": {
-      "alerts": {
-        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
-        "title": "Alerts & alert studio"
-      },
-      "automations": {
-        "description": "Triggers, conditions, actions, and conflict detection for rules.",
-        "title": "Automation builder"
-      },
-      "charging": {
-        "description": "Sessions, cost analysis, and the charging-curve viewer for any session.",
-        "title": "Charging insights"
-      },
-      "debugger": {
-        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks.",
-        "title": "FSM debugger"
-      },
-      "drives": {
-        "description": "Drive history, saved views, and the trip replay scrubber with markers.",
-        "title": "Drives & replay"
-      },
-      "main": {
-        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts.",
-        "title": "TeslaSync overview"
-      },
-      "settings": {
-        "description": "Theme, units, notification channels, and saved views — all in one place.",
-        "title": "Settings & preferences"
-      },
-      "vehicles": {
-        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access.",
-        "title": "Vehicles & access"
       }
     }
   },
@@ -2331,12 +2329,6 @@
   "score": {
     "aria": "Score {{grade}}"
   },
-  "severity": {
-    "info": "Info",
-    "warn": "Warning",
-    "critical": "Critical",
-    "success": "Success"
-  },
   "smallMultiples": {
     "noData": "No data"
   },
@@ -2347,7 +2339,11 @@
     "direction": "Sort direction"
   },
   "sparkline": {
-    "ariaLabel": "Trend sparkline"
+    "ariaLabel": "Trend sparkline",
+    "value": "Value",
+    "observation": "Observation {{index}} / {{count}}",
+    "inspect": "Inspect observations: {{trend}}",
+    "selection": "Observation {{index}} of {{count}}, value {{value}}"
   },
   "statCard": {
     "loading": "Loading",

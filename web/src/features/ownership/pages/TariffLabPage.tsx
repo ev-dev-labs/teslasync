@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Plug, Plus, Trash2, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -48,6 +48,7 @@ import {
 } from '../components';
 import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
+import { MonthlyTariffReviewPanel } from '../components/monthly-tariff/MonthlyTariffReviewPanel';
 import { formatCurrencyMinor, formatPct, formatPricePerEnergy } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -95,6 +96,7 @@ export default function TariffLabPage() {
   const [planPage, setPlanPage] = useState(1);
   const [planPageSize, setPlanPageSize] = useState(100);
   const [formOpen, setFormOpen] = useState(false);
+  const planEditorButton = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState({
     name: '',
     provider: '',
@@ -439,6 +441,8 @@ export default function TariffLabPage() {
         )}
       </AlertBanner>
 
+      <MonthlyTariffReviewPanel vehicleId={vehicleId} onReviewTariffs={() => planEditorButton.current?.focus()} />
+
       <FadeIn>
         <OwnershipPanel
           title={t('ownership.tariff.controls.title', 'Comparison parameters')}
@@ -766,6 +770,7 @@ export default function TariffLabPage() {
           )}
           actions={
             <Button
+              ref={planEditorButton}
               variant="secondary"
               size="sm"
               icon={<Plus className="h-4 w-4" aria-hidden="true" />}

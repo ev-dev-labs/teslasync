@@ -9,11 +9,11 @@ export function MobileReferenceToolbar({ model, callbacks }: Props) {
   const { t } = useTranslation();
   return (
     <div className="mb-2 space-y-2">
-      <div data-app-part="table-toolbar" className="mgr-toolbar flex min-w-0 items-center gap-2">
+      <div data-app-part="table-toolbar" className="mgr-toolbar flex min-w-0 flex-wrap items-end gap-2 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-1)] p-2">
         {showMobileSearch(model.maximumRows) && (
-          <div data-grid-search="" className="mgr-search min-w-0 flex-1">
+          <div data-grid-search="" className="mgr-search min-w-[min(100%,8rem)] flex-1">
             <Input type="search" value={model.query} onChange={event => callbacks.onSearch(event.target.value)}
-              aria-label={t('developerReference.mobileGrid.toolbar.searchLabel', 'Search {{label}}', { label: model.label })}
+              label={t('developerReference.mobileGrid.toolbar.searchLabel', 'Search {{label}}', { label: model.label })}
               placeholder={t('developerReference.mobileGrid.toolbar.search', 'Search…')} />
           </div>
         )}
@@ -23,7 +23,7 @@ export function MobileReferenceToolbar({ model, callbacks }: Props) {
             {t('developerReference.mobileGrid.toolbar.sort', 'Sort')}
           </Button>
         )}
-        <Button variant="secondary" className="mgr-control ml-auto !px-3" aria-haspopup="dialog"
+        <Button variant="secondary" className="mgr-control ms-auto !px-3" aria-haspopup="dialog"
           aria-expanded={model.overlays.overflow}
           aria-label={t('developerReference.mobileGrid.toolbar.more', 'More grid actions')}
           onClick={() => callbacks.onOverlay('overflow', true)}>

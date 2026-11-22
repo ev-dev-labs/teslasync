@@ -68,12 +68,28 @@ type Config struct {
 	AzureMaps                    AzureMapsConfig
 	APILogs                      APILogsConfig
 	WebPush                      WebPushConfig
+	SmartCommute                 SmartCommuteConfig
+	SpotifyPlaylists             SpotifyPlaylistsConfig
 	System                       SystemConfig
 	GitHub                       GitHubConfig
 	Physics                      PhysicsConfig
 
 	// Operator-toggled behaviors that should not require a code change.
 	Features FeaturesConfig
+}
+
+type SmartCommuteConfig struct {
+	HERELicenseConfirmed bool
+	HEREAPIKey           string `json:"-"`
+}
+
+type SpotifyPlaylistsConfig struct {
+	ClientID    string
+	RedirectURI string
+}
+
+func (s SmartCommuteConfig) HasLicensedTraffic() bool {
+	return s.HERELicenseConfirmed && strings.TrimSpace(s.HEREAPIKey) != ""
 }
 
 // FeaturesConfig holds operator-toggled behaviors that we don't want
@@ -422,6 +438,8 @@ func (r RedisConfig) Addr() string {
 
 type AuthConfig struct {
 	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
+	OperatorSubjects  string // Comma-separated exact browser subjects allowed to receive Smart Notifications operator advice.
+	IncidentSubject   string // Optional exact allowlisted recipient for private upstream incident notices.
 	// ProviderHint is operator-supplied free text surfaced verbatim by
 	// the /system/auth-mode endpoint. The SPA renders it as informative
 	// copy ("Sign in via Authentik / Authelia / oauth2-proxy / Keycloak
@@ -529,6 +547,8 @@ func Load() (*Config, error) {
 
 		Auth: AuthConfig{
 			ForwardAuthHeader: strings.TrimSpace(envStr("FORWARD_AUTH_HEADER", "")),
+			OperatorSubjects:  envStr("TESLASYNC_SMART_OPERATOR_SUBJECTS", ""),
+			IncidentSubject:   envStr("TESLASYNC_SMART_INCIDENT_SUBJECT", ""),
 			ProviderHint:      envStr("TESLASYNC_AUTH_PROVIDER_HINT", ""),
 		},
 		// Legacy input preserves issued certificate signatures; it never enables browser JWT authentication.
@@ -631,6 +651,14 @@ func Load() (*Config, error) {
 			PublicKey:  envStr("TESLASYNC_VAPID_PUBLIC_KEY", ""),
 			PrivateKey: envStr("TESLASYNC_VAPID_PRIVATE_KEY", ""),
 			Subject:    envStr("TESLASYNC_VAPID_SUBJECT", ""),
+		},
+		SmartCommute: SmartCommuteConfig{
+			HERELicenseConfirmed: envBool("SMART_COMMUTE_HERE_LICENSE_CONFIRMED", false),
+			HEREAPIKey:           envStr("SMART_COMMUTE_HERE_API_KEY", ""),
+		},
+		SpotifyPlaylists: SpotifyPlaylistsConfig{
+			ClientID:    envStr("SMART_MEDIA_SPOTIFY_CLIENT_ID", ""),
+			RedirectURI: envStr("SMART_MEDIA_SPOTIFY_REDIRECT_URI", ""),
 		},
 
 		System: SystemConfig{

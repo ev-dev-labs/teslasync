@@ -19,6 +19,15 @@ vi.mock('@/hooks/useAiEnabled', () => ({ useAiEnabled: () => false }))
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: vi.fn(() => true) }))
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ formatTemperature: (value: number) => `${value} C` }) }))
 
+const vehicleRead = vi.hoisted(() => ({ enabled: true }))
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>()
+  return {
+    ...actual,
+    useVehicles: (enabled = true) => actual.useVehicles(enabled && vehicleRead.enabled),
+  }
+})
+
 // InstalledPackCard reads locale/timezone through useSettings; the global
 // mock pins en-US/UTC, so provide a controllable double mirroring the global
 // defaults. The global timezone stub resolves the user zone from
@@ -93,6 +102,7 @@ function ruleFields(name: keyof typeof fieldRoles) {
 }
 
 beforeEach(() => {
+  vehicleRead.enabled = true
   vi.mocked(useMediaQuery).mockReturnValue(true)
   displayPrefs.locale = 'en-US'
   displayPrefs.tz_display_default = 'vehicle'
@@ -164,9 +174,9 @@ describe('Alert Packs', () => {
 
   it.each(['paused', 'idle'] as const)('explains %s vehicle and channel prerequisites without presenting an empty fleet', status => {
     if (status === 'paused') onlineManager.setOnline(false)
+    vehicleRead.enabled = status !== 'idle'
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />, client => {
       if (status === 'idle') {
-        client.setQueryDefaults(['vehicles'], { enabled: false })
         client.setQueryDefaults(['notification-channels'], { enabled: false })
       }
     })
@@ -175,6 +185,7 @@ describe('Alert Packs', () => {
     expect(screen.getByRole('status', { name: 'Channels' })).toHaveTextContent(message)
     expect(screen.queryByText('No external channels configured.')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeDisabled()
+    expect(vi.mocked(request).mock.calls.some(([path]) => path === '/vehicles' || path === '/notifications')).toBe(false)
   })
 
   it('retains vehicle and channel choices with named warnings before the affected controls', async () => {

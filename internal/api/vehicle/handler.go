@@ -18,6 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // Handler handles vehicle-related HTTP requests.
@@ -34,6 +35,11 @@ type Handler struct {
 	teslaClient *tesla.Client
 	telemetry   TelemetrySource
 	state       signal.StateReader
+	commandLog  wakeCommandLog
+}
+
+type wakeCommandLog interface {
+	Create(context.Context, *vehiclemodel.CommandLog) error
 }
 
 type vehicleListFetcher interface {
@@ -92,6 +98,11 @@ func NewHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state sign
 // SetTelemetrySource wires the telemetry source for streaming-aware state resolution.
 func (h *Handler) SetTelemetrySource(ts TelemetrySource) {
 	h.telemetry = ts
+}
+
+func (h *Handler) WithWakeCommandLog(history wakeCommandLog) *Handler {
+	h.commandLog = history
+	return h
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -363,7 +374,9 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Wake(w http.ResponseWriter, r *http.Request) {
-	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context()); suspended {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.vehicles.wake")
+	defer span.End()
+	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(ctx); suspended {
 		apperror.Write(w, r, apperror.ErrTeslaAPISuspended)
 		return
 	}
@@ -374,15 +387,27 @@ func (h *Handler) Wake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(r.Context(), id)
+	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(ctx, id)
 	if err != nil || vehicle == nil {
 		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
 	}
 
-	if err := h.teslaClient.WakeUp(r.Context(), vehicle.VIN); err != nil {
-		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to wake vehicle")
-		apperror.Write(w, r, apperror.ErrTeslaAPIUnavailable.WithMessage("failed to wake vehicle"))
+	requestedAt := time.Now().UTC()
+	err = h.teslaClient.WakeUp(ctx, vehicle.VIN)
+	if h.commandLog != nil {
+		entry := &vehiclemodel.CommandLog{VehicleID: id, Command: "wake_up", Params: "{}", Status: "success", WakeRequestedAt: &requestedAt}
+		if err != nil {
+			entry.Status, entry.Error = "failed", "wake request failed"
+		}
+		if logErr := h.commandLog.Create(ctx, entry); logErr != nil {
+			log.Warn().Err(logErr).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to record explicit wake request")
+		}
+	}
+	if err != nil {
+		span.SetStatus(codes.Error, "wake request failed")
+		log.Error().Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicleID", id).Msg("failed to wake vehicle")
+		apperror.Write(w, r.WithContext(ctx), apperror.ErrTeslaAPIUnavailable.WithMessage("failed to wake vehicle"))
 		return
 	}
 
@@ -404,4 +429,3 @@ func latestLiveSignalObservation(values map[string]*signal.Value) *time.Time {
 	// behaviour at the handler boundary.
 	return service.LatestLiveSignalObservation(values)
 }
-

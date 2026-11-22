@@ -9,6 +9,7 @@ import { producerProjection, projectionDigest, type ProducerProjection } from '.
 import { readFleetCurrentSource } from './verified-fleet-source-contract'
 import { restoreVerifiedThemeSource } from './verified-theme-source-contract'
 import { restoreHorizontalNavigationSource } from './verified-horizontal-navigation-contract'
+import { restoreSmartNotificationsSource } from './verified-smart-notifications-contract'
 import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -1411,8 +1412,8 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
       expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
       if ('dependencies' in checkpoint) for (const dependency of checkpoint.dependencies ?? []) {
-        const bytes = restoreHorizontalNavigationSource(dependency.file,
-          readFileSync(resolve(process.cwd(), '..', dependency.file), 'utf8'))
+        const source = readFileSync(resolve(process.cwd(), '..', dependency.file), 'utf8')
+        const bytes = restoreHorizontalNavigationSource(dependency.file, restoreSmartNotificationsSource(dependency.file, source))
         expect(createHash('sha256').update(bytes).digest('hex'), dependency.file).toBe(dependency.sha256)
       }
       return
@@ -1426,6 +1427,12 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
         text = text.replace(current, previous)
       }
       source = Buffer.from(text)
+    }
+    if (path === 'web/src/features/system/components/chatbot/CodeBlock.tsx') {
+      const current = "      wrap={false}\n      ariaLabel={t('chatbot.aria.codeBlock',"
+      const text = source.toString('utf8')
+      expect(text.split(current), path + ': desktop code wrapping opt-out').toHaveLength(2)
+      source = Buffer.from(text.replace(current, "      ariaLabel={t('chatbot.aria.codeBlock',"))
     }
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
       if (file !== path) continue

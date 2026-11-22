@@ -119,7 +119,7 @@ export default function InstallPrompt() {
             data-app-feedback-kind="notice"
             data-app-tone={installFailed ? 'danger' : 'info'}
             data-install-capability={capability}
-            className="flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-3 text-[var(--text-primary)] shadow-xl backdrop-blur-xl sm:px-4"
+            className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-3 text-[var(--text-primary)] shadow-xl sm:px-4"
           >
             <div data-app-part="feedback-icon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-primary)]">
               {showIosGuide ? (
@@ -129,7 +129,7 @@ export default function InstallPrompt() {
               )}
             </div>
 
-            <div data-app-part="feedback-content" className="flex-1 min-w-0">
+            <div data-app-part="feedback-content" className="min-w-0 [overflow-wrap:anywhere]">
               <p data-app-part="feedback-title" className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
                 {t('installPrompt.title', 'Install TeslaSync')}
               </p>
@@ -178,27 +178,28 @@ export default function InstallPrompt() {
                   {t('installPrompt.subtitle', 'Add to home screen for native experience')}
                 </p>
               )}
+              {showNative && !installFailed && (
+                <div data-app-part="feedback-actions" className="mt-2 border-t border-[var(--border-subtle)] pt-2">
+                  <Button
+                    type="button"
+                    onClick={handleInstall}
+                    size="sm"
+                    wrapLabel
+                    data-testid="install-prompt-install"
+                    className="min-h-11 max-w-full"
+                  >
+                    {t('installPrompt.install', 'Install')}
+                  </Button>
+                </div>
+              )}
             </div>
-
-            {showNative && !installFailed && (
-              <Button
-                data-app-part="feedback-actions"
-                type="button"
-                onClick={handleInstall}
-                size="sm"
-                data-testid="install-prompt-install"
-                className="h-8 shrink-0 rounded-lg px-3 text-xs font-semibold"
-              >
-                {t('installPrompt.install', 'Install')}
-              </Button>
-            )}
             <Button
               data-app-part="feedback-dismiss"
               type="button"
               onClick={handleDismiss}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 shrink-0 rounded-lg p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+              className="h-11 w-11 shrink-0 rounded-lg p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
               aria-label={t('installPrompt.dismiss', 'Dismiss install prompt')}
             >
               <X className="h-4 w-4" />

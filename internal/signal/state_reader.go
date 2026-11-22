@@ -68,6 +68,9 @@ type TimelineRow struct {
 	// Seed-only fields have no entry: their freshness is unknown. This is
 	// internal provenance and is deliberately omitted from MarshalJSON.
 	ObservedAt map[string]time.Time
+	// SourceTime records producer timestamps for the current field values
+	// when requested. A receipt-only replacement clears the prior timestamp.
+	SourceTime map[string]time.Time
 }
 
 // MarshalJSON flattens TimelineRow to the legacy JSON shape:
@@ -103,6 +106,12 @@ func (r TimelineRow) MarshalJSON() ([]byte, error) {
 // history views expect when you do not want to render duplicate
 // "still on D, still 65 mph" rows.
 type TimelineOptions struct {
+	// TrackSourceTime collects per-field producer timestamps without changing
+	// which rows or values are returned.
+	TrackSourceTime bool
+	// IncludeInitialState emits a boundary row at from. When tracking source
+	// time, it carries the preceding values' actual event timestamps.
+	IncludeInitialState bool
 	// CollapseBy lists output Field names whose value-tuple identifies a
 	// distinct row in list mode. Empty = chart mode (no collapsing).
 	CollapseBy []string

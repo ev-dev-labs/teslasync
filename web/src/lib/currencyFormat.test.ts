@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  currencyFractionDigits,
   currencySymbol,
   formatCurrencyMicro,
   formatCurrencyValue,
@@ -59,6 +60,13 @@ describe('currencyFormat — micro round-trip', () => {
 })
 
 describe('currencyFormat — formatCurrencyValue', () => {
+  it('uses the currency-specific fraction digits for estimates', () => {
+    expect(currencyFractionDigits('JPY', 'en-US')).toBe(0)
+    expect(currencyFractionDigits('USD', 'en-US')).toBe(2)
+    expect(currencyFractionDigits('BHD', 'en-US')).toBe(3)
+    expect(currencyFractionDigits('invalid', 'en-US')).toBe(2)
+  })
+
   it('formats USD in en-US with symbol prefix', () => {
     expect(formatCurrencyValue(1.5, 'USD', 'en-US', 2)).toBe('$1.50')
     expect(formatCurrencyValue(0, 'USD', 'en-US', 2)).toBe('$0.00')

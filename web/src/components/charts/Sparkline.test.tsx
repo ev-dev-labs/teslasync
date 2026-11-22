@@ -10,14 +10,14 @@
  *      collision-prone `url(#…)` refs for non-hex colours.
  */
 
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { Sparkline } from './Sparkline'
 
-// Deterministic i18n: return the developer fallback verbatim.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (key: string, fallback = key, options?: Record<string, string | number>) =>
+      fallback.replace(/\{\{(\w+)\}\}/g, (template, name) => String(options?.[name] ?? template)),
   }),
 }))
 
@@ -225,5 +225,50 @@ describe('Sparkline — accessibility', () => {
     const { container } = render(<Sparkline data={[1, 2, 3]} ariaLabel="Speed over time" />)
     const svg = container.querySelector('svg')
     expect(svg?.getAttribute('aria-label')).toBe('Speed over time')
+  })
+})
+
+describe('Sparkline — inspecting original observations', () => {
+  it('starts on the last valid reading and skips gaps when scrubbing', () => {
+    const { container } = render(<Sparkline inspect ariaLabel="Message rate" width={100} samples={[
+      { timestamp: 0, value: 0 }, { timestamp: 10, value: null },
+      { timestamp: 40, value: 8 }, { timestamp: 100, value: Infinity },
+    ]} formatValue={value => `${value} msg/s`} />)
+    const slider = screen.getByRole('slider', { name: 'Inspect observations: Message rate' })
+    expect(slider).toHaveAttribute('max', '2')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Observation 2 of 2, value 8 msg/s')
+    expect(screen.getByText('Observation 2 / 2')).toBeVisible()
+    expect(container.querySelector('[data-sparkline-selected]')).toHaveAttribute('cx', '40')
+
+    fireEvent.change(slider, { target: { value: '1' } })
+    expect(screen.getByText('0 msg/s')).toBeVisible()
+    expect(slider).toHaveAttribute('aria-valuetext', 'Observation 1 of 2, value 0 msg/s')
+    expect(container.querySelector('[data-sparkline-selected]')).toHaveAttribute('cx', '0')
+  })
+
+  it('offers no scrubber when there is only one possible reading', () => {
+    const { container } = render(<Sparkline data={[NaN, 7]} inspect />)
+    expect(screen.getByText('7', { exact: true })).toBeVisible()
+    expect(screen.getByText('Observation 1 / 1')).toBeVisible()
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-sparkline-selected]')).toHaveAttribute('cx', '50')
+  })
+
+  it('retains the chosen timed reading across a rolling refresh and follows the latest after eviction', () => {
+    const first = { timestamp: 10, value: 3 }
+    const chosen = { timestamp: 20, value: 7 }
+    const sameTime = { timestamp: 20, value: 2 }
+    const last = { timestamp: 30, value: 11 }
+    const next = { timestamp: 40, value: 15 }
+    const newest = { timestamp: 50, value: 19 }
+    const view = render(<Sparkline inspect samples={[first, chosen, sameTime, last]} />)
+    const slider = screen.getByRole('slider')
+    fireEvent.change(slider, { target: { value: '2' } })
+    view.rerender(<Sparkline inspect samples={[chosen, sameTime, last, next]} />)
+    expect(slider).toHaveAttribute('aria-valuetext', 'Observation 1 of 4, value 7')
+    view.rerender(<Sparkline inspect samples={[last, next]} />)
+    expect(slider).toHaveAttribute('aria-valuetext', 'Observation 2 of 2, value 15')
+    view.rerender(<Sparkline inspect samples={[last, next, newest]} />)
+    expect(slider).toHaveAttribute('aria-valuetext', 'Observation 3 of 3, value 19')
   })
 })

@@ -31,7 +31,7 @@ describe('controlled toolbar/footer/scope ownership', () => {
   it('emits search/filter/sheet requests without changing the supplied model', () => {
     const model = referenceModel(); const callbacks = referenceCallbacks();
     render(<MobileReferenceToolbar model={model} callbacks={callbacks} />);
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'home' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Test reference' }), { target: { value: 'home' } });
     fireEvent.click(screen.getByRole('button', { name: 'Home 3' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sort' }));
     expect(callbacks.onSearch).toHaveBeenCalledWith('home');
@@ -40,6 +40,18 @@ describe('controlled toolbar/footer/scope ownership', () => {
     expect(model.query).toBe('');
     expect(model.filterKey).toBe('all');
     expect(model.overlays.sort).toBe(false);
+  });
+  it('keeps the visible search label connected when results are filtered', () => {
+    const model = referenceModel(); const callbacks = referenceCallbacks();
+    const { rerender } = render(<MobileReferenceToolbar model={model} callbacks={callbacks} />);
+    const label = screen.getByText('Search Test reference', { selector: 'label' });
+    const search = screen.getByRole('searchbox', { name: 'Search Test reference' });
+    expect(label).toBeVisible();
+    expect(label).toHaveAttribute('for', search.id);
+    rerender(<MobileReferenceToolbar model={{ ...model, query: 'home', filterKey: 'home' }} callbacks={callbacks} />);
+    expect(search).toHaveValue('home');
+    expect(label).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Home 3' })).toHaveAttribute('aria-pressed', 'true');
   });
   it('hides search only by maximum capacity, sort only by supported orders', () => {
     const model = referenceModel();
@@ -76,13 +88,48 @@ describe('controlled toolbar/footer/scope ownership', () => {
   it('radio sort and Done use controlled callbacks; Escape dismisses the shared Modal', () => {
     const model = referenceModel(); const callbacks = referenceCallbacks();
     render(<MobileReferenceDialogs model={{ ...model, overlays: { sort: true, overflow: false } }} callbacks={callbacks} />);
+    const dialog = screen.getByRole('dialog', { name: 'Sort reference rows' });
+    const [header, body, footer] = Array.from(dialog.children);
+    const done = screen.getByRole('button', { name: 'Done' });
+    expect(header).toContainElement(screen.getByRole('heading', { name: 'Sort reference rows' }));
+    expect(body).toHaveAttribute('data-modal-scroll-body');
+    expect(body).toContainElement(screen.getByRole('radiogroup', { name: 'Sort order' }));
+    expect(footer).toHaveAttribute('data-modal-footer');
+    expect(footer).toContainElement(done);
     fireEvent.click(screen.getByRole('radio', { name: 'Highest cost' }));
     expect(callbacks.onSort).toHaveBeenCalledWith('cost');
     expect(model.sortKey).toBe('newest');
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(done);
     expect(callbacks.onOverlay).toHaveBeenCalledWith('sort', false);
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(callbacks.onOverlay).toHaveBeenCalledWith('sort', false);
-    expect(screen.getByRole('dialog')).toHaveClass('mgr-sort-sheet');
+    expect(dialog).toHaveClass('mgr-sort-sheet');
+  });
+  it('keeps selection, export scopes and errors in the action menu body with Done outside it', () => {
+    const model = referenceModel(); const callbacks = referenceCallbacks();
+    render(<MobileReferenceDialogs model={{ ...model, overlays: { sort: false, overflow: true },
+      exportError: 'Export unavailable' }} callbacks={callbacks} />);
+    const dialog = screen.getByRole('dialog', { name: 'More grid actions' });
+    const [, body, footer] = Array.from(dialog.children);
+    const select = screen.getByRole('button', { name: 'Select' });
+    const matching = screen.getByRole('button', { name: 'Request matching export' });
+    const selected = screen.getByRole('button', { name: 'Request selected export' });
+    const done = screen.getByRole('button', { name: 'Done' });
+    expect(body).toHaveAttribute('data-modal-scroll-body');
+    expect(body).toContainElement(select);
+    expect(body).toContainElement(matching);
+    expect(body).toContainElement(selected);
+    expect(body).toContainElement(screen.getByRole('alert'));
+    expect(selected).toBeDisabled();
+    expect(footer).toContainElement(done);
+    expect(dialog).not.toHaveClass('mgr-sort-sheet');
+    fireEvent.click(matching);
+    expect(callbacks.onExport).toHaveBeenCalledWith('matchingLoaded');
+    fireEvent.click(select);
+    expect(callbacks.onSelectionMode).toHaveBeenCalledWith(true);
+    expect(callbacks.onOverlay).toHaveBeenCalledExactlyOnceWith('overflow', false);
+    fireEvent.click(done);
+    expect(callbacks.onOverlay).toHaveBeenCalledTimes(2);
+    expect(callbacks.onOverlay).toHaveBeenLastCalledWith('overflow', false);
   });
 });

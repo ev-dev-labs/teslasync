@@ -7,18 +7,18 @@ import { TREND_METRICS } from './drivesListConstants';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
 type Props = Pick<DrivesListPageController,
-  't' | 'anomalyDrives' | 'collection' | 'setUrlBatch' | 'drivesState'
+  't' | 'anomalyCount' | 'collection' | 'setUrlBatch' | 'drivesState'
   | 'refetchDrives' | 'isDrivesLoading' | 'currentStats' | 'trendSeries'
   | 'trendMetricsConfig' | 'trendMetric' | 'setTrendMetric' | 'formatChartXTick'
   | 'highlightRows'>;
 
 export function DrivesTrendAnalysis({
-  t, anomalyDrives, collection, setUrlBatch, drivesState, refetchDrives,
+  t, anomalyCount, collection, setUrlBatch, drivesState, refetchDrives,
   isDrivesLoading, currentStats, trendSeries, trendMetricsConfig,
   trendMetric, setTrendMetric, formatChartXTick, highlightRows,
 }: Props) {
   /* ---- Anomaly callout ---- */
-  const anomalyFooter = anomalyDrives.length > 0 && collection !== 'anomalies' ? (
+  const anomalyFooter = anomalyCount > 0 && collection !== 'anomalies' ? (
     <InlineCallout
       variant="warning"
       icon={<AlertTriangle className="h-3.5 w-3.5" />}
@@ -28,8 +28,8 @@ export function DrivesTrendAnalysis({
       }}
     >
       {t('drives.anomalyCount', '{{count}} {{noun}} in this range', {
-        count: anomalyDrives.length,
-        noun: anomalyDrives.length === 1
+        count: anomalyCount,
+        noun: anomalyCount === 1
           ? t('drives.anomaly_one', 'anomaly')
           : t('drives.anomaly_other', 'anomalies'),
       })}

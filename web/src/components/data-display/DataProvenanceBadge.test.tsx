@@ -5,6 +5,13 @@ import type { FormatOptions } from '@/lib/dateFormat';
 
 import { DataProvenanceBadge } from './DataProvenanceBadge';
 
+it('shows provenance evidence on request without claiming a degraded live reading is historical', () => {
+  render(<DataProvenanceBadge provenance="live" status="stale" showEvidence />);
+  const badge = screen.getByText('Live');
+  expect(badge.closest('[data-provenance]')).toHaveAttribute('data-data-status', 'stale');
+  expect(screen.getByText('Current state pushed by the vehicle telemetry pipeline.')).toBeVisible();
+});
+
 const { formatDateTime, preferences, readSettings, readVehicle } = vi.hoisted(() => ({
   formatDateTime: vi.fn((_value: Date, _options?: FormatOptions): string | undefined => undefined),
   readSettings: vi.fn(),

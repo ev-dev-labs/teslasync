@@ -1,6 +1,11 @@
 package ownershipintel
 
-import "time"
+import (
+	"context"
+	"time"
+
+	domain "github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
+)
 
 // PolicyRecord is the stored insurance underwriting baseline.
 type PolicyRecord struct {
@@ -63,6 +68,8 @@ type InvoiceLineRecord struct {
 	BilledIdleMinor   int64
 	BilledTaxMinor    int64
 	BilledTotalMinor  int64
+	AmountCoverage    domain.InvoiceAmountCoverage
+	VarianceEvidence  *domain.InvoiceVarianceEvidence
 }
 
 // InvoiceRecord is a stored provider invoice.
@@ -80,6 +87,8 @@ type InvoiceRecord struct {
 	Lines            []InvoiceLineRecord
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	VarianceOptions  *domain.InvoiceVarianceOptions
+	ReviewCleared    bool
 }
 
 // DisputeRecord is a stored challenge against an invoice.
@@ -93,6 +102,24 @@ type DisputeRecord struct {
 	Note           string
 	OpenedAt       time.Time
 	ResolvedAt     *time.Time
+}
+
+// DisputeReviewGate evaluates current evidence while the statement is locked.
+type DisputeReviewGate struct {
+	VehicleID int64
+	Version   int
+	Verify    func(context.Context, InvoiceRecord, ChargeReader) error
+}
+
+type ChargeReader interface {
+	ListCharges(ctx context.Context, vehicleID int64, from, to time.Time) ([]ChargeRecord, error)
+}
+
+type InvoiceReviewUpdate struct {
+	Scope    domain.InvoiceReviewScope
+	Options  *domain.InvoiceVarianceOptions
+	Evidence map[int64]domain.InvoiceVarianceEvidence
+	Verify   func(InvoiceRecord) error
 }
 
 // DriverProfileRecord is a stored driver identity.
@@ -118,22 +145,27 @@ type AssignmentRecord struct {
 
 // WarrantyRecord is a stored coverage definition.
 type WarrantyRecord struct {
-	ID               int64
-	VehicleID        int64
-	Kind             string
-	Label            string
-	Provider         string
-	StartAt          time.Time
-	StartOdometerM   float64
-	TermS            int64
-	TermDistanceM    float64
-	CapacityFloorPct *float64
-	DeductibleMinor  int64
-	Currency         string
-	Notes            string
-	Version          int
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                         int64
+	VehicleID                  int64
+	Kind                       string
+	Label                      string
+	Provider                   string
+	StartAt                    time.Time
+	StartOdometerM             float64
+	ZeroStartOdometerConfirmed bool
+	TermS                      int64
+	TermDistanceM              float64
+	CapacityFloorPct           *float64
+	DeductibleMinor            int64
+	Currency                   string
+	Notes                      string
+	Version                    int
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+}
+
+func (w WarrantyRecord) HasStartOdometer() bool {
+	return w.StartOdometerM > 0 || w.ZeroStartOdometerConfirmed
 }
 
 // ClaimRecord is a stored warranty claim.

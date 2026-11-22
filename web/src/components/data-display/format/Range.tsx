@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { useUnits } from '@/hooks/useUnits'
 import { usePreferredRange, type PreferredRangeFields } from '@/hooks/usePreferredRange'
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading'
 
-interface RangeProps {
+interface RangeProps extends FormattedReadingOptions {
   /** Vehicle/charge state snapshot with `rated_range` + `ideal_range` in SI metres. */
   state: PreferredRangeFields | null | undefined
   /** Optional decimal precision override for the value. */
   precision?: number
-  className?: string
 }
 
 /**
@@ -21,13 +21,15 @@ interface RangeProps {
  * RangeEstimateWidget, BatteryRangePanel) which render BOTH ranges
  * side-by-side regardless of preference.
  */
-export function Range({ state, precision, className }: RangeProps) {
+export function Range({ state, precision, label, className }: RangeProps) {
   const { formatDistance } = useUnits()
   const { meters } = usePreferredRange(state)
 
-  if (meters == null) return <span className={className}>—</span>
-
-  return <span className={className}>{formatDistance(meters, { precision })}</span>
+  return (
+    <FormattedReading label={label} className={className}>
+      {meters == null ? '—' : formatDistance(meters, { precision })}
+    </FormattedReading>
+  )
 }
 
 /**

@@ -1,6 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockAppSettings, mockDrive, seedBrowserState, waitForHarnessReady } from './mockApi';
-import { expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
+import { expectControlsOnSameRow, expectIntegratedGridFooter, expectNoHorizontalOverflow } from './qualityAssertions';
+import { createReviewPreference } from './widget-design-packs.mock';
+import { driveGridResponse } from './driveGridFixture';
 
 const evidenceDrives = Array.from({ length: 4 }, (_, index) => ({
   ...mockDrive,
@@ -10,6 +12,149 @@ const evidenceDrives = Array.from({ length: 4 }, (_, index) => ({
   start_address: index === 1 ? 'Office' : 'Home',
   distance_m: index === 3 ? 57500 : 28750,
 }));
+
+const driveColumns = ['route', 'date', 'distance', 'duration', 'energy', 'status', 'actions'];
+
+test('drive paging loads the selected batch size beyond row 1,000', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seedBrowserState(page, 'light', '/drives');
+  const mocks = await installApiMocks(page, 'populated', 'light');
+  const count = 1054;
+  const start = Date.parse('2026-08-25T08:00:00Z');
+  const rows = Array.from({ length: count }, (_, index) => ({
+    ...mockDrive,
+    id: 2000 + index,
+    start_ts: new Date(start - index * 60_000).toISOString(),
+    end_ts: new Date(start + (32 - index) * 60_000).toISOString(),
+    distance_m: index === count - 1 ? 220000 : mockDrive.distance_m,
+  }));
+  const requested: Array<{ limit: string | null; offset: string | null }> = [];
+  let releaseNextPage = () => {};
+  const nextPageResponse = new Promise<void>(resolve => { releaseNextPage = resolve; });
+  await page.route('**/api/v1/drives?*', async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.get('view') === 'page') {
+      const limit = params.get('limit');
+      const offset = params.get('offset');
+      requested.push({ limit, offset });
+      if (limit === '50' && offset === '50') await nextPageResponse;
+    }
+    return fulfillApiFixture(route, mocks, { json: driveGridResponse(rows, params) });
+  });
+  await page.goto('/drives?from=2026-08-01&to=2026-08-31&size=25&page=41');
+  await waitForHarnessReady(page, mocks);
+  const grid = page.locator('[data-drive-evidence-grid]');
+  const body = grid.getByRole('table', { name: 'Drive evidence' }).locator('tbody');
+  const footer = grid.getByRole('navigation', { name: 'Pagination' });
+  await expect(footer).toContainText('Showing 1,001–1,025 of 1,054');
+  await expect(body.locator('a[href="/drives/3000"]')).toBeVisible();
+  expect(requested).toContainEqual({ limit: '25', offset: '1000' });
+  expect(requested.every(request => request.limit === '25')).toBe(true);
+
+  await footer.getByRole('combobox', { name: 'Rows per page' }).selectOption('50');
+  await expect(footer).toContainText('Showing 1–50 of 1,054');
+  await expect(body.locator('a[href="/drives/2000"]')).toBeVisible();
+  expect(requested).toContainEqual({ limit: '50', offset: '0' });
+  const nextPage = footer.getByRole('button', { name: 'Next page' });
+  try {
+    await nextPage.click();
+    await expect.poll(() => requested).toContainEqual({ limit: '50', offset: '50' });
+    await expect(nextPage).toBeFocused();
+    await expect(body.locator('a[href="/drives/2000"]')).toHaveCount(0);
+  } finally {
+    releaseNextPage();
+  }
+  await expect(footer).toContainText('Showing 51–100 of 1,054');
+  await expect(body.locator('a[href="/drives/2050"]')).toBeVisible();
+
+  await grid.getByRole('spinbutton', { name: 'Minimum Distance (km)' }).fill('200');
+  await expect(grid.getByText('1 matching / 1,054 in range')).toBeVisible();
+  await expect(body.locator('a[href="/drives/3053"]')).toBeVisible();
+  await expect(footer).toContainText('Showing 1–1 of 1');
+  await expect(page).not.toHaveURL(/[?&]page=/);
+  await assertMockApiComplete(page, mocks);
+});
+
+async function showOptionalColumns(page: Page, ...optional: string[]) {
+  await page.addInitScript(order => {
+    localStorage.setItem('teslasync.table.drives:evidence.columns', JSON.stringify({ order, hidden: [] }));
+  }, [...driveColumns, ...optional]);
+}
+
+for (const [theme, pack, width] of [['light', 'quiet', 390], ['dark', 'terminal', 1440]] as const) {
+  test(`shared Drive grid follows the ${pack} app design and saved accent in ${theme}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width, height: 900 });
+    await seedBrowserState(page, theme, '/drives');
+    const mocks = await installApiMocks(page, 'populated', theme);
+    await page.route('**/api/v1/settings/widget-design-pack', route => fulfillApiFixture(route, mocks, {
+      json: { ...createReviewPreference(), pack_id: pack, app_wide: true },
+    }));
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, mode: theme, theme: 'custom', custom_primary: '#9c6ade', custom_accent: '#c0842b', font_scale: 1.1 },
+    }));
+    await page.route('**/api/v1/drives?*', route => fulfillApiFixture(route, mocks, {
+      json: driveGridResponse(evidenceDrives, new URL(route.request().url()).searchParams),
+    }));
+    await page.goto('/drives?from=2026-08-01&to=2026-08-31&size=1');
+    await waitForHarnessReady(page, mocks);
+    await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack);
+    const frame = page.locator('[data-drive-evidence-grid] [data-grid-frame]');
+    await expect(page.getByRole('heading', { name: 'Drive history', exact: true })).toHaveCount(1);
+    await expect(frame.locator('[data-grid-heading]')).toHaveCount(0);
+    await expect(frame.locator('[data-grid-tools]')).toBeVisible();
+    expect(await frame.evaluate(node => getComputedStyle(node).getPropertyValue('--theme-accent').trim())).toBe('#9c6ade');
+    if (width === 390) {
+      await expect(frame.locator('[data-mobile-table] [data-card]')).toHaveCount(1);
+      await expect(frame.getByRole('table')).toHaveCount(0);
+      await frame.getByRole('button', { name: 'Filter & sort' }).click();
+      const tools = page.getByRole('dialog', { name: 'Filter & sort' });
+      await tools.getByRole('combobox', { name: 'Column' }).selectOption('route');
+      await tools.getByRole('button', { name: 'Text condition' }).click();
+      await tools.getByRole('textbox', { name: 'Filter Route' }).fill('Office →');
+      await expect(page).toHaveURL(/grid_route=/);
+      await tools.getByRole('button', { name: 'Done', exact: true }).click();
+    } else {
+      const table = frame.getByRole('table', { name: 'Drive evidence' });
+      await expect(table).toBeVisible();
+      await expect(table.getByRole('columnheader', { name: 'Route', exact: true })).toHaveAttribute('data-grid-identity', 'true');
+      const tools = frame.locator('[data-grid-tools]');
+      await expectControlsOnSameRow([
+        tools.getByRole('combobox', { name: 'Filter by column' }),
+        tools.locator('input[type="search"]'),
+        tools.getByRole('combobox', { name: 'Sort by' }),
+        tools.getByRole('button', { name: 'Saved views', exact: true }),
+        tools.getByRole('button', { name: 'Export list' }),
+        tools.getByRole('button', { name: 'Reorder or hide columns' }),
+      ]);
+      await frame.getByRole('combobox', { name: 'Filter by column' }).selectOption('route');
+      await frame.locator('[data-grid-tools]').getByRole('textbox', { name: 'Filter Route' }).fill('Office →');
+      await expect(page).toHaveURL(/grid_route=/);
+      await frame.getByRole('combobox', { name: 'Sort by' }).selectOption('distance');
+      await expect(table.getByRole('columnheader', { name: 'Distance (km)' })).toHaveAttribute('aria-sort', 'descending');
+      await expect(page).toHaveURL(/grid_route=Office/);
+      await expect(frame.locator('a[href="/drives/102"]')).toBeVisible();
+      const views = page.getByRole('dialog', { name: 'Saved views', exact: true });
+      await frame.getByRole('button', { name: 'Saved views', exact: true }).click();
+      await views.getByRole('textbox', { name: 'View name' }).fill('Office routes');
+      await views.getByRole('button', { name: 'Save current view' }).click();
+      await expect(views.getByRole('button', { name: 'Office routes', exact: true })).toBeVisible();
+      await views.getByRole('button', { name: 'Close', exact: true }).click();
+      await frame.locator('[data-grid-tools]').getByRole('textbox', { name: 'Filter Route' }).clear();
+      await expect(frame.locator('a[href="/drives/104"]')).toBeVisible();
+      await frame.getByRole('button', { name: 'Saved views', exact: true }).click();
+      await views.getByRole('button', { name: 'Office routes', exact: true }).click();
+      await expect(page).toHaveURL(/from=2026-08-01&to=2026-08-31/);
+      await expect(page).toHaveURL(/grid_route=Office/);
+    }
+    await expect(frame.getByText('1 matching / 4 in range', { exact: true })).toBeVisible();
+    await expect(frame.locator('a[href="/drives/102"]')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await frame.locator('[data-grid-tools]').scrollIntoViewIfNeeded();
+    await frame.screenshot({ path: test.info().outputPath(`app-grid-${pack}-${theme}.png`) });
+    await assertMockApiComplete(page, mocks);
+  });
+}
 
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [1440, 1920]) {
@@ -25,13 +170,8 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.route('**/api/v1/drives?*', route => {
         const params = new URL(route.request().url()).searchParams;
-        const start = Date.parse(params.get('start') ?? '1970-01-01');
-        const end = Date.parse(params.get('end') ?? '2100-01-01');
         return fulfillApiFixture(route, mocks, {
-          json: [...evidenceDrives, ...priorDrives].filter(drive => {
-            const at = Date.parse(drive.start_ts);
-            return at >= start && at < end;
-          }),
+          json: driveGridResponse([...evidenceDrives, ...priorDrives], params),
         });
       });
       await page.goto('/drives?from=2026-08-01&to=2026-08-31');
@@ -132,7 +272,10 @@ for (const theme of ['light', 'dark'] as const) {
       if (width >= 1920) expect(new Set(overviewGeometry.map(item => item.row)).size).toBe(2);
       await overview.screenshot({ path: test.info().outputPath(`drive-overview-${width}-${theme}.png`) });
       await region.scrollIntoViewIfNeeded();
-      if (width < 1024) {
+      const frame = region.locator('[data-grid-frame]');
+      const frameWidth = await frame.evaluate(node => node.getBoundingClientRect().width);
+      if (frameWidth <= 781) {
+        await expect(frame.locator('[data-mobile-table]')).toBeVisible();
         await expect(region.getByRole('table')).toHaveCount(0);
         await expect(region.getByRole('link').first()).toBeVisible();
         const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
@@ -159,7 +302,7 @@ for (const theme of ['light', 'dark'] as const) {
         const table = region.getByRole('table', { name: 'Drive evidence' });
         await expect(table).toBeVisible();
         await expectIntegratedGridFooter(table);
-        await expect(table.getByRole('spinbutton')).toHaveCount(0);
+        await expect(table.getByRole('spinbutton', { name: 'Minimum Distance (km)' })).toBeVisible();
         await expect(page.getByTestId('drives-filters')).toHaveCount(0);
         const exports = region.getByRole('button', { name: 'Export list', exact: true });
         await expect(exports).toHaveCount(1);
@@ -168,23 +311,13 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByRole('menuitem', { name: 'Download as JSON' })).toBeVisible();
         await exports.press('Escape');
         const columnMenu = region.getByRole('button', { name: 'Reorder or hide columns' });
-        const title = region.getByRole('heading', { name: /Drive evidence/ });
-        await expect(title).toHaveCount(1);
-        await expect.poll(async () => {
-          const bounds = await Promise.all([title, exports, columnMenu].map((item) => item.boundingBox()));
-          if (bounds.some(box => box == null)) return Infinity;
-          const centers = bounds.map(box => box!.y + box!.height / 2);
-          return Math.max(...centers) - Math.min(...centers);
-        }).toBeLessThanOrEqual(2);
-        for (const key of ['start', 'destination', 'startBattery', 'battery', 'batteryUsed', 'maxSpeed', 'avgPower', 'outsideTemp', 'regen']) {
-          await expect(table.locator(`thead th[data-column-key="${key}"]`)).toHaveCount(1);
-        }
-        await expect(table.locator('tbody tr').first().locator('td[data-column-key="startBattery"]')).toHaveText('78.00');
-        await expect(table.locator('tbody tr').first().locator('td[data-column-key="battery"]')).toHaveText('68.00');
-        await expect(table.locator('tbody tr').first().locator('td[data-column-key="batteryUsed"]')).toHaveText('10.00');
-        for (const label of ['Energy', 'Regen', 'FSD']) {
-          await expect(table.getByRole('button', { name: `${label} filter`, exact: true })).toBeVisible();
-        }
+        await expect(region.getByRole('heading', { name: 'Drive history', exact: true })).toHaveCount(0);
+        const [exportBox, columnsBox] = await Promise.all([exports, columnMenu].map(item => item.boundingBox()));
+        expect(Math.abs((exportBox!.y + exportBox!.height / 2) - (columnsBox!.y + columnsBox!.height / 2))).toBeLessThanOrEqual(2);
+        await expect(frame.getByRole('combobox', { name: 'Filter by column' })).toHaveValue('');
+        await expect(frame.getByRole('combobox', { name: 'Sort by' })).toHaveValue('date');
+        expect(await table.locator('thead th[data-column-key]').evaluateAll(cells =>
+          cells.map(cell => cell.getAttribute('data-column-key')))).toEqual(driveColumns);
         for (const key of ['distance', 'duration', 'speed', 'maxSpeed', 'avgPower', 'energy', 'regen', 'batteryUsed']) {
           await expect(table.locator(`tbody [data-column-key="${key}"] [data-indicator]`)).toHaveCount(0);
         }
@@ -193,12 +326,12 @@ for (const theme of ['light', 'dark'] as const) {
           const headerCheckbox = node.querySelector('thead .checkbox-indicator')!.getBoundingClientRect();
           const checkbox = node.querySelector('tbody .checkbox-indicator')!.getBoundingClientRect();
           const row = node.querySelector('tbody tr')!.getBoundingClientRect();
-          const header = node.querySelector('thead th[data-column-key="date"] button')!.getBoundingClientRect();
-          const link = node.querySelector('tbody a[href^="/drives/"]')!.getBoundingClientRect();
+          const header = node.querySelector('thead th[data-column-key="route"]')!.getBoundingClientRect();
+          const cell = node.querySelector('tbody td[data-column-key="route"]')!.getBoundingClientRect();
           return {
             checkboxX: Math.abs(headerCheckbox.x - checkbox.x),
             checkboxCenter: Math.abs(checkbox.y + checkbox.height / 2 - (row.y + row.height / 2)),
-            textX: Math.abs(header.x - link.x),
+            textX: Math.abs(header.x - cell.x),
             rowHeight: row.height,
           };
         });
@@ -210,12 +343,19 @@ for (const theme of ['light', 'dark'] as const) {
         await table.screenshot({ path: test.info().outputPath(`evidence-${width}-${theme}.png`) });
         await brief.screenshot({ path: test.info().outputPath(`posture-${width}-${theme}.png`) });
         await region.screenshot({ path: test.info().outputPath(`ledger-${width}-${theme}.png`) });
+        const minimum = table.getByRole('spinbutton', { name: 'Minimum Distance (km)' });
+        await minimum.fill('100000');
+        await expect(table.getByText('No drives match these filters')).toBeVisible();
+        await minimum.clear();
+        await expect(table.locator('tbody a[href^="/drives/"]').first()).toBeVisible();
+
         await table.getByRole('button', { name: 'Distance (km) filter', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Distance (km) filter' });
         await expect(dialog).toBeVisible();
         await expect(dialog.getByRole('checkbox', { name: '28.75 km' })).toBeChecked();
         await dialog.getByRole('button', { name: 'Number condition' }).click();
-        await dialog.getByRole('spinbutton').fill('100000');
+        await dialog.getByRole('spinbutton').fill('200000');
+        await expect(page).toHaveURL(/(?:\?|&)grid_distance=200000(?:&|$)/);
         await expect(table.getByText('No drives match these filters')).toBeVisible();
         await dialog.getByRole('button', { name: 'Clear', exact: true }).click();
         await expect(table.locator('tbody a[href^="/drives/"]').first()).toBeVisible();
@@ -229,7 +369,7 @@ for (const theme of ['light', 'dark'] as const) {
       const footer = drawer.locator('[data-drawer-footer]');
       const footerMatchesTheme = await footer.evaluate((node) => {
         const probe = document.createElement('span');
-        probe.style.backgroundColor = 'var(--surface-1)';
+        probe.style.backgroundColor = 'var(--surface-2)';
         node.appendChild(probe);
         const expected = getComputedStyle(probe).backgroundColor;
         const actual = getComputedStyle(node).backgroundColor;
@@ -247,8 +387,9 @@ for (const theme of ['light', 'dark'] as const) {
   test(`drive grid uses saved miles and Fahrenheit preferences in ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await seedBrowserState(page, theme, '/drives');
+    await showOptionalColumns(page, 'speed', 'efficiency', 'outsideTemp', 'startBattery', 'battery', 'batteryUsed');
     const mocks = await installApiMocks(page, 'populated', theme);
-    await page.route('**/api/v1/settings', (route) => route.fulfill({
+    await page.route('**/api/v1/settings', (route) => fulfillApiFixture(route, mocks, {
       json: { ...mockAppSettings, mode: theme, unit_of_length: 'mi', unit_of_temp: 'F' },
     }));
     await page.goto('/drives?from=2026-08-01&to=2026-08-31');
@@ -259,7 +400,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(table.locator('thead th[data-column-key="efficiency"]')).toContainText('Efficiency (Wh/mi)');
     await expect(table.locator('thead th[data-column-key="outsideTemp"]')).toContainText('Outside temp (°F)');
     const row = table.locator('tbody tr').first();
-    await expect(row.locator('[data-column-key="distance"]')).toHaveText('17.86');
+    await expect(row.locator('[data-column-key="distance"]')).toHaveText('17.86 mi');
     await expect(row.locator('[data-column-key="speed"]')).toHaveText('33');
     await expect(row.locator('[data-column-key="efficiency"]')).toHaveText('287');
     await expect(row.locator('[data-column-key="outsideTemp"]')).toHaveText('69.80');
@@ -274,7 +415,7 @@ for (const theme of ['light', 'dark'] as const) {
     await filter.getByRole('button', { name: 'Clear', exact: true }).click();
     await filter.getByRole('button', { name: 'Done' }).click();
     await expect(table.getByRole('button', { name: 'Distance (mi) filter', exact: true })).toHaveAttribute('aria-pressed', 'false');
-    await expect(row.locator('[data-column-key="distance"]')).toHaveText('17.86');
+    await expect(row.locator('[data-column-key="distance"]')).toHaveText('17.86 mi');
     await table.screenshot({ path: test.info().outputPath(`imperial-${theme}.png`), animations: 'disabled' });
     await expectNoHorizontalOverflow(page);
   });
@@ -285,9 +426,10 @@ for (const theme of ['light', 'dark'] as const) {
     const width = theme === 'light' ? 1024 : 1440;
     await page.setViewportSize({ width, height: 900 });
     await seedBrowserState(page, theme, '/drives');
+    await showOptionalColumns(page, 'start');
     const mocks = await installApiMocks(page, 'populated', theme);
     await page.route('**/api/v1/drives?*', (route) => fulfillApiFixture(route, mocks, {
-      json: evidenceDrives,
+      json: driveGridResponse(evidenceDrives, new URL(route.request().url()).searchParams),
     }));
     await page.goto('/drives?from=2026-08-01&to=2026-08-31&size=1&page=2');
     await waitForHarnessReady(page, mocks);
@@ -327,9 +469,10 @@ for (const theme of ['light', 'dark'] as const) {
     try {
       await restoredPage.setViewportSize({ width, height: 900 });
       await seedBrowserState(restoredPage, theme, '/drives');
+      await showOptionalColumns(restoredPage, 'start');
       const restoredMocks = await installApiMocks(restoredPage, 'populated', theme);
       await restoredPage.route('**/api/v1/drives?*', (route) => fulfillApiFixture(route, restoredMocks, {
-        json: evidenceDrives,
+        json: driveGridResponse(evidenceDrives, new URL(route.request().url()).searchParams),
       }));
       await restoredPage.goto(savedUrl);
       await waitForHarnessReady(restoredPage, restoredMocks);
@@ -355,7 +498,9 @@ for (const theme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await seedBrowserState(page, theme, '/drives');
     const mocks = await installApiMocks(page, 'populated', theme);
-    await page.route('**/api/v1/drives?*', (route) => route.fulfill({ json: evidenceDrives }));
+    await page.route('**/api/v1/drives?*', (route) => fulfillApiFixture(route, mocks, {
+      json: driveGridResponse(evidenceDrives, new URL(route.request().url()).searchParams),
+    }));
     await page.goto('/drives?from=2026-08-01&to=2026-08-31');
     await waitForHarnessReady(page, mocks);
     const frame = page.locator('[data-drive-evidence-grid]');
@@ -377,12 +522,13 @@ for (const theme of ['light', 'dark'] as const) {
     });
     expect(selectionMatchesTheme).toBe(true);
     await expect(frame.getByRole('region', { name: 'Bulk actions', exact: true })).toHaveCount(0);
-    const title = frame.getByRole('heading', { name: /Drive evidence/ });
-    const exports = frame.getByRole('button', { name: 'Export list', exact: true });
-    const menu = frame.getByRole('button', { name: 'Reorder or hide columns' });
-    const bounds = await Promise.all([title, exports, menu].map((item) => item.boundingBox()));
-    const centers = bounds.map((box) => box!.y + box!.height / 2);
-    expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
+    const toolbar = frame.locator('[data-grid-tools]');
+    await expect(toolbar).toHaveCount(1);
+    const exports = toolbar.getByRole('button', { name: 'Export list', exact: true });
+    const menu = toolbar.getByRole('button', { name: 'Reorder or hide columns' });
+    const bounds = await Promise.all([exports, menu].map((item) => item.boundingBox()));
+    const [exportButton, columns] = bounds.map((box) => box!.y + box!.height / 2);
+    expect(Math.abs(exportButton - columns)).toBeLessThanOrEqual(2);
     await rows.nth(2).press('Space');
     await expect(rows.nth(2)).toHaveAttribute('aria-selected', 'true');
     await frame.screenshot({ path: test.info().outputPath(`polished-selected-${theme}.png`) });

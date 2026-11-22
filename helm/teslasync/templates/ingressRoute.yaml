@@ -77,24 +77,32 @@ spec:
       {{- end }}
   {{- end }}
   {{- range .Values.ingressRoute.routes }}
-    - match: {{ .match }}
-      kind: {{ .kind | default "Rule" }}
-      {{- if or $.Values.ingressRoute.securityHeaders.enabled .middlewares }}
+  {{- $route := . }}
+  {{- $bridge := false }}
+  {{- if and $.Values.ingressRoute.securityHeaders.enabled (eq (len (default (list) $route.services)) 1) }}
+    {{- $service := first $route.services }}
+    {{- $bridge = and (eq ($service.port | int) 80) (or (not $service.name) (eq $service.name (printf "%s-web" (include "teslasync.fullname" $)))) }}
+  {{- end }}
+  {{- range $isBridge := ternary (list true false) (list false) $bridge }}
+    - match: {{ ternary (printf "(%s) && Path(`/spotify-episode-bridge.html`)" $route.match | quote) $route.match $isBridge }}
+      kind: {{ $route.kind | default "Rule" }}
+      {{- if or $.Values.ingressRoute.securityHeaders.enabled $route.middlewares }}
       middlewares:
       {{- if $.Values.ingressRoute.securityHeaders.enabled }}
-        - name: {{ include "teslasync.fullname" $ }}-security-headers
+        - name: {{ include "teslasync.fullname" $ }}-{{ ternary "spotify-bridge-headers" "security-headers" $isBridge }}
           namespace: {{ $.Values.ingressRoute.namespace | default $.Release.Namespace }}
       {{- end }}
-      {{- range .middlewares }}
+      {{- range $route.middlewares }}
         - name: {{ .name }}
           namespace: {{ .namespace | default $.Values.ingressRoute.namespace }}
       {{- end }}
       {{- end }}
       services:
-      {{- range .services }}
+      {{- range $route.services }}
         - name: {{ .name | default (printf "%s-%s" (include "teslasync.fullname" $) (eq (.port | int) 80 | ternary "web" "api")) }}
           namespace: {{ .namespace | default $.Values.ingressRoute.namespace | default $.Release.Namespace }}
           port: {{ .port }}
+      {{- end }}
       {{- end }}
   {{- end }}
   {{- if .Values.ingressRoute.tls.enabled }}

@@ -85,7 +85,6 @@ const ACKNOWLEDGED_LONG_LIST_SURFACES = [
   // DateGroupedList delegates iteration, so a .map-only scan missed it.
   'features/charging/components/charging-list/SessionListSection.tsx',
   'features/charging/pages/ChargingListPage.tsx',
-  'features/driving/components/drives-orchestrator/DrivesMobileEvidence.tsx',
   // Route cards vary in height and render only the selected 12-card page.
   'features/driving/pages/RouteEfficiencyPage.tsx',
   'features/maps/pages/LocationsPage.tsx',

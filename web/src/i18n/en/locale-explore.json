@@ -720,6 +720,11 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "settings": {
+    "smartFeatures": {
+      "subtitle": "Allow or pause individual recommendations and reminders."
+    }
+  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {
@@ -731,6 +736,12 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "smartCharging": {
+    "pageSubtitle": "Trip plans and charging decisions"
+  },
+  "smartCommute": {
+    "pageSubtitle": "Recurring drives and local analysis"
   },
   "sourceLayer": {
     "age": "age",

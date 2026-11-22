@@ -100,16 +100,29 @@ func flattenTime(t protomodel.Time, fieldName string, emittedAt time.Time, vin s
 func flattenDoorStateJSON(payload string, emittedAt time.Time, vin string) ([]Atomic, error) {
 	var ds protomodel.DoorState
 	if err := json.Unmarshal([]byte(payload), &ds); err != nil {
-		return nil, fmt.Errorf("DoorState: parse JSON %q: %w", payload, err)
+		return nil, fmt.Errorf("DoorState: parse JSON: %w", err)
 	}
-	return []Atomic{
-		{Field: "DoorStateDriverFront", Value: ds.DriverFront, EmittedAt: emittedAt, VehicleID: vin},
-		{Field: "DoorStateDriverRear", Value: ds.DriverRear, EmittedAt: emittedAt, VehicleID: vin},
-		{Field: "DoorStatePassengerFront", Value: ds.PassengerFront, EmittedAt: emittedAt, VehicleID: vin},
-		{Field: "DoorStatePassengerRear", Value: ds.PassengerRear, EmittedAt: emittedAt, VehicleID: vin},
-		{Field: "DoorStateFrontTrunk", Value: ds.FrontTrunk, EmittedAt: emittedAt, VehicleID: vin},
-		{Field: "DoorStateRearTrunk", Value: ds.RearTrunk, EmittedAt: emittedAt, VehicleID: vin},
-	}, nil
+	fields := [...]struct {
+		name string
+		open *bool
+	}{
+		{"DoorStateDriverFront", ds.DriverFront},
+		{"DoorStateDriverRear", ds.DriverRear},
+		{"DoorStatePassengerFront", ds.PassengerFront},
+		{"DoorStatePassengerRear", ds.PassengerRear},
+		{"DoorStateFrontTrunk", ds.FrontTrunk},
+		{"DoorStateRearTrunk", ds.RearTrunk},
+	}
+	atoms := make([]Atomic, 0, len(fields))
+	for _, field := range fields {
+		if field.open != nil {
+			atoms = append(atoms, Atomic{Field: field.name, Value: *field.open, EmittedAt: emittedAt, VehicleID: vin})
+		}
+	}
+	if len(atoms) == 0 {
+		return nil, fmt.Errorf("DoorState: no closure observations")
+	}
+	return atoms, nil
 }
 
 // flattenScheduledChargingStartTimeJSON parses the JSON-shaped

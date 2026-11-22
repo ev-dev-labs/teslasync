@@ -68,8 +68,8 @@ describe('StatSkeleton', () => {
     for (const card of cards) {
       const skeletons = card.querySelectorAll(selector)
       expect(skeletons).toHaveLength(2)
-      expect(skeletons[0]).toHaveClass('h-3', 'w-16')
-      expect(skeletons[1]).toHaveClass('h-7', 'w-24')
+      expect(skeletons[0]).toHaveClass('h-3', 'w-2/3')
+      expect(skeletons[1]).toHaveClass('h-7', 'w-4/5')
     }
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
   })

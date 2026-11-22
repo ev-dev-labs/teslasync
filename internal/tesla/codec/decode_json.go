@@ -120,9 +120,10 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //     length 1. Compound atomics have length matching the flattener
 //     (LocationLatitude/Longitude → 2; the 6 DoorState children → 6;
 //     the 10 TireLocation children → 10; Time → 1).
-//   - On Value.invalid (body == "null"): (nil, nil). Counter incremented.
-//     The caller MUST treat (nil, nil) the same way it treats an empty
-//     atomic slice: ack the message, do not DLQ.
+//   - On Value.invalid (body == "null"): count and acknowledge without DLQ.
+//     Media identity and status fields retain their explicit unavailable
+//     values so a previous recording cannot be carried across the change;
+//     other invalid fields return (nil, nil).
 //   - On unknown field: (nil, nil). Counter incremented. We do NOT DLQ
 //     these because a producer publishing a key our codegen has not
 //     caught up to is a known operational state, not a poison pill.
@@ -196,6 +197,9 @@ func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin stri
 	if isJSONNull(body) {
 		jsonInvalidValuesTotal.WithLabelValues(field).Inc()
 		span.SetAttributes(attribute.String("outcome", "invalid_null"))
+		if unavailable, ok := UnavailableMediaText(field); ok {
+			return []Atomic{{Field: field, Value: unavailable, EmittedAt: ts, VehicleID: vin}}, nil
+		}
 		return nil, nil
 	}
 	span.SetAttributes(attribute.String("value_kind", meta.ValueKind.String()))
@@ -421,13 +425,16 @@ func decodeCompoundJSON(field string, kind protomodel.CompoundKind, body []byte,
 		// keys). Use a struct with explicit json tags so we don't depend
 		// on protomodel.Location's Go field naming.
 		var w struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
+			Latitude  *float64 `json:"latitude"`
+			Longitude *float64 `json:"longitude"`
 		}
 		if err := json.Unmarshal(body, &w); err != nil {
 			return nil, fmt.Errorf("location parse: %v", err)
 		}
-		return flattenLocation(protomodel.Location{Latitude: w.Latitude, Longitude: w.Longitude}, field, ts, vin), nil
+		if w.Latitude == nil || w.Longitude == nil {
+			return nil, errors.New("location requires both coordinates")
+		}
+		return flattenLocation(protomodel.Location{Latitude: *w.Latitude, Longitude: *w.Longitude}, field, ts, vin), nil
 
 	case protomodel.CompoundKindDoors:
 		var d protomodel.Doors

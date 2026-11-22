@@ -2,6 +2,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BADGE_VARIANTS, type BadgeProps } from '@/components/ui';
 import en from '@/i18n/en.json';
+import detailEn from '@/i18n/en/locale-detail-ownership.json';
 import splitEn from '@/i18n/en/locale-ownership.json';
 import { VerdictBadge } from './VerdictBadge';
 
@@ -47,7 +48,8 @@ describe('VerdictBadge canonical labels and preserved roles', () => {
     expect(Object.keys(originalRoles)).toHaveLength(38);
     expect(Object.keys(roles)).toHaveLength(41);
     expect(Object.keys(roles).sort()).toEqual(Object.keys(en.ownership.verdict).sort());
-    expect(splitEn.ownership.verdict).toEqual(en.ownership.verdict);
+    expect(detailEn.ownership.verdict).toEqual(en.ownership.verdict);
+    expect(en.ownership.verdict).toMatchObject(splitEn.ownership.verdict);
     for (const [value, label] of Object.entries(en.ownership.verdict)) {
       expect(label).toBe(value.replace(/_/g, ' '));
     }

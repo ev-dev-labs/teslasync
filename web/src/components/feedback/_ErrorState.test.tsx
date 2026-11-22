@@ -170,10 +170,10 @@ describe('ErrorState', () => {
 
     expect(screen.getByText(title.trim())).toHaveClass('text-sm', 'text-[var(--text-primary)]')
     expect(screen.getByText(message)).toHaveClass('text-sm', 'text-[var(--text-secondary)]')
-    expect(screen.getByText(message).parentElement).toHaveClass('min-w-0', 'break-words')
+    expect(screen.getByText(message).parentElement).toHaveClass('min-w-0', '[overflow-wrap:anywhere]')
     expect(screen.getByRole('button').parentElement).toHaveClass(
       'w-full',
-      'md:w-auto',
+      'border-t',
       '[&_button]:min-h-11',
       '[&_button]:min-w-11',
       '[&_button]:whitespace-normal',

@@ -277,45 +277,72 @@ const (
 
 // InvoiceLine is one billed charging event as reported by the provider.
 type InvoiceLine struct {
-	ID                int64     `json:"id"`
-	LineRef           string    `json:"line_ref"`
-	OccurredAt        time.Time `json:"occurred_at"`
-	Location          string    `json:"location"`
-	BilledEnergyWh    float64   `json:"billed_energy_wh"`
-	BilledEnergyMinor int64     `json:"billed_energy_minor"`
-	BilledIdleMinor   int64     `json:"billed_idle_minor"`
-	BilledTaxMinor    int64     `json:"billed_tax_minor"`
-	BilledTotalMinor  int64     `json:"billed_total_minor"`
+	ID                int64                    `json:"id"`
+	LineRef           string                   `json:"line_ref"`
+	OccurredAt        time.Time                `json:"occurred_at"`
+	Location          string                   `json:"location"`
+	BilledEnergyWh    float64                  `json:"billed_energy_wh"`
+	BilledEnergyMinor int64                    `json:"billed_energy_minor"`
+	BilledIdleMinor   int64                    `json:"billed_idle_minor"`
+	BilledTaxMinor    int64                    `json:"billed_tax_minor"`
+	BilledTotalMinor  int64                    `json:"billed_total_minor"`
+	AmountCoverage    InvoiceAmountCoverage    `json:"-"`
+	VarianceEvidence  *InvoiceVarianceEvidence `json:"variance_evidence,omitempty"`
+}
+
+type InvoiceAmountCoverage int16
+
+const (
+	InvoiceEnergyAmountKnown InvoiceAmountCoverage = 1 << iota
+	InvoiceIdleAmountKnown
+	InvoiceTaxAmountKnown
+	InvoiceAllAmountsKnown = InvoiceEnergyAmountKnown | InvoiceIdleAmountKnown | InvoiceTaxAmountKnown
+)
+
+type InvoiceLineInput struct {
+	ID                int64                    `json:"id"`
+	LineRef           string                   `json:"line_ref"`
+	OccurredAt        time.Time                `json:"occurred_at"`
+	Location          string                   `json:"location"`
+	BilledEnergyWh    float64                  `json:"billed_energy_wh"`
+	BilledEnergyMinor *int64                   `json:"billed_energy_minor"`
+	BilledIdleMinor   *int64                   `json:"billed_idle_minor"`
+	BilledTaxMinor    *int64                   `json:"billed_tax_minor"`
+	BilledTotalMinor  *int64                   `json:"billed_total_minor"`
+	VarianceEvidence  *InvoiceVarianceEvidence `json:"variance_evidence,omitempty"`
 }
 
 // ChargingInvoice is a stored provider invoice with all of its lines.
 type ChargingInvoice struct {
-	ID               int64         `json:"id"`
-	VehicleID        int64         `json:"vehicle_id"`
-	Provider         string        `json:"provider"`
-	InvoiceRef       string        `json:"invoice_ref"`
-	Currency         string        `json:"currency"`
-	PeriodStart      time.Time     `json:"period_start"`
-	PeriodEnd        time.Time     `json:"period_end"`
-	BilledTotalMinor int64         `json:"billed_total_minor"`
-	Status           InvoiceStatus `json:"status"`
-	LineCount        int           `json:"line_count"`
-	Version          int           `json:"version"`
-	Lines            []InvoiceLine `json:"lines"`
-	CreatedAt        time.Time     `json:"created_at"`
-	UpdatedAt        time.Time     `json:"updated_at"`
+	ID               int64                   `json:"id"`
+	VehicleID        int64                   `json:"vehicle_id"`
+	Provider         string                  `json:"provider"`
+	InvoiceRef       string                  `json:"invoice_ref"`
+	Currency         string                  `json:"currency"`
+	PeriodStart      time.Time               `json:"period_start"`
+	PeriodEnd        time.Time               `json:"period_end"`
+	BilledTotalMinor int64                   `json:"billed_total_minor"`
+	Status           InvoiceStatus           `json:"status"`
+	LineCount        int                     `json:"line_count"`
+	Version          int                     `json:"version"`
+	Lines            []InvoiceLine           `json:"lines"`
+	CreatedAt        time.Time               `json:"created_at"`
+	UpdatedAt        time.Time               `json:"updated_at"`
+	VarianceOptions  *InvoiceVarianceOptions `json:"variance_options,omitempty"`
+	ReviewCleared    bool                    `json:"variance_review_cleared,omitempty"`
 }
 
 // CreateInvoiceRequest ingests a provider statement.
 type CreateInvoiceRequest struct {
-	VehicleID        int64         `json:"vehicle_id"`
-	Provider         string        `json:"provider"`
-	InvoiceRef       string        `json:"invoice_ref"`
-	Currency         string        `json:"currency"`
-	PeriodStart      time.Time     `json:"period_start"`
-	PeriodEnd        time.Time     `json:"period_end"`
-	BilledTotalMinor int64         `json:"billed_total_minor"`
-	Lines            []InvoiceLine `json:"lines"`
+	VehicleID        int64                   `json:"vehicle_id"`
+	Provider         string                  `json:"provider"`
+	InvoiceRef       string                  `json:"invoice_ref"`
+	Currency         string                  `json:"currency"`
+	PeriodStart      time.Time               `json:"period_start"`
+	PeriodEnd        time.Time               `json:"period_end"`
+	BilledTotalMinor *int64                  `json:"billed_total_minor"`
+	Lines            []InvoiceLineInput      `json:"lines"`
+	VarianceOptions  *InvoiceVarianceOptions `json:"variance_options,omitempty"`
 }
 
 // ReconciledLine pairs one invoice line with the measured session behind it.
@@ -370,31 +397,35 @@ type InvoiceDispute struct {
 
 // CreateDisputeRequest opens a dispute against a reconciled invoice.
 type CreateDisputeRequest struct {
-	ClaimedMinor int64    `json:"claimed_minor"`
-	Reasons      []string `json:"reasons"`
-	Note         string   `json:"note"`
-	Confirmed    bool     `json:"confirmed"`
+	ClaimedMinor    int64    `json:"claimed_minor"`
+	Reasons         []string `json:"reasons"`
+	Note            string   `json:"note"`
+	Confirmed       bool     `json:"confirmed"`
+	VehicleID       int64    `json:"vehicle_id,omitempty"`
+	ExpectedVersion int      `json:"expected_version,omitempty"`
+	ExpectedDigest  string   `json:"expected_digest,omitempty"`
 }
 
 // ReconciliationReport is the full audit of one invoice.
 type ReconciliationReport struct {
-	Invoice             ChargingInvoice     `json:"invoice"`
-	Lines               []ReconciledLine    `json:"lines"`
-	Uninvoiced          []UninvoicedSession `json:"uninvoiced_sessions"`
-	VarianceBuckets     []VarianceBucket    `json:"variance_buckets"`
-	MatchedLineCount    int                 `json:"matched_line_count"`
-	UnmatchedLineCount  int                 `json:"unmatched_line_count"`
-	BilledTotalMinor    int64               `json:"billed_total_minor"`
-	ExpectedTotalMinor  int64               `json:"expected_total_minor"`
-	NetVarianceMinor    int64               `json:"net_variance_minor"`
-	RecoverableMinor    int64               `json:"recoverable_minor"`
-	MeasuredEnergyWh    float64             `json:"measured_energy_wh"`
-	BilledEnergyWh      float64             `json:"billed_energy_wh"`
-	EnergyVarianceWh    float64             `json:"energy_variance_wh"`
-	DisputePacketDigest string              `json:"dispute_packet_digest"`
-	Disputes            []InvoiceDispute    `json:"disputes"`
-	Quality             DataQuality         `json:"quality"`
-	Evidence            []Evidence          `json:"evidence"`
+	Invoice             ChargingInvoice        `json:"invoice"`
+	Lines               []ReconciledLine       `json:"lines"`
+	Uninvoiced          []UninvoicedSession    `json:"uninvoiced_sessions"`
+	VarianceBuckets     []VarianceBucket       `json:"variance_buckets"`
+	MatchedLineCount    int                    `json:"matched_line_count"`
+	UnmatchedLineCount  int                    `json:"unmatched_line_count"`
+	BilledTotalMinor    int64                  `json:"billed_total_minor"`
+	ExpectedTotalMinor  int64                  `json:"expected_total_minor"`
+	NetVarianceMinor    int64                  `json:"net_variance_minor"`
+	RecoverableMinor    int64                  `json:"recoverable_minor"`
+	MeasuredEnergyWh    float64                `json:"measured_energy_wh"`
+	BilledEnergyWh      float64                `json:"billed_energy_wh"`
+	EnergyVarianceWh    float64                `json:"energy_variance_wh"`
+	DisputePacketDigest string                 `json:"dispute_packet_digest"`
+	Disputes            []InvoiceDispute       `json:"disputes"`
+	Quality             DataQuality            `json:"quality"`
+	Evidence            []Evidence             `json:"evidence"`
+	VarianceReview      *InvoiceVarianceReview `json:"variance_review,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

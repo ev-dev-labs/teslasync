@@ -51,6 +51,7 @@ import { Pencil } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
+import { Label } from './Label';
 import { ErrorText } from './Typography';
 
 export type EditableTextVariant = 'body' | 'heading';
@@ -85,9 +86,8 @@ export interface EditableTextProps {
   maxLength?: number;
   /**
    * Required accessible name describing the editable field
-   * (e.g. "Rename geofence Home"). Used as the button's aria-label
-   * AND the input's aria-label, so screen readers know what's being
-   * edited.
+   * (e.g. "Rename geofence Home"). Used as the button's accessible
+   * name and the input's visible label while editing.
    */
   ariaLabel: string;
   /** 'body' (default) or 'heading' — controls visible text size only. */
@@ -296,7 +296,17 @@ export function EditableText({
   // ─── Edit mode ──────────────────────────────────────────────────────
   if (editing) {
     return (
-      <div data-app-part="field" className={cn('inline-flex flex-col gap-1', className)}>
+      <div data-app-part="field" className={cn('inline-flex min-w-0 max-w-full flex-col gap-1', className)}>
+        <Label
+          htmlFor={inputId}
+          className="self-start [overflow-wrap:anywhere]"
+          onMouseDown={(e) => {
+            // Preserve focus until the native label click instead of saving on blur.
+            if (e.button === 0 && inputRef.current === document.activeElement) e.preventDefault();
+          }}
+        >
+          {ariaLabel}
+        </Label>
         <div className="inline-flex items-center gap-2">
           <input
             ref={inputRef}
@@ -311,13 +321,12 @@ export function EditableText({
             autoFocus
             placeholder={placeholder}
             maxLength={maxLength}
-            aria-label={ariaLabel}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? `${inputId}-error` : undefined}
             aria-busy={saving || undefined}
             data-testid="editable-text-input"
             className={cn(
-              'rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+              'min-w-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
               'px-2 py-1 placeholder:text-[var(--text-muted)]',
               'focus:outline-none focus:ring-2 focus:ring-theme-accent',
               'disabled:cursor-not-allowed disabled:opacity-60',

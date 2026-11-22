@@ -959,6 +959,12 @@ config:
   #   Keycloak:      X-Forwarded-User
   #   Empty:         disables auth (dev mode)
   forwardAuthHeader: ""
+  # -- Comma-separated exact ForwardAuth subjects eligible for Smart Notifications operator advice.
+  # Empty disables operator advice. This does not grant administrator access to other routes.
+  smartOperatorSubjects: ""
+  # -- One exact allowlisted subject for private upstream outage and recovery notices.
+  # Empty disables notices; confirmed outages still pause estimates.
+  smartIncidentSubject: ""
 
   # ── Auth-mode contract — Phase 46 / Prompt 57 ────────────────────────
   # Free-text hint surfaced verbatim by /system/auth-mode and rendered
@@ -1046,6 +1052,19 @@ webPush:
   # -- VAPID `sub` field. Operator contact the push service can use.
   # Must be a `mailto:` URL or an https:// URL.
   subject: ""
+
+spotifyPlaylists:
+  # Optional public Spotify OAuth client ID for private playlists. No client secret.
+  clientId: ""
+  # Registered same-origin HTTPS URI ending in /api/v1/media/spotify/callback.
+  redirectUri: ""
+
+smartCommute:
+  # Confirm that your HERE agreement permits background Routing and Traffic Flow
+  # comparisons for this use and short-lived retention of the resulting ETAs.
+  hereLicenseConfirmed: false
+  # Server-only HERE key for the licensed Routing v8 and Traffic Flow v7 APIs.
+  hereApiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Service mode banner override (Phase 46 / Prompt 04)

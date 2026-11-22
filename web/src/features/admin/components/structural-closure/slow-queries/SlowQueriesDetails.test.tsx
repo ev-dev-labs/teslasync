@@ -130,8 +130,8 @@ describe('SlowQueriesDetails full-detail mobile contract', () => {
     resize(1440);
     expect(view.container.querySelector('[data-mobile-table]')).toBeNull();
     const table = screen.getByRole('table', { name: 'admin:slow-queries' });
-    expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual(labels);
-    expect(within(table).getByText(fingerprint)).toBeInTheDocument();
+    expect(within(table).getAllByRole('columnheader').map(header => header.getAttribute('aria-label'))).toEqual(labels);
+    expect(within(table).getByRole('cell', { name: fingerprint })).toBeInTheDocument();
     expect(rows).toEqual(before);
   });
 

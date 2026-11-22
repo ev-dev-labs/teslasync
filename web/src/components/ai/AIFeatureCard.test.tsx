@@ -87,6 +87,38 @@ describe('AIBadge', () => {
     expect(badge).toHaveAttribute('aria-label', 'Helix')
     expect(screen.queryByText('Helix')).not.toBeInTheDocument()
   })
+
+  it('shows source context without requiring a hover when requested', () => {
+    render(<AIBadge showEvidence />)
+
+    const badge = screen.getByText('Helix')
+    const source = screen.getByText(/Helix grounds responses in redacted TeslaSync data/)
+    expect(badge).toHaveAttribute('aria-describedby', source.id)
+    expect(badge).not.toHaveAttribute('title')
+  })
+})
+
+it('keeps the workbench request separate from real returned evidence', () => {
+  const start = vi.fn()
+  const view = (stream: AIFeatureStream) => (
+    <AIFeatureCard title="Review history" description="Review the selected period."
+      buttonLabel="Review" inputSlot={<span>Selected period</span>} canStart stream={stream} />
+  )
+  const { container, rerender } = render(view(makeStream({ start })))
+
+  const request = container.querySelector('[data-helix-zone="request"]')
+  const evidence = container.querySelector('[data-helix-zone="evidence"]')
+  const action = screen.getByRole('button', { name: 'Ask Helix · Review' })
+  expect(request).toContainElement(screen.getByText('Selected period'))
+  expect(request).toContainElement(action)
+  expect(request).toContainElement(screen.getByRole('heading', { name: 'Review history' }))
+  expect(request).not.toContainElement(screen.getByText('Helix'))
+  expect(evidence).toBeEmptyDOMElement()
+  fireEvent.click(action)
+  expect(start).toHaveBeenCalledOnce()
+
+  rerender(view(makeStream({ state: 'done', text: 'Two trips were recorded.' })))
+  expect(evidence).toContainElement(screen.getByText('Two trips were recorded.'))
 })
 
 describe('AIFeatureCard — header content', () => {

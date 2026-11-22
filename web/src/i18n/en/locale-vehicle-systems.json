@@ -848,100 +848,158 @@
       "notice": "{{rows}} returned rows, {{runs}} run fragments, and {{complete}} complete active runs support only the disclosed observational summaries; no maintenance diagnosis is inferred."
     }
   },
-  "maintenance": {
-    "aiPredictive": {
-      "title": "Helix maintenance advisor",
-      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
-      "button": "Predict maintenance",
-      "badge": "Helix",
-      "emptyHint": "Select a vehicle first."
-    },
-    "itemProgress": "{{name}} service progress",
-    "title": "Maintenance",
-    "subtitle": "Service schedule, records, and upcoming maintenance",
-    "kpis": "Maintenance summary",
-    "kpi": {
-      "total": "Total items",
-      "overdue": "Overdue",
-      "soon": "Due soon",
-      "healthy": "Healthy",
-      "completed": "Completed",
-      "categories": "Categories"
-    },
-    "schedule": "Schedule",
-    "refresh": "Refresh maintenance data",
-    "itemsTitle": "Maintenance items",
-    "filterCategory": "Filter by category",
-    "sortBy": "Sort items",
-    "allCategories": "All categories",
-    "sort": {
-      "status": "Status",
-      "name": "Name",
-      "dueDate": "Due date",
-      "category": "Category"
-    },
-    "status": {
-      "good": "Good",
-      "soon": "Due soon",
-      "overdue": "Overdue",
-      "completed": "Completed"
-    },
-    "due": "Due",
-    "noItemsTitle": "No maintenance items",
-    "noItemsFiltered": "No items match the selected category. Try a different filter.",
-    "noItems": "No maintenance items found for this vehicle.",
-    "clearFilterCta": "Clear filter",
-    "projectionsTitle": "Service projections",
-    "noProjections": "No upcoming service projections available.",
-    "costTitle": "Estimated annual cost",
-    "totalSpent": "Total spent",
-    "annualEst": "Annual est.",
-    "perYear": "/yr",
-    "avgService": "Avg / service",
-    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
-    "noCost": "No cost data available yet. Log service records to see cost estimates.",
-    "categoryTitle": "Maintenance by category",
-    "noCategory": "No maintenance items to categorize yet.",
-    "items": "items",
-    "recordsTitle": "Service records",
-    "noRecords": "No service records logged yet.",
-    "noRecordsShort": "No service records found.",
-    "inspectRecord": "Inspect service record",
-    "preview": {
-      "eyebrow": "Service evidence",
-      "title": "Service record",
-      "recordId": "Record ID",
-      "completed": "Completed"
-    },
-    "cost": {
-      "methodology": "Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record."
-    },
-    "details": {
-      "createdAt": "Created",
-      "id": "Item ID",
-      "sourceStatus": "Source status",
-      "lastDate": "Last service date",
-      "dueDistance": "Due odometer",
-      "lastDistance": "Last service odometer",
-      "distanceInterval": "Distance interval",
-      "monthInterval": "Month interval",
-      "title": "Service interval and metadata"
-    },
-    "sources": {
-      "refreshBlocked": "Refresh is paused. Retained data remains available."
-    },
-    "summary": {
-      "provenance": "Counts use all returned maintenance items, before category filtering."
-    },
-    "col": {
-      "date": "Date",
-      "description": "Description",
-      "mileage": "Mileage",
-      "cost": "Cost",
-      "provider": "Provider"
-    }
-  },
   "media": {
+    "episode": {
+      "title": "Episode for your next drive",
+      "description": "Check whether the known time remaining in one episode fits your estimated drive. Nothing is sent as a notification.",
+      "open": "Open private episode review",
+      "vehicle": "Select a vehicle to review an upcoming drive.",
+      "signIn": "Sign in to review an episode privately.",
+      "denied": "This private episode review is no longer available for the current sign-in or vehicle.",
+      "offline": "Reconnect to view or change this episode review.",
+      "off": "Off. Confirm a drive and one episode to check the fit.",
+      "expired": "This review expired. Confirm a new drive to check again.",
+      "awaiting": "No authorized progress has been received.",
+      "unmatched": "This upcoming drive estimate is not usable.",
+      "unknown": "Playback progress is unknown. A fit was not assumed.",
+      "completed": "This episode is already complete.",
+      "notFit": "The remaining episode is longer than this drive estimate.",
+      "fits": "The remaining episode fits the estimated drive.",
+      "clear": "Turn off and clear episode review",
+      "driveTiming": "Estimated departure {{departure}}; drive length {{length}}.",
+      "remaining": "{{length}} remaining as reported during this review.",
+      "spotifyLink": "Open episode in Spotify",
+      "playerPrivacy": "Loading the player shares this episode and its saved position with Spotify. Then choose Play in the player.",
+      "playerChecking": "Checking that this private episode review is still current.",
+      "playerNotCurrent": "The episode review could not be verified. No Spotify player was loaded.",
+      "loadPlayer": "Load Spotify player at saved position",
+      "closePlayer": "Close Spotify player",
+      "playerFrame": "Spotify episode player",
+      "playerLoading": "Loading the Spotify player.",
+      "playerReady": "Spotify player ready. Playback at the saved position is not confirmed.",
+      "playbackObserved": "Spotify reported playback near the saved position.",
+      "playbackDifferent": "Spotify did not report playback near the saved position.",
+      "playerUnavailable": "Spotify playback could not be confirmed. You can still open the episode in Spotify.",
+      "authFailed": "Spotify did not return authorized episode progress. No playback was started.",
+      "lead": "Minutes until departure",
+      "drive": "Estimated drive length (minutes)",
+      "source": "Episode progress source",
+      "manual": "Enter known progress manually",
+      "provider": "Read progress from Spotify",
+      "name": "Episode title",
+      "length": "Episode duration (seconds)",
+      "position": "Known position (seconds)",
+      "positionHint": "Leave blank if unknown. Enter 0 only for a known unplayed episode.",
+      "link": "Exact Spotify episode link",
+      "providerHint": "Authorize one read for this episode. TeslaSync sends its ID, not your drive details, and does not start playback.",
+      "confirm": "Confirm drive and check fit",
+      "authorize": "Confirm drive and authorize progress read",
+      "clearDetail": "Clear the local progress snapshot and cancel pending authorization? Spotify history does not change."
+    },
+    "favorites": {
+      "title": "Weekly favorites shortlist",
+      "description": "Opt in to a private weekly shortlist based on repeated playback in this vehicle. Nothing is sent to music services or delivered as a push.",
+      "open": "Review weekly favorites",
+      "vehicle": "Select a vehicle for the weekly shortlist.",
+      "signIn": "Sign in to review music favorites privately.",
+      "offline": "Reconnect to view or change the favorites shortlist.",
+      "clear": "Turn off and delete local favorites",
+      "confirmFavorite": "Confirm local favorite",
+      "spotify": "Spotify",
+      "youtubeMusic": "YouTube Music",
+      "appleMusic": "Apple Music",
+      "tidal": "Tidal",
+      "bluetooth": "Bluetooth",
+      "usb": "USB",
+      "recording": "{{title}} by {{artist}} · {{length}} · {{source}}",
+      "off": "Off. No weekly playback review is scheduled.",
+      "paused": "Paused. Confirmed local favorites are kept, but history is not checked.",
+      "available": "Active. A private shortlist is ready to review.",
+      "waiting": "Active. No shortlist is available; weak or missing playback evidence stays quiet.",
+      "next": "Next weekly check: {{next}} ({{zone}}).",
+      "candidates": "Possible favorites",
+      "why": "Why this? Repeated playback was observed on separate completed drives. The vehicle cannot identify who chose or heard it. Only confirm recordings you want to keep.",
+      "coverage": "Playback observations from {{from}} up to {{until}}. This shortlist expires {{expiry}}.",
+      "samples": "Observed in {{drives}} separate drives across {{dates}} dates.",
+      "chooseRecording": "Choose {{title}} as a local favorite",
+      "full": "Remove one of the 50 saved favorites before adding another.",
+      "dismiss": "Dismiss this shortlist",
+      "saved": "Confirmed local favorites",
+      "remove": "Remove {{title}}",
+      "setup": "Set up weekly shortlist",
+      "resume": "Resume weekly shortlist",
+      "edit": "Change shortlist time zone",
+      "pause": "Pause weekly shortlist",
+      "zone": "Shortlist time zone",
+      "zoneHelp": "Use a time zone such as America/New_York or UTC. The previous week is reviewed at 9 AM Monday in that time zone.",
+      "consent": "Review local playback from completed drives for this vehicle each week.",
+      "enroll": "Confirm private weekly shortlist",
+      "clearDetail": "Stop weekly checks and delete the shortlist and confirmed local favorites? Source playback history stays unchanged.",
+      "chooseDetail": "Save this recording as your local favorite? TeslaSync does not update a streaming account."
+    },
+    "privateReview": {
+      "refreshRequired": "Private playback details are hidden until the current review is verified."
+    },
+    "playlist": {
+      "title": "Private drive playlist",
+      "description": "Preview a drive-length playlist locally. No listening history or track selections leave TeslaSync during preview.",
+      "open": "Review drive playlist",
+      "selectVehicle": "Select a vehicle to review a playlist for your next drive.",
+      "signIn": "Sign in to use your private drive playlist review.",
+      "offline": "Reconnect to view or change this playlist review.",
+      "connect": "Connect Spotify for private playlists",
+      "disconnect": "Disconnect Spotify",
+      "clear": "Turn off and clear preview",
+      "connectDetail": "Authorize Spotify to create private playlists on your account. The connection expires within an hour. Authorization alone does not save tracks or start playback.",
+      "disconnectDetail": "Remove TeslaSync’s saved permission and any pending sign-in. This does not remove any playlists from Spotify. You can also remove app access in your Spotify account.",
+      "clearDetail": "Delete this local preview and save outcome? This does not delete vehicle history, disconnect Spotify or remove a playlist there.",
+      "off": "Off. Confirm a drive to build a private preview.",
+      "paused": "Paused. Confirm a drive to resume.",
+      "expired": "The confirmed departure has passed. No playlist can be saved from this preview.",
+      "snoozed": "Snoozed until {{time}}.",
+      "ready": "Local preview ready. Edit the tracks before saving.",
+      "noEvidence": "No supported tracks with enough observed playback and known duration fit this drive. No suggestions were invented.",
+      "saving": "Spotify save is in progress. Do not retry.",
+      "saved": "Spotify confirmed creation of your private playlist and its tracks.",
+      "rejected": "Spotify rejected creation of the playlist. No tracks were sent.",
+      "createdOnly": "Spotify created a private playlist, but its tracks were not added. Check your Spotify library before making another playlist.",
+      "unknown": "Spotify did not confirm creating the playlist. No tracks were sent. Check your Spotify library before trying again. TeslaSync will not retry it.",
+      "itemsUnknown": "Spotify confirmed creation of your private playlist but did not confirm adding the tracks. Check the playlist before trying again. TeslaSync will not retry it.",
+      "savedDeparture": "Confirmed departure: {{time}}. This review is only for the selected vehicle.",
+      "unavailable": "You can preview locally. A Spotify connector with secure storage is not configured.",
+      "connected": "Spotify private playlist authorization is active.",
+      "editDrive": "Confirm or edit drive details",
+      "setup": "Confirm an upcoming drive",
+      "pause": "Pause review",
+      "snooze": "Snooze 15 minutes",
+      "matchError": "At least one link could not be matched to the observed recording. Check the links and your Spotify access. No playlist was created.",
+      "connectError": "Spotify authorization is unavailable or expired. Check your connection before saving.",
+      "changeError": "The action was not confirmed. Refresh this review and check the recorded outcome before trying again.",
+      "departure": "Confirmed departure ({{zone}})",
+      "driveLength": "Estimated drive length (minutes)",
+      "confirmDrive": "I confirmed this drive and allow TeslaSync to use this vehicle’s last seven days of observed Spotify playback. This can include other listeners.",
+      "invalidDrive": "Choose an existing local departure time in the next 24 hours and a drive length from 5 to 360 minutes.",
+      "build": "Build local preview",
+      "save": "Save private playlist",
+      "why": "Why this playlist?",
+      "whyDetail": "The selected tracks were observed playing on this vehicle. Their reported lengths approximate your drive; they do not prove anyone’s preferences.",
+      "total": "Edited length: {{total}}. Drive estimate: {{target}}. Allowed difference: {{margin}}.",
+      "notFit": "Adjust the selected tracks to fit the drive length before saving.",
+      "track": "{{title}} by {{artist}}",
+      "trackObserved": "Reported length: {{duration}}. Observed playing at {{time}}.",
+      "link": "Spotify track link for {{title}}",
+      "moveUpTrack": "Move {{title}} up",
+      "moveDownTrack": "Move {{title}} down",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeTrack": "Remove {{title}}",
+      "alternative": "Observed tracks to add",
+      "chooseTrack": "Choose a track",
+      "add": "Add track",
+      "linkHelp": "Paste each exact track’s open.spotify.com link. TeslaSync checks the title, artist and duration before saving. Keep locations and other sensitive details out of the playlist name.",
+      "name": "Playlist name",
+      "saveConfirm": "Send the playlist name and selected track IDs to Spotify and create a private playlist? This will not play music or send anything to the car."
+    },
     "status": {
       "playing": "Playing",
       "paused": "Paused",
@@ -1010,6 +1068,68 @@
   "preconditioningEffectiveness": {
     "title": "Preconditioning effectiveness",
     "subtitle": "Observational pre-drive cabin readiness with explicit source, exclusion, support, and uncertainty accounting",
+    "scheduledClimate": {
+      "title": "Private scheduled climate review",
+      "description": "Off by default. Review repeated scheduled cabin starts from local history. Nothing is sent outside TeslaSync and no automation is changed.",
+      "open": "Review scheduled climate",
+      "signIn": "Sign in to set up or view your private schedule review.",
+      "selectVehicle": "Select the vehicle for this review. A linked vehicle may no longer be available.",
+      "needsSetup": "Needs setup. Create an enabled automation for this vehicle with one schedule and one Start climate action.",
+      "off": "Off. No scheduled climate review is active for this vehicle.",
+      "changed": "Paused. This automation changed; review its current version before resuming.",
+      "ready": "Active. A weekly review is available.",
+      "learning": "Learning. Waiting for three matching weekdays with enough parked telemetry.",
+      "selectedSchedule": "Selected schedule: {{name}} ({{zone}}).",
+      "summary": "Climate started near {{count}} matching scheduled runs with no observed drive in the next 90 minutes.",
+      "coverage": "Latest parked evidence: {{last}}. Review expires {{expiry}}.",
+      "history": "View the schedule’s run history",
+      "change": "Change reviewed schedule",
+      "start": "Set up schedule review",
+      "clear": "Turn off and clear review",
+      "schedule": "Scheduled climate automation",
+      "choose": "Choose a schedule",
+      "option": "{{name}} ({{zone}})",
+      "consent": "I want a private weekly review of this schedule using local vehicle history.",
+      "confirm": "Confirm private review",
+      "failed": "The review could not be changed. Refresh and try again.",
+      "cardTitle": "Review a recurring climate schedule",
+      "cardBasis": "Accepted scheduled command for this vehicle, observed HVAC changes and parked telemetry",
+      "cardRationale": "Review whether this schedule still fits your routine. Nothing changes automatically.",
+      "cardLimit": "The observed time window does not explain why climate ran or what happened later."
+    },
+    "cabinPrep": {
+      "title": "Private cabin prep reminder",
+      "description": "Off by default. Confirm one morning departure. TeslaSync checks comparable local warm-ups or cool-downs and may send one private reminder. No vehicle wake, command, or climate change is automatic.",
+      "open": "Review cabin reminder",
+      "signIn": "Sign in to review or set a private reminder.",
+      "selectVehicle": "Select the vehicle for this reminder. The linked vehicle may no longer be available.",
+      "planned": "Confirmed departure: {{when}} (scheduled in {{zone}}).",
+      "unavailable": "Needs setup: verified web push and distributed live telemetry must be enabled.",
+      "off": "Off. No cabin reminder is scheduled for this vehicle.",
+      "expired": "Expired. This departure no longer has an actionable reminder.",
+      "deviceChanged": "Paused. Verify this browser again before confirming another reminder.",
+      "ready": "Active. Review climate controls while there is still time.",
+      "waiting": "Active. Waiting for the departure window and enough trustworthy observations.",
+      "silent": "No reminder: conditions changed, the cabin is already preparing or comfortable, or comparable evidence is insufficient.",
+      "estimate": "Estimate: {{low}} to {{high}} for {{target}}, based on {{count}} comparable mornings. Fresh conditions observed at {{when}}. This is not a measurement for today.",
+      "window": "Act by {{when}} if you choose to prepare the cabin.",
+      "reviewClimate": "Review this vehicle’s climate controls",
+      "set": "Set one morning reminder",
+      "edit": "Review or change departure",
+      "clear": "Turn off and clear reminder",
+      "clearFailed": "The reminder was not cleared. Refresh and try again.",
+      "browserReady": "This browser is verified for personal delivery.",
+      "retryBrowser": "Retry browser verification check",
+      "verifyBrowser": "Verify a browser in personal delivery settings",
+      "departure": "Morning departure ({{zone}})",
+      "target": "Comfort target ({{unit}})",
+      "confirm": "I confirm this one departure and want a private reminder on this verified browser.",
+      "invalid": "Choose a departure from 05:00 to before noon in the next 14 days and a supported comfort target.",
+      "failed": "The reminder was not saved. Refresh and check your browser selection.",
+      "save": "Confirm cabin reminder",
+      "pushTitle": "Review cabin preparation",
+      "pushBody": "Comparable mornings suggest it is time to review cabin preparation for your planned drive."
+    },
     "actions": {
       "refresh": "Refresh evidence"
     },
@@ -1403,6 +1523,42 @@
   },
   "softwareUpdates": {
     "title": "Software updates",
+    "window": {
+      "title": "Private software update window",
+      "open": "Review software update window",
+      "select": "Select a vehicle to check a private update window.",
+      "signIn": "Sign in to save or read your private update window.",
+      "offline": "Reconnect to check or edit your private update window.",
+      "off": "Off. Confirm an update and departure to check a window.",
+      "privateOnly": "Private in-app review. TeslaSync does not send an alert, wake the vehicle, schedule, or start an installation.",
+      "unavailable": "Fresh distributed vehicle telemetry is not available for this review.",
+      "noEvidence": "No current recommendation. Recheck the update and confirm your departure again if the details are old.",
+      "conflict": "Recent vehicle data may conflict with your update check. Review the vehicle’s Software screen.",
+      "notIdle": "No current recommendation. Recent observations do not confirm this vehicle is parked, unoccupied, unplugged and out of service mode.",
+      "short": "The recorded estimate plus the 30-minute margin does not fit before this departure.",
+      "paused": "Paused. Confirm the current update and departure to resume.",
+      "snoozed": "Snoozed until {{time}}.",
+      "expired": "The confirmed departure has passed.",
+      "fits": "The estimated update fits before your confirmed departure.",
+      "saved": "Your confirmed departure: {{departure}}. Update {{version}}; estimate {{minutes}} min.",
+      "why": "Why this window?",
+      "evidence": "Observed parked and idle at {{observed}}. You checked the ready update at {{checked}}. This review includes a {{margin}}-minute margin and expires at {{expires}}.",
+      "action": "Recheck Controls > Software in the parked vehicle before deciding. Installation may run longer, prevent driving, and interrupt charging.",
+      "start": "Confirm update and departure",
+      "edit": "Recheck or edit update details",
+      "pause": "Pause review",
+      "snooze": "Snooze 2 minutes",
+      "clear": "Turn off and clear",
+      "clearDetail": "Delete your private update and departure record? This does not change anything on the vehicle.",
+      "saveFailed": "The review could not be changed. Verify your sign-in, selected vehicle and current settings before trying again.",
+      "setupHelp": "Check Controls > Software while parked. Use the update version and a known installation estimate, not the current firmware version or a guess.",
+      "departure": "Confirmed departure ({{zone}})",
+      "version": "Ready update version",
+      "estimate": "Known installation estimate (minutes)",
+      "confirm": "I checked that this update is ready to install, is not already scheduled or installing, and confirmed when I next need the vehicle.",
+      "invalid": "Enter a valid software version, a known estimate from 1 to 720 minutes, and a local departure more than 30 minutes and within 24 hours from now. Skipped and repeated clock times are not valid.",
+      "save": "Check this window"
+    },
     "source": {
       "unavailable": "Update history is not available. Select a vehicle to load its history.",
       "failed": "Update history could not be refreshed. Retry to recover.",
@@ -1462,52 +1618,6 @@
       "installedOn": "Installed {{date}}",
       "scheduledFor": "Scheduled {{date}}",
       "detected": "Detected {{date}}"
-    }
-  },
-  "tireDifferentialDrift": {
-    "brief": {
-      "scope": "Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings."
-    },
-    "title": "Tire differential drift",
-    "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
-    "kpis": "Differential drift metrics",
-    "leakCorner": "Likely leak corner",
-    "leakCornerLabel": "{{corner}} · {{status}}",
-    "none": "None detected",
-    "leakScore": "evidence score {{score}}",
-    "imbalance": "Structural imbalance",
-    "imbalanceCorner": "largest offset: {{corner}}",
-    "noImbalance": "corners evenly matched",
-    "daysToThreshold": "Days to Threshold",
-    "daysToThresholdHint": "projected from the fitted trend, evidence-gated",
-    "samples": "Samples analyzed",
-    "samplesHint": "{{span}} day span · {{n}} raw rows",
-    "noData": "No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.",
-    "noDrift": "At least two usable four-corner samples at distinct times are needed to fit a drift rate.",
-    "residualTimeline": "Common-mode-removed residuals",
-    "residualTimelineHint": "Each corner's deviation from the four-tire median at every sample — shared weather swings cancel out, leaving only relative drift",
-    "residualTimelineAria": "Line chart of four tire-corner pressure residuals against the common-mode median over time",
-    "col": {
-      "time": "Time",
-      "timestamp": "Timestamp (UTC)",
-      "corner": "Corner",
-      "confidence": "Confidence",
-      "slope": "Slope",
-      "slopeUnit": "Slope ({{unit}}/day)"
-    },
-    "slopeRanking": "Per-corner drift rate",
-    "slopeRankingHint": "Theil-Sen slope of each corner's residual, per day — negative means losing pressure relative to the group",
-    "slopeRankingAria": "Bar chart of the fitted residual drift rate per day for each tire corner",
-    "reading": "Reading this inference",
-    "noReading": "The reading appears once at least one usable four-corner sample has been analyzed.",
-    "suspect": "Leak suspect",
-    "offset": "Most offset",
-    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}",
-    "corner": {
-      "fl": "Front left",
-      "fr": "Front right",
-      "rl": "Rear left",
-      "rr": "Rear right"
     }
   },
   "tirePressure": {
@@ -2091,6 +2201,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -2172,6 +2289,13 @@
     }
   },
   "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    },
     "summary": {
       "status": {
         "partial": "Partial evidence"
@@ -2221,6 +2345,11 @@
       "summaryDays_one": "{{count}} day",
       "summaryDays_other": "{{count}} days",
       "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -2382,6 +2511,34 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -2815,6 +2972,134 @@
       "title": "Suggest a name for this location"
     }
   },
+  "maintenance": {
+    "aiPredictive": {
+      "badge": "Helix",
+      "button": "Predict maintenance",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "emptyHint": "Select a vehicle first.",
+      "title": "Helix maintenance advisor"
+    },
+    "allCategories": "All categories",
+    "annualEst": "Annual est.",
+    "avgService": "Avg / service",
+    "categoryTitle": "Maintenance by category",
+    "clearFilterCta": "Clear filter",
+    "col": {
+      "cost": "Cost",
+      "date": "Date",
+      "description": "Description",
+      "mileage": "Mileage",
+      "provider": "Provider"
+    },
+    "cost": {
+      "methodology": "Annual estimate uses the span between valid service dates, with a minimum of 0.1 years; fewer than two valid dates use total cost. Average cost uses every returned record."
+    },
+    "costTitle": "Estimated annual cost",
+    "details": {
+      "createdAt": "Created",
+      "distanceInterval": "Distance interval",
+      "dueDistance": "Due odometer",
+      "id": "Item ID",
+      "lastDate": "Last service date",
+      "lastDistance": "Last service odometer",
+      "monthInterval": "Month interval",
+      "sourceStatus": "Source status",
+      "title": "Service interval and metadata"
+    },
+    "due": "Due",
+    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
+    "filterCategory": "Filter by category",
+    "inspectRecord": "Inspect service record",
+    "itemProgress": "{{name}} service progress",
+    "items": "items",
+    "itemsTitle": "Maintenance items",
+    "kpi": {
+      "categories": "Categories",
+      "completed": "Completed",
+      "healthy": "Healthy",
+      "overdue": "Overdue",
+      "soon": "Due soon",
+      "total": "Total items"
+    },
+    "kpis": "Maintenance summary",
+    "noCategory": "No maintenance items to categorize yet.",
+    "noCost": "No cost data available yet. Log service records to see cost estimates.",
+    "noItems": "No maintenance items found for this vehicle.",
+    "noItemsFiltered": "No items match the selected category. Try a different filter.",
+    "noItemsTitle": "No maintenance items",
+    "noProjections": "No upcoming service projections available.",
+    "noRecords": "No service records logged yet.",
+    "noRecordsShort": "No service records found.",
+    "perYear": "/yr",
+    "preview": {
+      "completed": "Completed",
+      "eyebrow": "Service evidence",
+      "recordId": "Record ID",
+      "title": "Service record"
+    },
+    "projectionsTitle": "Service projections",
+    "recallWatch": {
+      "active": "Watching {{year}} {{model}}.",
+      "applicability": "Matches your recorded {{year}} {{model}}. An open recall for this VIN is not confirmed.",
+      "basis": "NHTSA received the report on {{reported}}. Last checked {{checked}}.",
+      "campaign": "NHTSA campaign {{campaign}}",
+      "choose": "Choose the exact model",
+      "confirmModel": "I verified this model and model year for the selected vehicle.",
+      "confirmProvider": "Check the U.S. NHTSA catalog once a day. Send only Tesla, the model and the model year; never send my VIN or driving history.",
+      "conflict": "The watch changed. Review the current setup before trying again.",
+      "description": "Review recent U.S. NHTSA campaigns by model year. This watch cannot check VIN applicability or completion. It posts private cards only, never push alerts.",
+      "disabled": "Private recall watch cleared",
+      "edit": "Edit recall watch",
+      "editHint": "Saving replaces the previous watch and clears its saved matches.",
+      "empty": "No current model-year matches to review. This does not mean your VIN has no open recalls.",
+      "enabled": "Private recall watch saved",
+      "failure": "Could not change your recall watch. Refresh and verify your sign-in and vehicle.",
+      "hint": "Only recent public model-year matches appear here. Check your VIN separately by entering it yourself on Tesla’s site.",
+      "lastCheck": "Last successful check: {{when}}.",
+      "model": "Tesla model",
+      "off": "Off. Turn on a watch for your selected vehicle.",
+      "offline": "Reconnect to review your private recall watch.",
+      "open": "Review private recall watch",
+      "remedy": "Published remedy: {{remedy}}",
+      "remove": "Turn off and clear recall watch",
+      "removeMessage": "Stop future checks and delete these private matches? Existing vehicle and service records will not change.",
+      "save": "Save private recall watch",
+      "signIn": "This private watch requires verified sign-in.",
+      "start": "Set up recall watch",
+      "title": "Private recall watch",
+      "unavailable": "NHTSA could not be checked. Any visible matches are from the last successful check; none confirms VIN status.",
+      "vehicle": "Select a vehicle in the workspace picker to set up a recall watch.",
+      "verify": "Verify VIN on Tesla’s site",
+      "waiting": "Waiting for the first catalog check. You can close the browser.",
+      "year": "Model year"
+    },
+    "recordsTitle": "Service records",
+    "refresh": "Refresh maintenance data",
+    "schedule": "Schedule",
+    "sort": {
+      "category": "Category",
+      "dueDate": "Due date",
+      "name": "Name",
+      "status": "Status"
+    },
+    "sortBy": "Sort items",
+    "sources": {
+      "refreshBlocked": "Refresh is paused. Retained data remains available."
+    },
+    "status": {
+      "completed": "Completed",
+      "good": "Good",
+      "overdue": "Overdue",
+      "soon": "Due soon"
+    },
+    "subtitle": "Service schedule, records, and upcoming maintenance",
+    "summary": {
+      "provenance": "Counts use all returned maintenance items, before category filtering."
+    },
+    "title": "Maintenance",
+    "totalSpent": "Total spent"
+  },
   "maps": {
     "animatedMarker": {
       "label": "Vehicle position"
@@ -2970,6 +3255,21 @@
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
   },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -3113,6 +3413,10 @@
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
+    },
+    "markers": {
+      "start": "Start",
+      "stop": "End"
     }
   },
   "requiresAuth": {
@@ -3168,6 +3472,16 @@
       "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
+    }
+  },
+  "serviceIntelligence": {
+    "recall": {
+      "source": "Open NHTSA campaign"
+    }
+  },
+  "settings": {
+    "smartFeatures": {
+      "reviewPaused": "This review is paused in Smart Features."
     }
   },
   "sharing": {
@@ -3264,6 +3578,10 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "timeMachine": {
     "ageFresh": "Fresh"
   },
@@ -3273,6 +3591,76 @@
     "source": {
       "paused": "{{section}} is paused while the connection is unavailable"
     }
+  },
+  "tireDifferentialDrift": {
+    "brief": {
+      "scope": "Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings."
+    },
+    "col": {
+      "confidence": "Confidence",
+      "corner": "Corner",
+      "slope": "Slope",
+      "slopeUnit": "Slope ({{unit}}/day)",
+      "time": "Time",
+      "timestamp": "Timestamp (UTC)"
+    },
+    "coldReview": {
+      "add": "Record a cold gauge check",
+      "ambient": "Ambient temperature ({{unit}})",
+      "cardBasis": "You entered cold gauge readings from {{start}} to {{end}}. The latest reading on this tire was {{pressure}}.",
+      "cardLimit": "Check it cold with a gauge and follow the vehicle’s own guidance. This pattern does not diagnose a leak, set a target pressure, or replace a vehicle warning.",
+      "cardSummary": "{{wheel}} fell by at least {{drop}} relative to the other tires across {{checks}} comparable cold checks.",
+      "cardTitle": "Check one tire manually",
+      "conflict": "The series changed, or this reading is less than 18 hours after the last one. Check the last entry before saving again.",
+      "consent": "I used the same gauge on all four tires before driving, with the tires cold and no wheel rotation or pressure adjustment since the previous check. Compare these readings on this server.",
+      "description": "Compare your own cold gauge readings, separately from the vehicle’s TPMS chart. Nothing is sent outside TeslaSync.",
+      "failure": "Could not change the series. Refresh, check the selected vehicle, and try again.",
+      "invalid": "Enter a reading time in the past 30 days, an ambient temperature and four valid gauge readings.",
+      "observed": "Reading time ({{zone}})",
+      "off": "Off. Save a confirmed cold gauge check to start a series.",
+      "offline": "Reconnect to review your saved cold checks.",
+      "open": "Review cold checks",
+      "remove": "Turn off and clear readings",
+      "removeMessage": "Delete these gauge readings and their recommendation? Vehicle telemetry and warnings are not changed. Start over after a rotation or pressure adjustment.",
+      "save": "Save cold check",
+      "title": "Cold tire checks",
+      "vehicle": "Select a vehicle in the workspace picker to record cold checks.",
+      "waiting": "No current repeated drift. Saved checks: {{checks}}. We need at least five comparable checks spanning seven days or more.",
+      "wheel": "{{wheel}} ({{unit}})"
+    },
+    "corner": {
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right"
+    },
+    "cornerStats": "slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}",
+    "daysToThreshold": "Days to Threshold",
+    "daysToThresholdHint": "projected from the fitted trend, evidence-gated",
+    "imbalance": "Structural imbalance",
+    "imbalanceCorner": "largest offset: {{corner}}",
+    "kpis": "Differential drift metrics",
+    "leakCorner": "Likely leak corner",
+    "leakCornerLabel": "{{corner}} · {{status}}",
+    "leakScore": "evidence score {{score}}",
+    "noData": "No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.",
+    "noDrift": "At least two usable four-corner samples at distinct times are needed to fit a drift rate.",
+    "noImbalance": "corners evenly matched",
+    "noReading": "The reading appears once at least one usable four-corner sample has been analyzed.",
+    "none": "None detected",
+    "offset": "Most offset",
+    "reading": "Reading this inference",
+    "residualTimeline": "Common-mode-removed residuals",
+    "residualTimelineAria": "Line chart of four tire-corner pressure residuals against the common-mode median over time",
+    "residualTimelineHint": "Each corner's deviation from the four-tire median at every sample — shared weather swings cancel out, leaving only relative drift",
+    "samples": "Samples analyzed",
+    "samplesHint": "{{span}} day span · {{n}} raw rows",
+    "slopeRanking": "Per-corner drift rate",
+    "slopeRankingAria": "Bar chart of the fitted residual drift rate per day for each tire corner",
+    "slopeRankingHint": "Theil-Sen slope of each corner's residual, per day — negative means losing pressure relative to the group",
+    "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
+    "suspect": "Leak suspect",
+    "title": "Tire differential drift"
   },
   "toast": {
     "admin": {
@@ -3536,6 +3924,29 @@
       "title": "Explain the recent vampire drain"
     }
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "vehicleManagement": {
     "state": {
       "vehicleRequired": "Select a vehicle"
@@ -3605,7 +4016,8 @@
     },
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   },
   "yearReview": {
     "aiNarration": {

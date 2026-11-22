@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, GlassPanel, HelperText, PanelTitle, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import type { PersonalScope } from '@/api/hooks/usePersonalIdentity';
 import { Icons, type LucideIcon } from '@/lib/icons';
 import type {
   ActionCenterPriority,
@@ -9,6 +10,9 @@ import type {
   ActionCenterStateAction,
 } from '@/types/actionCenter';
 import { RecommendationDetails } from './RecommendationDetails';
+import { SmartCommuteRecommendationActions } from './SmartCommuteRecommendationActions';
+import { SmartChargingRecommendationActions } from './SmartChargingRecommendationActions';
+import { useRecommendationContent } from './useRecommendationContent';
 
 interface RecommendationCardProps {
   recommendation: ActionCenterRecommendation;
@@ -18,6 +22,7 @@ interface RecommendationCardProps {
   ) => void;
   actionsDisabled?: boolean;
   actionsDisabledReason?: string;
+  personalScope?: PersonalScope;
 }
 
 const priorityVariant: Record<
@@ -57,9 +62,11 @@ export function RecommendationCard({
   onAction,
   actionsDisabled = false,
   actionsDisabledReason,
+  personalScope,
 }: RecommendationCardProps) {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
+  const content = useRecommendationContent(recommendation);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const confidencePct = Math.round(recommendation.confidence.score * 100);
   const disabledReasonId = `${recommendation.id}-actions-disabled-reason`;
@@ -94,10 +101,10 @@ export function RecommendationCard({
               </Badge>
             </div>
             <PanelTitle id={`${recommendation.id}-title`} className="mt-3 break-words">
-              {recommendation.title}
+              {content.title}
             </PanelTitle>
-            <Text as="p" variant="bodySm" className="mt-1 break-words">{recommendation.summary}</Text>
-            <Text as="p" variant="bodySm" className="mt-2 break-words">{recommendation.rationale}</Text>
+            <Text as="p" variant="bodySm" className="mt-1 break-words">{content.summary}</Text>
+            <Text as="p" variant="bodySm" className="mt-2 break-words">{content.rationale}</Text>
             <Text as="p" variant="caption" className="mt-3 break-words">
               {recommendation.vehicle?.display_name ??
                 t('actionCenter.card.allVehicles', 'All vehicles')} ·{' '}
@@ -132,6 +139,16 @@ export function RecommendationCard({
             {disabledReason}
           </HelperText>
         )}
+        {recommendation.source_feature === 'smart_commute' &&
+          recommendation.safe_actions.some((action) => action.startsWith('smart_commute_')) && (
+          <SmartCommuteRecommendationActions recommendation={recommendation}
+            personalScope={personalScope} disabled={actionsDisabled} />
+        )}
+        {recommendation.source_feature === 'smart_charging' &&
+          recommendation.safe_actions.includes('smart_charging_snooze') && (
+          <SmartChargingRecommendationActions recommendation={recommendation}
+            personalScope={personalScope} disabled={actionsDisabled} />
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {stateActions.filter(({ action }) => actionAllowed(recommendation, action)).map(({ action, Icon }) => (
             <Button
@@ -160,14 +177,33 @@ export function RecommendationCard({
               icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
               onClick={() => onAction(recommendation, 'navigate')}
             >
-              {t('actionCenter.action.navigate', 'Open source')}
+              {recommendation.evidence.some((item) => item.commute_traffic)
+                ? t('smartCommute.traffic.comparison', 'Compare routes')
+                : recommendation.source_feature === 'warranty_distance'
+                  ? t('ownership.warranty.mileage.open', 'Review warranty terms')
+                  : recommendation.source_feature === 'trip_maintenance'
+                    ? t('smartCharging.tripMaintenance.open', 'Review maintenance')
+                    : recommendation.source_feature === 'cold_tire_drift'
+                      ? t('tireDifferentialDrift.coldReview.open', 'Review cold checks')
+                      : recommendation.source_feature === 'recall_watch'
+                        ? t('maintenance.recallWatch.open', 'Review private recall watch')
+                        : recommendation.source_feature === 'service_case'
+                          ? t('serviceEvidencePack.privateCase.open', 'Review private service case')
+                          : recommendation.source_feature === 'climate_schedule'
+                            ? t('preconditioningEffectiveness.scheduledClimate.open', 'Review scheduled climate')
+                            : recommendation.source_feature === 'subscription_renewal'
+                              ? t('ownership.subscription.renewal.open', 'Open private renewal review')
+                              : recommendation.source_feature === 'automation_failure'
+                                ? t('actionCenter.automationFailure.open', 'Open latest execution')
+                                : t('actionCenter.action.navigate', 'Open source')}
             </Button>
           )}
         </div>
         <RecommendationDetails
-          recommendation={recommendation}
+          recommendation={content}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
+          personalScope={personalScope}
         />
       </article>
     </GlassPanel>

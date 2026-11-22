@@ -44,6 +44,16 @@ function Harness({ initialMicro = null, onCommit, ...rest }: HarnessProps) {
 }
 
 describe('CurrencyInput — display & symbol', () => {
+  it('keeps the field name visible while editing unless the form provides it', () => {
+    const { rerender } = render(<Harness ariaLabel="Tariff" currency="USD" />)
+    const input = screen.getByRole('textbox', { name: 'Tariff' })
+    fireEvent.change(input, { target: { value: '1.50' } })
+    expect(screen.getByText('Tariff', { selector: 'label' })).toHaveAttribute('for', input.id)
+    rerender(<Harness ariaLabel="Tariff" currency="USD" showLabel={false} />)
+    expect(screen.queryByText('Tariff', { selector: 'label' })).not.toBeInTheDocument()
+    expect(input).toHaveAccessibleName('Tariff')
+  })
+
   it('renders the localized USD symbol exactly once in the value', () => {
     render(
       <Harness ariaLabel="Tariff" currency="USD" locale="en-US" initialMicro={1_500_000} />,

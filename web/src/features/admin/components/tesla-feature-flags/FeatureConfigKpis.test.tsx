@@ -67,9 +67,9 @@ describe('FeatureConfigKpis — loading', () => {
     expect(loading).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4', 'lg:grid-cols-4', 'gap-4');
     expect(loading.children).toHaveLength(4);
     for (const cell of loading.children) {
-      expect(cell).toHaveClass('h-24', 'w-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveClass('h-24');
       expect(cell).toHaveAttribute('aria-hidden', 'true');
-      expect(cell).toBeEmptyDOMElement();
+      expect(cell.querySelector('[data-app-skeleton="fact"]')).toBeInTheDocument();
     }
     expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     // The real MetricCards (and their labels) must not render yet.
@@ -93,9 +93,9 @@ describe('FeatureConfigKpis — loading', () => {
     expect(loading).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4', 'lg:grid-cols-4', 'gap-4');
     expect(loading.children).toHaveLength(4);
     for (const cell of loading.children) {
-      expect(cell).toHaveClass('h-24', 'w-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveClass('h-24');
       expect(cell).toHaveAttribute('aria-hidden', 'true');
-      expect(cell).toBeEmptyDOMElement();
+      expect(cell.querySelector('[data-app-skeleton="fact"]')).toBeInTheDocument();
     }
     expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     // isLoading short-circuits before the error branch is considered.

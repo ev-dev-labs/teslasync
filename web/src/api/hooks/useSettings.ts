@@ -316,6 +316,7 @@ export interface PollingConfig {
   auto_polling_enabled: boolean;
   fleet_endpoints: Record<string, boolean>;
   auto_endpoints: Record<string, boolean>;
+  smart_endpoints?: Record<string, boolean>;
   endpoint_catalog: FleetEndpoint[];
   vehicle_discovery: boolean;
   charge_state: boolean;

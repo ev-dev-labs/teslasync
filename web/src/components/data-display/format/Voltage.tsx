@@ -1,20 +1,17 @@
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface VoltageProps {
+interface VoltageProps extends FormattedReadingOptions {
   volts?: number | null;
   precision?: number;
-  className?: string;
 }
 
 /** Voltage renderer with locale-aware number formatting. */
-export function Voltage({ volts, precision, className }: VoltageProps) {
+export function Voltage({ volts, precision, label, className }: VoltageProps) {
   const { fmtNumber } = useNumberFormatting();
   if (volts == null || !Number.isFinite(volts)) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
-  return (
-    <span className={className} title={`${fmtNumber(volts, precision)} V`}>
-      {fmtNumber(volts, precision)} V
-    </span>
-  );
+  const display = `${fmtNumber(volts, precision)} V`;
+  return <FormattedReading label={label} className={className} title={display}>{display}</FormattedReading>;
 }

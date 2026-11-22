@@ -5,6 +5,7 @@ import {
   seedBrowserState, waitForHarnessReady,
 } from './mockApi';
 import { expectIntegratedGridFooter, expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
+import { expectTableDensityControls, openTableColumnLayout } from './tableToolbarControls';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic notification mutation fixtures');
 
@@ -83,9 +84,6 @@ for (const theme of ['light', 'dark'] as const) {
         await more.click();
       }
       const controls = compact ? page.getByRole('dialog', { name: 'More', exact: true }) : frame;
-      await expect(controls.getByRole('radio', { name: 'Compact', exact: true })).toBeVisible();
-      await controls.getByRole('radio', { name: 'Comfortable', exact: true }).click();
-      await expect(controls.getByRole('radio', { name: 'Comfortable', exact: true })).toBeChecked();
       const exportTrigger = controls.getByRole('button', { name: 'Export list', exact: true });
       await exportTrigger.click();
       const exportMenu = page.getByRole('menu', { name: 'Export list', exact: true });
@@ -98,8 +96,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(exportTrigger).toBeFocused();
       if (compact) await controls.screenshot({ path: test.info().outputPath(`notification-more-${width}-${theme}.png`) });
       const columnsTrigger = controls.getByRole('button', { name: 'Reorder or hide columns' });
-      await columnsTrigger.click();
-      const columnsDialog = page.getByRole('dialog', { name: 'Reorder or hide columns', exact: true });
+      const columnsDialog = await openTableColumnLayout(controls);
+      await expectTableDensityControls(columnsDialog);
       await expect(columnsDialog.getByRole('checkbox', { name: 'Show or hide Notification', exact: true })).toBeDisabled();
       const selectedColumns = columnsDialog.getByRole('checkbox', { checked: true });
       const defaultColumnCount = await selectedColumns.count();

@@ -346,6 +346,8 @@
     "perDriveTrendAria": "Per-drive efficiency subset area chart",
     "perDriveTrendContext": "Up to 30 eligible drive observations in reverse source order; not daily averages.",
     "perDriveTrendCounts": "Showing {{shown}} of {{eligible}} eligible drives from {{loaded}} range-filtered loaded drives.",
+    "perDriveTrendFirstSample": "First sample",
+    "perDriveTrendLastSample": "Last sample",
     "period": {
       "lifetime": "Lifetime driving summary",
       "statsSource": "Vehicle driving aggregates; not filtered by the workspace range."

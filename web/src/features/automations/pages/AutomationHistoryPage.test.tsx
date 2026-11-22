@@ -16,6 +16,7 @@ import AutomationHistoryPage from './AutomationHistoryPage';
 
 const state = vi.hoisted(() => ({
   filters: vi.fn(),
+  executionDetail: vi.fn(),
   timezone: 'UTC',
   data: null as AutomationHistoryListResponse | null,
   isLoading: false,
@@ -49,7 +50,10 @@ vi.mock('@/api/hooks/useAutomations', () => ({
       error: state.error, refetch: state.refetch,
     };
   },
-  useAutomationExecutionDetail: () => ({ data: null, isLoading: false, isError: false }),
+  useAutomationExecutionDetail: (id: number | null) => {
+    state.executionDetail(id);
+    return { data: null, isLoading: false, isError: false };
+  },
   useAutomations: () => ({
     data: state.rulesData, error: state.rulesError, isError: state.rulesError !== null,
     fetchStatus: state.rulesFetchStatus, isFetching: state.rulesFetchStatus === 'fetching',
@@ -99,12 +103,29 @@ describe('Automation History', () => {
     state.isError = false;
     state.error = null;
     state.filters.mockClear();
+    state.executionDetail.mockClear();
     state.timezone = 'UTC';
     state.refetch.mockClear();
     state.rulesData = [{ id: 7, name: 'Home arrival' }];
     state.rulesError = null;
     state.rulesFetchStatus = 'idle';
     state.rulesRefetch.mockClear();
+  });
+
+  it('opens the exact linked execution even when the current history period has no matching rows', () => {
+    render(
+      <MemoryRouter initialEntries={['/automations/history?automation_id=7&history_id=602']}>
+        <AutomationHistoryPage />
+      </MemoryRouter>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Execution details' });
+    expect(state.executionDetail).toHaveBeenLastCalledWith(602);
+    expect(state.filters).toHaveBeenLastCalledWith(expect.objectContaining({
+      automationId: 7, since: '2026-09-01T07:00:00.000Z', until: '2026-10-01T07:00:00.000Z',
+    }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(state.executionDetail).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
   });
 
   it('distinguishes active initial loading, paused and pending history from successful empty', () => {
@@ -406,8 +427,8 @@ describe('Automation History', () => {
     expect(screen.getByLabelText('Filter executions by status', { selector: 'select' })).toBe(status);
     expect(screen.getByText('Filter executions by rule', { selector: 'label' })).toHaveAttribute('for', rule.id);
     expect(screen.getByText('Filter executions by status', { selector: 'label' })).toHaveAttribute('for', status.id);
-    expect(rule.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-72');
-    expect(status.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-60');
+    expect(rule.closest('[data-app-part="field"]')?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-72');
+    expect(status.closest('[data-app-part="field"]')?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-60');
     expect(rule).not.toHaveClass('flex-1', 'sm:max-w-72');
     expect(status).not.toHaveClass('flex-1', 'sm:max-w-60');
     expect(within(rule).getByRole('option', { name: 'Rule #99' })).toHaveValue('99');

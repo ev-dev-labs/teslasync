@@ -2601,6 +2601,11 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "sharedRoutines": "Without sign-in, anyone with access to TeslaSync can view and manage these routines.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -2856,6 +2861,10 @@
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
+    },
+    "markers": {
+      "start": "Start",
+      "stop": "End"
     }
   },
   "requiresAuth": {
@@ -3213,6 +3222,217 @@
       "noResults": "No matching settings.",
       "placeholder": "Search settings…"
     },
+    "smartFeatures": {
+      "allowed": "Allowed",
+      "automation": {
+        "description": "Show eligible operators an inbox notice about repeated failures without changing automation rules or run history.",
+        "title": "Repeated automation failure notices"
+      },
+      "backup": {
+        "description": "Warn when charging draws on home battery backup during a confirmed outage.",
+        "title": "Backup charging watch"
+      },
+      "cabin": {
+        "description": "Suggest when to precondition before an opted-in departure.",
+        "title": "Cabin prep reminders"
+      },
+      "capacity": {
+        "description": "Review material capacity changes supported by comparable charging sessions.",
+        "title": "Monthly battery capacity digest"
+      },
+      "closure": {
+        "description": "Warn if a door, trunk, or window remains open after your grace period.",
+        "title": "Parked closure reminders"
+      },
+      "coldTire": {
+        "description": "Compare your recorded cold gauge readings for repeated pressure changes.",
+        "title": "Cold tire drift review"
+      },
+      "commute": {
+        "description": "Suggest repeat drives from local history without changing confirmed routines.",
+        "title": "Commute learning"
+      },
+      "costDigest": {
+        "description": "Explain a material change in recorded charging spend using comparable billing evidence.",
+        "title": "Monthly charging cost breakdown"
+      },
+      "dashcam": {
+        "description": "Review imported clips against deadlines you saved on this browser.",
+        "title": "Dashcam clip retention reminders"
+      },
+      "destination": {
+        "description": "Allow a confirmed traffic recommendation to send a destination when you request it.",
+        "title": "Commute destination dispatch"
+      },
+      "drain": {
+        "description": "Compare an opted-in night with similar measured parks.",
+        "title": "Overnight drain review"
+      },
+      "driveTrack": {
+        "description": "Identify a track heard on a selected drive and allow a library save only when you confirm it.",
+        "title": "Drive track lookup"
+      },
+      "earlyStop": {
+        "description": "Review an unexpected interruption that could leave a planned trip short of charge.",
+        "title": "Unexpected charging stop watch"
+      },
+      "efficiency": {
+        "description": "Compare measured energy use on comparable routes and flag material changes.",
+        "title": "Weekly drive efficiency review"
+      },
+      "episode": {
+        "description": "Compare confirmed remaining episode time with a planned drive.",
+        "title": "Episode fit review"
+      },
+      "explanation": "Allowing a feature does not set it up, grant Fleet API access, or enable notifications. Pausing stops new smart work and delivery without deleting your setup or history.",
+      "favorites": {
+        "description": "Suggest recordings heard on several completed drives without changing confirmed favorites.",
+        "title": "Weekly favorite-track suggestions"
+      },
+      "feature": "Feature",
+      "fee": {
+        "description": "Warn when a completed session may begin incurring a reviewed per-minute fee.",
+        "title": "Public charging fee reminders"
+      },
+      "groups": {
+        "battery": "Battery",
+        "charging": "Charging",
+        "climate": "Climate",
+        "driving": "Driving",
+        "maintenance": "Maintenance",
+        "media": "Media",
+        "operations": "Operations",
+        "ownership": "Ownership",
+        "security": "Security & access"
+      },
+      "here": {
+        "description": "Notify designated operators about estimate incidents without disabling health checks or safeguards.",
+        "title": "HERE estimate incident notices"
+      },
+      "identityRequired": "Sign in to manage your Smart Features.",
+      "invoice": {
+        "description": "Flag material differences in a reviewed charging invoice without altering invoices or past disputes.",
+        "title": "Charging invoice variance review"
+      },
+      "mileage": {
+        "description": "Review whether your recorded driving may exceed the allowance for a documented term.",
+        "title": "Mileage allowance review"
+      },
+      "noMatches": "No Smart Features match these filters.",
+      "openSetup": "Open setup",
+      "overlap": {
+        "description": "Flag a recorded service or software installation window that conflicts with departure.",
+        "title": "Departure conflict reminders"
+      },
+      "paused": "Paused",
+      "permission": "Permission",
+      "playlist": {
+        "description": "Suggest tracks from recorded listening and allow a playlist save only when you confirm it.",
+        "title": "Private playlist suggestions"
+      },
+      "rain": {
+        "description": "Check for near-term rain while the opted-in vehicle is parked with an open window.",
+        "title": "Open window rain watch"
+      },
+      "readiness": {
+        "description": "Estimate whether your charge and planned charging are sufficient for a confirmed trip.",
+        "title": "Charging readiness"
+      },
+      "recall": {
+        "description": "Check public recall campaigns for your confirmed model and year.",
+        "title": "Recall Watch"
+      },
+      "renewal": {
+        "description": "Review price and recorded usage before a confirmed renewal date.",
+        "title": "Subscription renewal review"
+      },
+      "reserve": {
+        "description": "Estimate whether a parked vehicle may drop below your return reserve.",
+        "title": "Long-park reserve"
+      },
+      "routeEnergy": {
+        "description": "Compare observed energy use on comparable routes for an opted-in commute.",
+        "title": "Commute route energy comparison"
+      },
+      "saveFailed": "Could not save that permission. The last verified setting is shown.",
+      "saving": "Saving…",
+      "scheduledClimate": {
+        "description": "Review the results of an existing climate schedule without changing it.",
+        "title": "Scheduled climate review"
+      },
+      "search": "Search Smart Features",
+      "serviceCase": {
+        "description": "Show an inbox reminder for a recorded service case without changing its evidence or exports.",
+        "title": "Service case review reminders"
+      },
+      "setup": "Setup",
+      "setupFor": "Setup for {{feature}}",
+      "shared": "Without sign-in, these preferences apply to everyone using this server. Private features require sign-in.",
+      "sharedCharger": {
+        "description": "Show a swap reminder when you are the designated recipient and have accepted it.",
+        "title": "Shared charger swap reminders"
+      },
+      "sharedTrip": {
+        "description": "Compare confirmed vehicles for a shared trip without changing another participant’s settings.",
+        "title": "Shared trip readiness comparison"
+      },
+      "sitePerformance": {
+        "description": "Compare measured charging performance for the same vehicle at a reviewed site.",
+        "title": "Charging site performance"
+      },
+      "siteRates": {
+        "description": "Compare reviewed price windows that can meet the trip’s charging deadline.",
+        "title": "Charging-hour rate comparison"
+      },
+      "softwareWindow": {
+        "description": "Check whether a recorded update could fit a confirmed parked window.",
+        "title": "Software update window review"
+      },
+      "solar": {
+        "description": "Look for sustained solar surplus at your reviewed home charger.",
+        "title": "Solar charging opportunities"
+      },
+      "soundtrack": {
+        "description": "Review recorded listening during a completed journey you select.",
+        "title": "Journey soundtrack review"
+      },
+      "subtitle": "Allow or pause individual recommendations and reminders.",
+      "switchFor": "Allow {{feature}}",
+      "tariff": {
+        "description": "Compare two reviewed utility tariffs against actual charging at one place.",
+        "title": "Monthly tariff comparison"
+      },
+      "title": "Smart Features",
+      "traffic": {
+        "description": "Compare traffic on reviewed routes and flag departures that may miss an arrival deadline.",
+        "title": "Traffic and departure advice"
+      },
+      "tripMaintenance": {
+        "description": "Flag when a planned trip may cross a recorded maintenance interval.",
+        "title": "Trip maintenance review"
+      },
+      "tripPacket": {
+        "description": "Prepare a private review from confirmed trip purposes and receipt references.",
+        "title": "Monthly trip packet"
+      },
+      "tripReview": {
+        "description": "Compare a completed trip with its saved plan and review allowances for a similar trip.",
+        "title": "Post-trip plan review"
+      },
+      "tripStops": {
+        "description": "Compare reviewed stations using route detours and measured charging history.",
+        "title": "Trip charging stop comparison"
+      },
+      "unavailable": "No Smart Features are available for this account.",
+      "unlock": {
+        "description": "Warn if your vehicle stays unlocked at a reviewed place.",
+        "title": "Parked unlock reminders"
+      },
+      "warranty": {
+        "description": "Estimate when recorded driving may reach a documented warranty distance limit.",
+        "title": "Warranty mileage reminders"
+      }
+    },
     "title": "Settings",
     "tours": {
       "body": "Re-run the guided walkthroughs that introduce major sections.",
@@ -3287,6 +3507,188 @@
       "promptLabel": "Filter request",
       "promptPlaceholder": "e.g. show me battery level for yesterday",
       "title": "Helix natural-language filter"
+    }
+  },
+  "smartCharging": {
+    "delivery": {
+      "added": "Added {{when}}.",
+      "browserUnavailable": "Personal browser delivery needs a supported browser and a secure, same-origin connection.",
+      "changeFailed": "The delivery preference was not saved. Refresh and retry.",
+      "chargingToggle": "Allow charging readiness notifications on {{device}}",
+      "clearBrowser": "Remove this browser subscription",
+      "clearFailed": "The browser subscription could not be removed. Retry from this browser.",
+      "connect": "Connect this browser",
+      "connectFailed": "Could not confirm this browser. Check notification permission and server configuration, then retry.",
+      "deviceNumber": "Device {{number}}",
+      "disconnect": "Disconnect device",
+      "disconnectDescription": "Pending personal deliveries are invalidated. Plans and existing alert channels are unchanged.",
+      "disconnectDevice": "Disconnect {{device}}",
+      "disconnectFailed": "The device could not be fully disconnected. Refresh and retry; remove any remaining browser subscription if needed.",
+      "disconnectTitle": "Disconnect this device?",
+      "empty": "No personal devices are connected. Charging push is off by default.",
+      "owned": "This browser is linked to another account. Sign in as its owner to disconnect it first.",
+      "pending": "Waiting for this browser to confirm its subscription.",
+      "privacy": "Your browser’s push service receives an encrypted, short-lived token, not trip details. TeslaSync checks the same account and current consent before showing a generic notification.",
+      "pushBody": "Open TeslaSync to review a charging decision.",
+      "pushTitle": "Charging readiness",
+      "retryBrowser": "Retry checking this browser",
+      "retryConfirmation": "Retry confirmation",
+      "serverUnavailable": "Personal delivery needs VAPID credentials and the same encryption key on the API and notification worker. Existing alert channels are separate.",
+      "shared": "Without sign-in, anyone with access to TeslaSync can manage these delivery devices.",
+      "thisDevice": "This browser",
+      "title": "Personal browser notifications",
+      "verified": "Verified for this account.",
+      "verifyBody": "This browser is ready for personal notifications.",
+      "verifyTitle": "TeslaSync device confirmation"
+    },
+    "identityMissing": "Identity unavailable",
+    "identityMissingDescription": "Your authentication provider did not supply a verified identity."
+  },
+  "smartCommute": {
+    "addManual": "Add a routine manually",
+    "analysisTimeZone": "Time zone for local analysis",
+    "analyzeAgain": "Analyze completed drives again",
+    "changeFailed": "The change was not saved. Refresh and try again.",
+    "chooseVehicle": "Choose the vehicle whose routines you want to manage.",
+    "controls": "Recurring drives",
+    "deleteAll": "Delete my Smart Commute data",
+    "deleteConfirm": "Delete data",
+    "deleteDescription": "This turns the feature off and deletes your routines and decisions for this vehicle. Your original drives are not deleted.",
+    "deleteRoutine": "Delete routine",
+    "deleteRoutineDescription": "The saved routine will be removed. Your original drives are not deleted.",
+    "deleteRoutineTitle": "Delete this routine?",
+    "deleteTitle": "Delete your Smart Commute data?",
+    "delivery": {
+      "empty": "No personal devices are connected.",
+      "help": "Commute push starts off and only applies to routines with approved traffic checks. Enable it from the browser that should receive it. This replaces the previous commute recipient without changing charging notifications.",
+      "pushBody": "Open TeslaSync to review a route comparison.",
+      "pushTitle": "Smart Commute",
+      "toggle": "Allow commute traffic notifications on {{device}}",
+      "unavailable": "Commute push requires configured HERE traffic checks and shared live signals."
+    },
+    "departure": "Local departure time",
+    "destinationLatitude": "Destination latitude",
+    "destinationLongitude": "Destination longitude",
+    "edit": "Edit",
+    "editRoutine": "Review and save routine",
+    "enable": "Enable Smart Commute for this vehicle",
+    "enableHint": "Enable this vehicle’s commute settings and routines.",
+    "endpoints": "Origin: {{origin}}; destination: {{destination}}",
+    "evidence_one": "{{count}} matching day, departures between {{start}} and {{end}}. Last observed {{last}}.",
+    "evidence_other": "{{count}} matching days, departures between {{start}} and {{end}}. Last observed {{last}}.",
+    "formPrivacy": "These coordinates stay on this server. Saving a routine does not send a notification or command.",
+    "identityMissing": "Identity unavailable",
+    "identityMissingDescription": "Your authentication provider did not supply a verified identity.",
+    "invalidForm": "Enter a name, valid local time, time zone and coordinates.",
+    "localAnalysis": "Allow local analysis of completed drives",
+    "localAnalysisHint": "Use this vehicle’s completed drives on this server to suggest routines.",
+    "localOnly": "Local analysis examines up to eight weeks of this vehicle’s completed drives on this server. It does not identify the driver.",
+    "manualRoutine": "Add a routine manually",
+    "name": "Routine name",
+    "navigation": {
+      "accepted": "Tesla accepted the destination. Check the vehicle for its route.",
+      "address": "Destination address",
+      "allowWake": "Allow wake and send",
+      "checkVehicle": "Check vehicle connection",
+      "disclosure": "Confirm the destination address for {{destination}}. Tesla receives this address for the named vehicle and calculates its own route, not the HERE alternative.",
+      "expired": "This comparison is no longer actionable. TeslaSync will not send or resend it.",
+      "notSent": "No destination was sent. If you allowed a wake, the vehicle may have woken.",
+      "rejected": "The request was rejected. The destination was not accepted.",
+      "send": "Send {{destination}} to {{vehicle}}",
+      "unknown": "Delivery could not be confirmed. Check the vehicle; TeslaSync will not resend this request.",
+      "wake": "Wake and send",
+      "wakePermission": "Tesla reports the vehicle is online. Nothing has been sent. Tesla does not guarantee that sending a destination cannot wake it if its connection changes. Allow a possible wake to send this destination.",
+      "wakeRequired": "Tesla reports the vehicle is asleep. Nothing has been sent. Wake and send allows one wake request and sends only if the vehicle comes online and the comparison is still current."
+    },
+    "noRoutines": "No routine is saved or awaiting review. Enable local analysis or add one manually.",
+    "notMine": "Not mine",
+    "originLatitude": "Origin latitude",
+    "originLongitude": "Origin longitude",
+    "pageSubtitle": "Recurring drives and local analysis",
+    "pause": "Pause Smart Commute",
+    "pauseHint": "Temporarily pause Smart Commute without deleting your routines.",
+    "question": "Is this your regular {{day}} drive?",
+    "routines": "Your routines",
+    "saveRoutine": "Save routine",
+    "saveTimeZone": "Save time zone",
+    "schedule": "{{day}} at {{time}} ({{zone}})",
+    "selectVehicle": "Select a vehicle",
+    "showNow": "Show suggestion now",
+    "snooze": "Snooze for 24 hours",
+    "snoozedUntil": "Snoozed until {{until}}.",
+    "states": {
+      "learning": "Learning on request",
+      "off": "Off",
+      "paused": "Paused",
+      "review": "Needs review",
+      "saved": "Routine saved",
+      "setup": "Needs setup"
+    },
+    "status": "Status: {{status}}",
+    "timeZone": "IANA time zone",
+    "timeZoneHint": "For example, America/Los_Angeles.",
+    "title": "Smart Commute",
+    "traffic": {
+      "allow": "Allow sharing this trace with HERE for this routine",
+      "alternativeEta": "Faster alternative: {{minutes}} min",
+      "chooseDrive": "Choose a completed drive",
+      "comparison": "Compare routes",
+      "deadline": {
+        "alternativeEta": "Alternative route: {{minutes}} min",
+        "disclosure": "If an earlier departure may help, TeslaSync also asks HERE for an estimate at that departure time. The deadline itself is not sent.",
+        "help": "Set a time within six hours after departure in {{zone}}, or leave it blank. This stays in TeslaSync and does not require calendar access.",
+        "input": "Arrival deadline (optional)",
+        "limitations": "TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.",
+        "recommendation": "Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}."
+      },
+      "disclosure": "When a check is due, HERE receives these exact coordinates and the planned departure time. It does not get the routine name, VIN, or other drives.",
+      "disconnect": "Disconnect HERE",
+      "driveOption": "{{time}} (drive {{id}})",
+      "edit": "Review traffic settings",
+      "enable": "Enable traffic checks",
+      "energy": {
+        "allow": "Compare routes using local driving energy history",
+        "conditions": "Matched routes, travel times, and outside temperature near {{temp}}.",
+        "consent": "Off by default. TeslaSync checks comparable completed drives locally. It never sends their routes, temperatures, or energy use to HERE. Energy comparisons do not send push notifications.",
+        "fastest": "Fastest offered route: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "limits": "The recorded ranges suggest a lower-energy option; they do not measure or guarantee energy use on your next trip.",
+        "rationale": "Comparable completed drives used less energy on the slower route under similar conditions.",
+        "saving": "Lower-energy alternative: {{minutes}} min estimated by HERE; {{count}} comparable drives used {{low}} to {{high}} (median {{typical}}).",
+        "title": "Compare a lower-energy route before departure"
+      },
+      "evidence": "HERE traffic observed {{observed}} for departure at {{departure}}.",
+      "expired": "This comparison is no longer available. You may have left or the traffic evidence may have expired.",
+      "forVehicle": "{{routine}} · {{vehicle}}",
+      "lead": "Check this many minutes before departure",
+      "minimum": "Minimum time saving in minutes",
+      "noDrives": "There are no recent completed drives to review.",
+      "notConfigured": "HERE traffic checks are not configured on this server. Your routines still work locally.",
+      "optional": "Traffic checks are optional for each confirmed routine. A check never wakes or operates your vehicle.",
+      "points": "Coordinates that can be shared with HERE",
+      "preview": "Preview points locally",
+      "previewFailed": "This drive could not be previewed. Choose a completed drive with recorded locations that matches the routine.",
+      "recentDrive": "Representative drive",
+      "reviewHelp": "Choose one recent completed drive that follows this routine. Previewing reads its location points locally and does not contact HERE.",
+      "saving": "Estimated saving: {{minutes}} min",
+      "setup": "Set up traffic checks",
+      "skip": "Skip today",
+      "teslaRoute": "These are estimates, not measured trip times. Tesla calculates its own route.",
+      "usualEta": "Usual route: {{minutes}} min",
+      "viaRoute": "via {{route}}"
+    },
+    "unknownDay": "unknown day",
+    "useRoutine": "Use routine",
+    "vehicle": "Vehicle",
+    "vehicleUnavailable": "That vehicle is unavailable. Select a vehicle explicitly; no other vehicle was selected.",
+    "weekday": "Local weekday",
+    "weekdays": {
+      "friday": "Friday",
+      "monday": "Monday",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "thursday": "Thursday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday"
     }
   },
   "softwareUpdates": {
@@ -3871,7 +4273,41 @@
     "openLauncher": "Show tours",
     "prev": "Back",
     "skip": "Skip tour",
-    "title": "Onboarding tour"
+    "title": "Onboarding tour",
+    "tours": {
+      "alerts": {
+        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
+        "title": "Alerts & alert studio"
+      },
+      "automations": {
+        "description": "Triggers, conditions, actions, and conflict detection for rules.",
+        "title": "Automation builder"
+      },
+      "charging": {
+        "description": "Sessions, cost analysis, and the charging-curve viewer for any session.",
+        "title": "Charging insights"
+      },
+      "debugger": {
+        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks.",
+        "title": "FSM debugger"
+      },
+      "drives": {
+        "description": "Drive history, saved views, and the trip replay scrubber with markers.",
+        "title": "Drives & replay"
+      },
+      "main": {
+        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts.",
+        "title": "TeslaSync overview"
+      },
+      "settings": {
+        "description": "Theme, units, notification channels, and saved views — all in one place.",
+        "title": "Settings & preferences"
+      },
+      "vehicles": {
+        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access.",
+        "title": "Vehicles & access"
+      }
+    }
   },
   "tripPlanner": {
     "aiAgent": {

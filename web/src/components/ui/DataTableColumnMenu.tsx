@@ -40,6 +40,7 @@ interface ColumnDescriptor {
   /** When true, the column cannot be hidden (e.g. selection / expand columns).
    *  Reorder is unaffected. */
   required?: boolean
+  pinned?: boolean
   /** Default visibility for the "Reset" computation. Defaults to true. */
   defaultVisible?: boolean
 }
@@ -56,6 +57,7 @@ interface DataTableColumnMenuProps {
    *  reorder list. */
   toggleable?: boolean
   trigger?: (open: () => void) => ReactNode
+  displayControls?: ReactNode
   className?: string
 }
 
@@ -67,6 +69,7 @@ export function DataTableColumnMenu({
   reorderable = true,
   toggleable = true,
   trigger,
+  displayControls,
   className,
 }: DataTableColumnMenuProps) {
   const { t } = useTranslation()
@@ -137,9 +140,9 @@ export function DataTableColumnMenu({
     const base = ensureLayout()
     const currentOrder = effectiveColumnOrder(safeColumns, base)
     const fromIndex = currentOrder.indexOf(key)
-    if (fromIndex < 0) return
+    if (fromIndex < 0 || colByKey.get(key)?.pinned) return
     const toIndex = fromIndex + direction
-    if (toIndex < 0 || toIndex >= currentOrder.length) return
+    if (toIndex < 0 || toIndex >= currentOrder.length || colByKey.get(currentOrder[toIndex])?.pinned) return
     const nextOrder = moveColumn(currentOrder, key, toIndex)
     onChange({ order: nextOrder, hidden: base.hidden.slice() })
   }
@@ -158,6 +161,7 @@ export function DataTableColumnMenu({
 
       <Modal open={open} onClose={() => setOpen(false)} title={triggerLabel} size="sm"
         footer={<Button variant="secondary" className="min-h-11" onClick={() => setOpen(false)}>{t('Done', 'Done')}</Button>}>
+        {displayControls && <div className="mb-3 border-b border-[var(--border-subtle)] pb-3">{displayControls}</div>}
         <div
           data-testid="datatable-column-menu"
         >
@@ -185,6 +189,7 @@ export function DataTableColumnMenu({
           {toggleable && safeColumns.length > 0 && (
             <div className="mb-1 border-b border-[var(--border-subtle)] px-2 pb-2">
               <Checkbox
+                variant="row"
                 label={t('table.columns.selectAll', 'Select all')}
                 aria-label={t('table.columns.selectAll', 'Select all')}
                 checked={allVisible}
@@ -192,7 +197,6 @@ export function DataTableColumnMenu({
                 aria-checked={allVisible ? true : visibleCount > 0 ? 'mixed' : false}
                 disabled={allVisible && (safeColumns.length === 1 || safeColumns.every(column => column.required))}
                 onChange={handleToggleAll}
-                className="min-h-11 w-full"
               />
             </div>
           )}
@@ -203,27 +207,29 @@ export function DataTableColumnMenu({
               const isHidden = effectiveHidden.has(key)
               const checked = !isHidden
               const checkboxDisabled = col.required || (checked && visibleCount <= 1)
-              const upDisabled = idx === 0
-              const downDisabled = idx === orderedKeys.length - 1
+              const upDisabled = col.pinned || idx === 0 || colByKey.get(orderedKeys[idx - 1])?.pinned
+              const downDisabled = col.pinned || idx === orderedKeys.length - 1
               return (
                 <li key={col.key}>
                   <div
-                    className={cn(
-                      'flex items-center gap-2 rounded-shape-sm px-2 py-2',
-                      'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)]',
-                    )}
+                    className={cn('flex min-w-0 items-center gap-2 px-2', !toggleable &&
+                      'rounded-shape-sm py-2 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)]')}
                   >
-                    {toggleable && (
+                    {toggleable ? (
                       <Checkbox
+                        variant="row"
+                        className="min-w-0 flex-1"
                         checked={checked}
                         disabled={checkboxDisabled}
                         onChange={() => handleToggle(col.key)}
                         aria-label={t('table.columns.toggleColumn', 'Show or hide {{col}}', {
                           col: col.header || col.key,
                         })}
+                        label={col.header || col.key}
                       />
+                    ) : (
+                      <Text variant="bodySm" className="min-w-0 flex-1 break-words">{col.header || col.key}</Text>
                     )}
-                    <Text variant="bodySm" className="min-w-0 flex-1 break-words">{col.header || col.key}</Text>
                     {reorderable && (
                       <div className="flex shrink-0 items-center gap-1">
                         <button

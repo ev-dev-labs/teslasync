@@ -3,36 +3,35 @@ import { type PillItem } from '@/components/forms';
 import type { DriveFsdInsight } from '@/types/fsd';
 import type { useDrivesListPageData } from './useDrivesListPageData';
 import type { useDrivesListPageFilters } from './useDrivesListPageFilters';
+import type { useDrivesListRange } from './useDrivesListRange';
 
 type CollectionsInput = ReturnType<typeof useDrivesListPageData>
-  & ReturnType<typeof useDrivesListPageFilters>;
+  & ReturnType<typeof useDrivesListPageFilters> & ReturnType<typeof useDrivesListRange>;
 
 export function useDrivesListPageCollections(input: CollectionsInput) {
   const {
-    t, hasDrivePayload, fsdDataAvailable, fsdByDriveID, dateFilteredDrives,
-    anomalyDrives, notableDrives, commuteDrives, collection, fsdFilter, filteredDrives,
+    t, hasDrivePayload, fsdDataAvailable, fsdByDriveID, currentStats,
+    anomalyCount, notableCount, commuteCount, collection, fsdFilter, matchingTotal,
   } = input;
+  const rangeTotal = currentStats.count;
 
   /* ---- Collection filters ---- */
   const collectionPills: PillItem[] = useMemo(() => [
-    { key: 'all',       label: t('drives.coll.allPill', 'All'),             count: hasDrivePayload ? dateFilteredDrives.length : undefined },
-    { key: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies'), count: hasDrivePayload ? anomalyDrives.length : undefined },
-    { key: 'notable',   label: t('drives.coll.notable', 'Notable'),     count: hasDrivePayload ? notableDrives.length : undefined },
-    { key: 'commutes',  label: t('drives.coll.commutes', 'Commutes'),   count: hasDrivePayload ? commuteDrives.length : undefined },
+    { key: 'all',       label: t('drives.coll.allPill', 'All'),         count: hasDrivePayload ? rangeTotal : undefined },
+    { key: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies'), count: hasDrivePayload ? anomalyCount : undefined },
+    { key: 'notable',   label: t('drives.coll.notable', 'Notable'),     count: hasDrivePayload ? notableCount : undefined },
+    { key: 'commutes',  label: t('drives.coll.commutes', 'Commutes'),   count: hasDrivePayload ? commuteCount : undefined },
     { key: 'tagged',    label: t('drives.coll.tagged', 'Tagged'),       count: 0, disabled: true },
-  ], [t, hasDrivePayload, dateFilteredDrives.length, anomalyDrives.length, notableDrives.length, commuteDrives.length]);
+  ], [t, hasDrivePayload, rangeTotal, anomalyCount, notableCount, commuteCount]);
 
   const fsdPills: PillItem[] = useMemo(() => {
-    const count = (predicate: (insight: DriveFsdInsight | undefined) => boolean) =>
-      fsdDataAvailable && hasDrivePayload ? dateFilteredDrives.reduce(
-        (total, drive) => total + (predicate(fsdByDriveID.get(drive.id)) ? 1 : 0),
-        0,
-      ) : undefined;
+    const count = (predicate: (insight: DriveFsdInsight) => boolean) =>
+      fsdDataAvailable ? Array.from(fsdByDriveID.values()).filter(predicate).length : undefined;
     return [
       {
         key: 'all',
         label: t('drives.fsdFilter.all', 'All FSD data'),
-        count: hasDrivePayload ? dateFilteredDrives.length : undefined,
+        count: hasDrivePayload ? rangeTotal : undefined,
       },
       {
         key: 'reported',
@@ -67,7 +66,7 @@ export function useDrivesListPageCollections(input: CollectionsInput) {
         disabled: !fsdDataAvailable,
       },
     ];
-  }, [dateFilteredDrives, hasDrivePayload, fsdByDriveID, fsdDataAvailable, t]);
+  }, [rangeTotal, hasDrivePayload, fsdByDriveID, fsdDataAvailable, t]);
 
   /* ---- Compact summary for the sticky bar ---- */
   const collectionLabel = collectionPills.find(p => p.key === collection)?.label ?? t('drives.coll.allPill', 'All');
@@ -78,7 +77,7 @@ export function useDrivesListPageCollections(input: CollectionsInput) {
     ...collectionPills.slice(1).map((pill) => ({ ...pill, key: `coll:${pill.key}` })),
     ...fsdPills.slice(1).map((pill) => ({ ...pill, key: `fsd:${pill.key}` })),
     ...(combinedFilters
-      ? [{ key: 'combined', label: `${collectionLabel} + ${fsdFilterLabel}`, count: filteredDrives.length }]
+      ? [{ key: 'combined', label: `${collectionLabel} + ${fsdFilterLabel}`, count: matchingTotal }]
       : []),
   ];
   const activeFilterKey = combinedFilters
@@ -87,5 +86,5 @@ export function useDrivesListPageCollections(input: CollectionsInput) {
       ? `fsd:${fsdFilter}`
       : collection === 'all' ? 'all' : `coll:${collection}`;
 
-  return { collectionLabel, fsdFilterLabel, filterPills, activeFilterKey };
+  return { collectionLabel, fsdFilterLabel, collectionPills, fsdPills, filterPills, activeFilterKey };
 }

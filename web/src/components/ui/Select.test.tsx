@@ -204,6 +204,20 @@ describe('Select — size variants', () => {
 });
 
 describe('Select — passthrough, ref, and interaction', () => {
+  it('keeps the editor decoration out of the native selection and form value', () => {
+    const { container } = render(
+      <form>
+        <Select options={OPTIONS} name="model" label="Model" defaultValue="model-s" />
+        <Select options={OPTIONS} name="compare" label="Compare" multiple defaultValue={['model-3']} />
+      </form>,
+    );
+    const select = screen.getByRole('combobox', { name: 'Model' });
+    expect(select.parentElement?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('listbox', { name: 'Compare' }).parentElement?.querySelector('svg')).toBeNull();
+    const form = container.querySelector('form')!;
+    expect([...new FormData(form)]).toEqual([['model', 'model-s'], ['compare', 'model-3']]);
+  });
+
   it('merges a custom className onto the native <select>', () => {
     const { container } = render(<Select options={OPTIONS} className="my-custom-class" />);
     expect((container.querySelector('select') as HTMLSelectElement).className).toContain(

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/Badge';
+import { Text } from '@/components/ui/Typography';
 import type { DataProvenance, DataStatus } from '@/api/dataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
@@ -23,6 +24,8 @@ export interface DataProvenanceBadgeProps
   size?: 'sm' | 'md';
   /** Hide the icon (dense table cells). */
   iconOnly?: boolean;
+  /** Show the source explanation beside the badge on spacious surfaces. */
+  showEvidence?: boolean;
 }
 
 type BadgeVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
@@ -119,6 +122,7 @@ function ProvenanceBadge({
   time,
   size = 'sm',
   iconOnly = false,
+  showEvidence = false,
   ...props
 }: Omit<DataProvenanceBadgeProps, 'updatedAt'> & { time?: string }) {
   const { t } = useTranslation();
@@ -135,7 +139,7 @@ function ProvenanceBadge({
       })}`
     : t(`${config.key}Hint`, config.hint);
 
-  return (
+  const badge = (
     <Badge
       {...props}
       variant={variant}
@@ -150,4 +154,10 @@ function ProvenanceBadge({
       <span>{label}</span>
     </Badge>
   );
+  return showEvidence ? (
+    <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-1">
+      {badge}
+      <Text variant="caption" className="min-w-0 [overflow-wrap:anywhere]">{title}</Text>
+    </span>
+  ) : badge;
 }

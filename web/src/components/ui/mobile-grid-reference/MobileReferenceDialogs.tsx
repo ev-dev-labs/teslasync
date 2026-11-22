@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Modal, RadioCard, Text } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { Button } from '../Button';
+import { Modal } from '../Modal';
+import { RadioCard } from '../RadioCard';
+import { Text } from '../Typography';
+import { modalMessageActions } from '../modalMessageActions';
 import type { MobileGridCallbacks, MobileGridModel } from './types';
 
 interface Props { model: MobileGridModel; callbacks: MobileGridCallbacks }
@@ -10,7 +15,7 @@ export function MobileReferenceDialogs({ model, callbacks }: Props) {
     <>
       <Modal open={model.overlays.sort} onClose={() => callbacks.onOverlay('sort', false)}
         title={t('developerReference.mobileGrid.sort.title', 'Sort reference rows')}
-        className="mgr-sort-sheet" size="sm"
+        className={cn('mgr-sort-sheet', modalMessageActions)} size="sm"
         footer={<Button className="min-h-11 w-full" onClick={() => callbacks.onOverlay('sort', false)}>{done}</Button>}>
         <div role="radiogroup" aria-label={t('developerReference.mobileGrid.sort.order', 'Sort order')} className="space-y-2">
           {model.sortOptions.map(option => (
@@ -21,7 +26,8 @@ export function MobileReferenceDialogs({ model, callbacks }: Props) {
         </div>
       </Modal>
       <Modal open={model.overlays.overflow} onClose={() => callbacks.onOverlay('overflow', false)}
-        title={t('developerReference.mobileGrid.toolbar.more', 'More grid actions')} size="sm"
+        title={t('developerReference.mobileGrid.toolbar.more', 'More grid actions')}
+        className={modalMessageActions} size="sm"
         footer={<Button className="min-h-11 w-full" onClick={() => callbacks.onOverlay('overflow', false)}>{done}</Button>}>
         <div className="flex flex-col gap-2">
           {!model.selection.enabled && (

@@ -184,6 +184,7 @@ func TestChargingTelemetry_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
+
 	h := NewChargingTelemetryHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
@@ -191,6 +192,35 @@ func TestChargingTelemetry_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestChargingTelemetryLatestPrefersDetailedChargeState(t *testing.T) {
+	for _, tt := range []struct {
+		name, detailed, legacy, want string
+	}{
+		{"canonical only", "DetailedChargeStateNoPower", "", "NoPower"},
+		{"canonical overrides old value", "NoPower", "Charging", "NoPower"},
+		{"unrecognized detailed falls back", "unexpected", "Charging", "Charging"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeStateReader{stateFn: func(context.Context, int64, time.Time) (signal.State, error) {
+				state := signal.State{"DetailedChargeState": tt.detailed}
+				if tt.legacy != "" {
+					state["ChargeState"] = tt.legacy
+				}
+				return state, nil
+			}}
+			h := NewChargingTelemetryHandler(fake, newTestLiveStateReader(fake))
+			rec := httptest.NewRecorder()
+			h.Latest(rec, newChargingTelemetryRequest("42", "/charging-telemetry/latest?vehicle_id=42"))
+			var body struct {
+				ChargingState string `json:"charging_state"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); rec.Code != http.StatusOK || err != nil || body.ChargingState != tt.want {
+				t.Fatalf("want state %q, got HTTP %d: %s", tt.want, rec.Code, rec.Body)
+			}
+		})
 	}
 }
 

@@ -109,8 +109,7 @@ export function AchievementUnlockedToast({
       exit={reduce ? { opacity: 0 } : { opacity: 0, x: 80, scale: 0.95 }}
       transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.25, duration: 0.45 }}
       className={cn(
-        'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
-        'border-yellow-500/40 shadow-[0_0_24px_rgba(234,179,8,0.18)]',
+        'pointer-events-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] shadow-e2',
         'relative overflow-visible',
       )}
       style={{ width: 'min(360px, calc(100vw - 2rem))' }}
@@ -139,14 +138,14 @@ export function AchievementUnlockedToast({
         </div>
       )}
 
-      <div data-app-part="feedback-layout" className="flex items-start gap-3">
-        <div className="flex-shrink-0">
+      <div data-app-part="feedback-layout" className="flex min-w-0 items-start gap-2.5">
+        <div data-app-part="feedback-icon" className="grid shrink-0 self-stretch place-items-center rounded-s-[inherit] border-e border-[var(--border-subtle)] bg-[var(--surface-2)] px-2">
           <AchievementBadge achievement={event.achievement} size="md" />
         </div>
-        <div data-app-part="feedback-content" className="flex-1 min-w-0">
+        <div data-app-part="feedback-content" className="min-w-0 flex-1 py-3 [overflow-wrap:anywhere]">
           <div className="flex items-center gap-1.5">
-            <Trophy className="h-3.5 w-3.5 text-yellow-300" aria-hidden="true" />
-            <p className="text-2xs font-semibold tracking-wider text-yellow-300/90">
+            <Trophy className="h-3.5 w-3.5 shrink-0 text-[var(--semantic-success)]" aria-hidden="true" />
+            <p className="text-2xs font-semibold tracking-wider text-[var(--semantic-success)]">
               {t('achievements.toastEyebrow', 'Achievement unlocked')}
             </p>
           </div>
@@ -163,7 +162,7 @@ export function AchievementUnlockedToast({
             type="button"
             onClick={handleView}
             className={cn(
-              'mt-2 inline-flex h-auto items-center gap-1 p-0 text-xs font-medium text-yellow-300',
+              'mt-2 inline-flex h-auto items-center gap-1 p-0 text-xs font-medium text-[var(--theme-primary)]',
               'underline-offset-2 hover:bg-transparent hover:underline focus-visible:outline-none focus-visible:ring-2',
               'focus-visible:ring-yellow-500/50 rounded',
             )}
@@ -178,7 +177,7 @@ export function AchievementUnlockedToast({
           type="button"
           onClick={onDismiss}
           aria-label={t('achievements.dismiss', 'Dismiss achievement notification')}
-          className="h-auto flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+          className="me-1 mt-1 h-8 w-8 shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] max-md:min-h-11 max-md:min-w-11"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>

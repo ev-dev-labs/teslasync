@@ -1,10 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FleetEndpoint, PollingConfig } from '@/api/hooks/useSettings';
-import { Input } from '@/components/ui';
 import { useFleetAPIPage } from '../../../hooks/useFleetAPIPage';
 import { FleetAPIRouteCatalog } from './FleetAPIRouteCatalog';
 
@@ -81,33 +80,35 @@ vi.mock('@/api/hooks/useSettings', async () => {
 vi.mock('../../FleetEndpointTable', async () => {
   const actual = await vi.importActual<typeof import('../../FleetEndpointTable')>('../../FleetEndpointTable');
   return {
-  FleetEndpointTable: (props: TableProps) => {
-    fixtures.table(props);
-    return <actual.FleetEndpointTable {...props} />;
-  },
+    FleetEndpointTable: (props: TableProps) => {
+      fixtures.table(props);
+      return <actual.FleetEndpointTable {...props} />;
+    },
   };
 });
 
 function CatalogHarness() {
   const controller = useFleetAPIPage();
   if (!controller.pollingConfig) throw new Error('Missing local polling fixture');
-  return (
-    <>
-      <Input aria-label="Fixture search" value={controller.search}
-        onChange={(event) => controller.setSearch(event.target.value)} />
-      <FleetAPIRouteCatalog controller={controller} pollingConfig={controller.pollingConfig} />
-    </>
-  );
+  return <FleetAPIRouteCatalog controller={controller} pollingConfig={controller.pollingConfig} />;
 }
 
 function renderCatalog() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(<QueryClientProvider client={client}><CatalogHarness /></QueryClientProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'View options' }));
 }
 
 function routeKeys() {
   return fixtures.table.mock.lastCall?.[0].endpoints.map(endpoint => endpoint.key);
+}
+
+function setSearch(value: string) {
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search API routes' }), { target: { value } });
+}
+
+function openGrouping() {
+  fireEvent.click(screen.getByRole('button', { name: 'View options' }));
+  return within(screen.getByRole('dialog', { name: 'View options' }));
 }
 
 beforeEach(() => fixtures.table.mockClear());
@@ -121,7 +122,7 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(fixtures.table).toHaveBeenLastCalledWith(expect.objectContaining({
       tableId: 'admin:fleet-endpoints',
-      endpoints: [fixtures.catalog[1], fixtures.catalog[0], fixtures.catalog[2]],
+      endpoints: fixtures.catalog,
       candidates: fixtures.catalog,
       access: fixtures.polling.fleet_endpoints,
       auto: fixtures.polling.auto_endpoints,
@@ -132,72 +133,80 @@ describe('FleetAPIRouteCatalog source contracts', () => {
     }));
   });
 
-  it.each([
-    { case: 'category', name: 'Category' },
-    { case: 'method', name: 'HTTP method' },
-    { case: 'direction', name: 'Sort descending' },
-  ])('declares mobile target classes and restores compact desktop sizing for $case', ({ name }) => {
+  it('keeps each grouping option reachable with a mobile-sized target', () => {
     renderCatalog();
-    const button = screen.getByRole('button', { name });
-    expect(button).toHaveClass('h-11', 'min-w-11', 'md:h-9', 'md:min-w-0', 'px-3', 'text-sm');
-    expect(button).not.toHaveClass('h-9', 'w-11', 'md:w-11', 'md:min-w-11');
+    const grouping = openGrouping();
+    for (const name of ['Category', 'HTTP method', 'No grouping']) {
+      expect(grouping.getByRole('button', { name })).toHaveClass('min-h-11', 'md:min-h-9');
+    }
   });
 
-  it('runs method and category grouping handlers while keeping raw method identity', () => {
+  it('runs method and category grouping handlers while keeping raw method identity', async () => {
     renderCatalog();
-    fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
-    expect(screen.getByRole('button', { name: 'HTTP method' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'false');
+    const grouping = openGrouping();
+    fireEvent.click(grouping.getByRole('button', { name: 'HTTP method' }));
+    expect(grouping.getByRole('button', { name: 'HTTP method' })).toHaveAttribute('aria-pressed', 'true');
+    expect(grouping.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Expand POST' })).toBeInTheDocument();
     expect(fixtures.table.mock.lastCall?.[0].grouping?.key(fixtures.catalog[2])).toBe('POST');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'command.lock' } });
-    expect(screen.queryByRole('button', { name: 'Expand GET' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
-    expect(screen.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'true');
+    setSearch('command.lock');
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Expand GET' })).not.toBeInTheDocument());
+    fireEvent.click(grouping.getByRole('button', { name: 'Category' }));
+    expect(grouping.getByRole('button', { name: 'Category' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Collapse Fahrzeugbefehle' })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: '' } });
-    expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
+    setSearch('');
+    expect(await screen.findByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand Fahrzeugbefehle' })).toBeInTheDocument();
   });
 
   it.each([
-    { case: 'operation', value: 'name', keys: ['vehicle.a', 'vehicle.z'], reversed: ['vehicle.z', 'vehicle.a'], direction: 'Sort descending' },
-    { case: 'path', value: 'path', keys: ['vehicle.z', 'vehicle.a'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort descending' },
-    { case: 'method', value: 'method', keys: ['vehicle.a', 'vehicle.z'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort descending' },
-    { case: 'access', value: 'access', keys: ['vehicle.z', 'vehicle.a'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort ascending' },
-    { case: 'auto', value: 'auto', keys: ['vehicle.z', 'vehicle.a'], reversed: ['vehicle.a', 'vehicle.z'], direction: 'Sort ascending' },
-  ])('runs the $case sort selection and direction handlers', ({ value, keys, reversed, direction }) => {
+    { value: 'operation', paths: ['/api/1/a', '/api/1/z'], direction: 'Sort descending' },
+    { value: 'path', paths: ['/api/1/a', '/api/1/z'], direction: 'Sort ascending' },
+    { value: 'method', paths: ['/api/1/a', '/api/1/b'], direction: 'Sort ascending' },
+    { value: 'access', paths: ['/api/1/a', '/api/1/z'], direction: 'Sort ascending' },
+    { value: 'auto', paths: ['/api/1/a', '/api/1/z'], direction: 'Sort ascending' },
+  ])('sorts the displayed routes by $value in both directions', ({ value, paths, direction }) => {
     renderCatalog();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Sort routes by' }), { target: { value } });
-    expect(screen.getByRole('combobox', { name: 'Sort routes by' })).toHaveValue(value);
-    expect(routeKeys()).toEqual(keys);
-    fireEvent.click(screen.getByRole('button', { name: direction }));
-    expect(screen.getByRole('button', { name: direction === 'Sort ascending' ? 'Sort descending' : 'Sort ascending' })).toBeInTheDocument();
-    expect(routeKeys()).toEqual(reversed);
+    fireEvent.click(openGrouping().getByRole('button', { name: 'No grouping' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View options' }));
+    if (value !== 'method') setSearch('vehicle.');
+    const visiblePaths = () => within(screen.getByRole('table')).getAllByRole('row').slice(1)
+      .map(row => row.querySelector('[data-column-key="operation"] code')?.textContent);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter & sort' }));
+    const query = within(screen.getByRole('dialog', { name: 'Filter & sort' }));
+    fireEvent.change(query.getByRole('combobox', { name: 'Column' }), { target: { value } });
+    fireEvent.click(query.getByRole('button', { name: direction }));
+    const reverse = direction === 'Sort ascending' ? 'Sort descending' : 'Sort ascending';
+    expect(query.getByRole('button', { name: reverse })).toBeInTheDocument();
+    expect(visiblePaths()[0]).toBe(paths[0]);
+    fireEvent.click(query.getByRole('button', { name: reverse }));
+    expect(visiblePaths()[0]).toBe(paths[1]);
   });
 
-  it('filters both grouping modes through one shared search alongside category chips', async () => {
+  it('filters both grouping modes through the shared search and category selector', async () => {
     renderCatalog();
-    expect(screen.getByRole('group', { name: 'Route groups' })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'vehicle.a' } });
-    expect(routeKeys()).toEqual(['vehicle.a']);
-    fireEvent.click(screen.getByRole('button', { name: 'HTTP method' }));
+    const category = screen.getByRole('combobox', { name: 'Route groups' });
+    fireEvent.change(category, { target: { value: 'Vehicle data' } });
+    expect(routeKeys()).toEqual(['vehicle.z', 'vehicle.a']);
+    setSearch('vehicle.a');
+    await waitFor(() => expect(routeKeys()).toEqual(['vehicle.a']));
+    fireEvent.click(openGrouping().getByRole('button', { name: 'HTTP method' }));
     expect(screen.getByRole('button', { name: 'Collapse GET' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View options' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue(''));
-    expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z', 'command.lock']);
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search API routes' })).toHaveValue(''));
+    await waitFor(() => expect(routeKeys()).toEqual(['vehicle.z', 'vehicle.a']));
   });
 
   it('retains the no-match message and executes the clear-search action', async () => {
     renderCatalog();
-    fireEvent.change(screen.getByRole('textbox', { name: 'Fixture search' }), { target: { value: 'missing-fixture-route' } });
-    expect(screen.getByText('No API routes match that search.')).toBeInTheDocument();
+    setSearch('missing-fixture-route');
+    expect(await screen.findByText('No API routes match that search.')).toBeInTheDocument();
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /^Collapse Fahrzeug/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Fixture search' })).toHaveValue(''));
-    expect(screen.getByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
-    expect(routeKeys()).toEqual(['vehicle.a', 'vehicle.z', 'command.lock']);
+    await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search API routes' })).toHaveValue(''));
+    expect(await screen.findByRole('button', { name: 'Expand Fahrzeugdaten' })).toBeInTheDocument();
+    expect(routeKeys()).toEqual(['vehicle.z', 'vehicle.a', 'command.lock']);
   });
 });

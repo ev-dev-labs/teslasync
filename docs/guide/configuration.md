@@ -42,6 +42,8 @@ TeslaSync delegates user identity to a reverse-proxy auth provider (Authentik, A
 
 Open mode is intended for local trials on `localhost`. **Never expose an open-mode install to the public internet** — there is no enforcement on read paths and any caller can browse vehicle state.
 
+`GET /api/v1/system/auth-mode` is not cacheable. In forward-auth mode, `subject` identifies the effective subject and `impersonating` is `true` when the request uses an active impersonation session. Browser-local private reminders require the user's own verified session, even when the effective subject matches.
+
 Reference: `internal/api/forward_auth_middleware.go`, `internal/auth/subject.go`, `internal/auth/subject_recorder.go`.
 
 ## Token encryption

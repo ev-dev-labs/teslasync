@@ -68,7 +68,7 @@ export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function M
         className,
       )}
     >
-      <div data-app-part="metric-reading" className="flex items-baseline gap-1">
+      <div data-app-part="metric-reading" className={cn('flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1 gap-y-0.5 tabular-nums [overflow-wrap:anywhere]', align === 'center' && 'justify-center')}>
         <Text
           data-app-part="metric-value"
           as="span"
@@ -84,11 +84,11 @@ export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function M
           </Text>
         ) : null}
       </div>
-      <Text data-app-part="metric-label" as="span" size="xs" weight="medium" color="muted">
+      <Text data-app-part="metric-label" as="span" size="xs" weight="medium" color="secondary" className="max-w-full [overflow-wrap:anywhere]">
         {label}
       </Text>
       {sublabel ? (
-        <Text data-app-part="metric-context" as="span" size="xs" color="muted">
+        <Text data-app-part="metric-context" as="span" size="xs" color="muted" className="mt-1 w-full border-t border-[var(--border-subtle)] pt-1.5 [overflow-wrap:anywhere]">
           {sublabel}
         </Text>
       ) : null}

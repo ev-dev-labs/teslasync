@@ -1,10 +1,9 @@
 import { BulkActionsToolbar } from '@/components/data-display';
 import { TableToolbar } from '@/components/forms';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { DrivesEvidenceHeading } from './DrivesEvidenceHeading';
 import { DrivesEvidenceNotices } from './DrivesEvidenceNotices';
-import { DrivesDesktopEvidence } from './DrivesDesktopEvidence';
-import { DrivesMobileEvidence } from './DrivesMobileEvidence';
+import { DrivesGridEvidence } from './DrivesGridEvidence';
 import { DrivesEvidenceEmpty } from './DrivesEvidenceEmpty';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
@@ -12,32 +11,29 @@ type Props = { model: DrivesListPageController };
 
 export function DrivesEvidenceSection({ model }: Props) {
   const {
-    t, desktopEvidence, isDrivesLoading, dateFilteredDrives, tableControls,
-    drivesState, refetchDrives, paginatedDrives, bulkSelected,
-    filteredDrives, clearBulk, bulkDriveActions,
+    t, desktopEvidence, isDrivesLoading, currentStats, tableControls,
+    pageState, refetchPage, bulkSelected, matchingError,
+    matchingTotal, clearBulk, bulkDriveActions,
   } = model;
+  const hasGrid = currentStats.count > 0 || (matchingTotal ?? 0) > 0;
   return (
     <section
       aria-label={t('drives.list', 'Drive list')}
       className="space-y-3"
       data-tour="drives-list"
     >
-      {(!desktopEvidence || isDrivesLoading || dateFilteredDrives.length === 0) && (
+      {!hasGrid && (
         <DrivesEvidenceHeading {...model} />
       )}
-      {desktopEvidence && dateFilteredDrives.length === 0 && <TableToolbar {...tableControls} />}
+      {desktopEvidence && !hasGrid && <TableToolbar {...tableControls} />}
       <DrivesEvidenceNotices {...model} />
-      {drivesState.fatalError ? (
-        <QueryError error={drivesState.fatalError} onRetry={() => { void refetchDrives(); }} />
-      ) : isDrivesLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
-        </div>
-      ) : paginatedDrives.length > 0 || (desktopEvidence && dateFilteredDrives.length > 0) ? (
+      <StaleRefreshWarning state={pageState} label={t('drives.driveEvidence', 'Drive evidence')} />
+      {matchingError && <QueryError error={matchingError} onRetry={model.selectAllMatching} />}
+      {hasGrid ? (
         <>
           {bulkSelected.size > 0 && <BulkActionsToolbar
             selectedIds={Array.from(bulkSelected)}
-            total={filteredDrives.length}
+            total={matchingTotal ?? bulkSelected.size}
             selectionScope="filtered"
             onClear={clearBulk}
             actions={bulkDriveActions}
@@ -46,10 +42,14 @@ export function DrivesEvidenceSection({ model }: Props) {
               other: t('bulk.noun.drive_other', 'drives'),
             }}
           />}
-          {desktopEvidence
-            ? <DrivesDesktopEvidence {...model} />
-            : <DrivesMobileEvidence {...model} />}
+          <DrivesGridEvidence {...model} />
         </>
+      ) : pageState.fatalError ? (
+        <QueryError error={pageState.fatalError} onRetry={() => { void refetchPage(); }} />
+      ) : isDrivesLoading || pageState.status === 'initial' ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
+        </div>
       ) : <DrivesEvidenceEmpty {...model} />}
     </section>
   );

@@ -371,7 +371,7 @@ func TestSideEffectsObserver_ThreadsPerFieldEventTimeToLiveFSMAndSessions(t *tes
 	batteryTs := time.Date(2026, 4, 18, 0, 22, 12, 0, time.UTC)
 
 	atomics := []codec.Atomic{
-		{Field: "Gear", Value: "D", EmittedAt: gearTs, VehicleID: "VIN-EVENT"},
+		{Field: "Gear", Value: "D", EmittedAt: gearTs, SourceEmittedAt: &gearTs, VehicleID: "VIN-EVENT"},
 		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: speedTs, VehicleID: "VIN-EVENT"},
 		{Field: "BatteryLevel", Value: 78.0, EmittedAt: batteryTs, VehicleID: "VIN-EVENT"},
 	}
@@ -403,6 +403,9 @@ func TestSideEffectsObserver_ThreadsPerFieldEventTimeToLiveFSMAndSessions(t *tes
 	}
 	if got := live.lastTimed["VehicleSpeed"].EmittedAt; !got.Equal(speedTs) {
 		t.Errorf("live VehicleSpeed event time = %v, want %v", got, speedTs)
+	}
+	if !live.lastTimed["Gear"].SourceObserved || live.lastTimed["VehicleSpeed"].SourceObserved {
+		t.Error("only producer-timestamped data may keep observed freshness")
 	}
 
 	// Field count must equal atomic count (no fields silently dropped)

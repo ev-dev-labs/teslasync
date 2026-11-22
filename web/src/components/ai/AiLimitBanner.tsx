@@ -129,6 +129,8 @@ export function AiLimitBanner({
   const title = titleForReason(t, info.reason);
   const description = descriptionForReason(t, info.reason);
   const retryReady = secondsLeft <= 0;
+  const showBaseline = info.baselineAvailable && onUseBaseline != null;
+  const showRetry = retryReady && onRetry != null;
 
   return (
     <AlertBanner
@@ -139,7 +141,7 @@ export function AiLimitBanner({
       data-testid="ai-limit-banner"
       data-reason={info.reason}
     >
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2 [overflow-wrap:anywhere]">
         <p>{description}</p>
         {!retryReady && (
           <p className="text-[var(--text-secondary)]">
@@ -149,9 +151,10 @@ export function AiLimitBanner({
             })}
           </p>
         )}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {onUseBaseline && info.baselineAvailable && (
+        {(showBaseline || showRetry) && <div data-app-part="feedback-actions" className="flex min-w-0 flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2">
+          {showBaseline && (
             <Button
+              wrapLabel
               size="sm"
               variant="ghost"
               onClick={onUseBaseline}
@@ -160,8 +163,9 @@ export function AiLimitBanner({
               {t('ai.limit.useBaseline', 'Use baseline')}
             </Button>
           )}
-          {onRetry && retryReady && (
+          {showRetry && (
             <Button
+              wrapLabel
               size="sm"
               variant="primary"
               onClick={onRetry}
@@ -170,7 +174,7 @@ export function AiLimitBanner({
               {t('ai.limit.retry', 'Retry')}
             </Button>
           )}
-        </div>
+        </div>}
       </div>
     </AlertBanner>
   );

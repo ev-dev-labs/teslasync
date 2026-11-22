@@ -1,16 +1,16 @@
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface PercentageProps {
+interface PercentageProps extends FormattedReadingOptions {
   /** Already a percentage value, e.g. SoC of 85 → "85%". */
   value?: number | null;
   /** A 0–1 ratio; multiplied by 100 before display. */
   ratio?: number | null;
   precision?: number;
-  className?: string;
 }
 
 /** Percentage renderer that accepts either a percentage or a 0–1 ratio. */
-export function Percentage({ value, ratio, precision, className }: PercentageProps) {
+export function Percentage({ value, ratio, precision, label, className }: PercentageProps) {
   const { fmtPercent } = useNumberFormatting();
   let v: number | null = null;
   if (value != null && Number.isFinite(value)) {
@@ -20,12 +20,9 @@ export function Percentage({ value, ratio, precision, className }: PercentagePro
   }
 
   if (v == null) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
 
-  return (
-    <span className={className} title={fmtPercent(v, precision)}>
-      {fmtPercent(v, precision)}
-    </span>
-  );
+  const display = fmtPercent(v, precision);
+  return <FormattedReading label={label} className={className} title={display}>{display}</FormattedReading>;
 }

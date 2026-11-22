@@ -1,6 +1,7 @@
 package drives
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -8,12 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/fsd"
+	"github.com/ev-dev-labs/teslasync/internal/app/drivehistorysvc"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -36,6 +41,22 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	if err != nil || vehicleID <= 0 {
 		span.RecordError(errInvalidVehicleID)
 		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	if view := r.URL.Query().Get("view"); view != "" {
+		status, result, err := h.historyView(r.WithContext(ctx), vehicleID, view)
+		if err != nil {
+			span.RecordError(err)
+			if status == http.StatusInternalServerError {
+				log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to load drive history")
+				writeError(w, status, "failed to load drive history")
+			} else {
+				writeError(w, status, err.Error())
+			}
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
 		return
 	}
 
@@ -62,6 +83,88 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 	apiparams.SetPaginationHeaders(w, limit, offset, len(drives))
 	writeJSON(w, http.StatusOK, drives)
+}
+
+func (h *DriveHandler) historyView(r *http.Request, vehicleID int64, view string) (int, any, error) {
+	ctx, query := r.Context(), r.URL.Query()
+	start, end, err := parseDrivingStatsRange(r)
+	if err != nil {
+		return http.StatusBadRequest, nil, err
+	}
+	if start.IsZero() || !start.Before(end) {
+		return http.StatusBadRequest, nil, errors.New("start and end must define a non-empty range")
+	}
+	zone, err := time.LoadLocation(query.Get("timezone"))
+	if err != nil || query.Get("timezone") == "Local" {
+		return http.StatusBadRequest, nil, errors.New("invalid timezone")
+	}
+	var filters drivehistorysvc.Filters
+	if raw := query.Get("grid"); raw != "" && json.Unmarshal([]byte(raw), &filters) != nil {
+		return http.StatusBadRequest, nil, errors.New("invalid grid filters")
+	}
+	field := query.Get("field")
+	if view != "page" && view != "overview" && view != "values" && view != "ids" {
+		return http.StatusBadRequest, nil, errors.New("invalid drives view")
+	}
+	if view == "values" && !drivehistorysvc.ValueField(field) {
+		return http.StatusBadRequest, nil, errors.New("invalid facet field")
+	}
+	limit, offset := apiparams.Pagination(r)
+	if view == "page" && filters.DefaultOrder() {
+		total, err := h.historyRepo.HistoryCount(ctx, vehicleID, start, end)
+		if err != nil {
+			return http.StatusInternalServerError, nil, err
+		}
+		offset = drivehistorysvc.PageOffset(total, limit, offset)
+		items, err := h.historyRepo.HistoryPage(ctx, vehicleID, limit, offset, start, end)
+		if err != nil {
+			return http.StatusInternalServerError, nil, err
+		}
+		if items == nil {
+			items = []*drivemodel.Drive{}
+		}
+		return http.StatusOK, drivehistorysvc.Page{Items: items, Total: total, Page: offset/limit + 1}, nil
+	}
+	readStart := start
+	prior := view == "overview" && query.Get("prior_start") != ""
+	if prior {
+		if readStart, err = time.Parse(time.RFC3339Nano, query.Get("prior_start")); err != nil || !readStart.Before(start) {
+			return http.StatusBadRequest, nil, errors.New("prior_start must be before start")
+		}
+	}
+	drives, err := h.historyRepo.HistoryRange(ctx, vehicleID, readStart, end)
+	if err != nil {
+		return http.StatusInternalServerError, nil, err
+	}
+	var fsdByID map[int64]drivehistorysvc.FSDValue
+	if _, hasFilter := filters.Values["fsd"]; field == "fsd" || filters.Sort == "fsd" || hasFilter || filters.FSD != "" && filters.FSD != "all" {
+		insights, err := fsd.ReadDriveRange(ctx, h.db, vehicleID, start, end, zone)
+		if err != nil {
+			return http.StatusInternalServerError, nil, err
+		}
+		fsdByID = make(map[int64]drivehistorysvc.FSDValue, len(insights))
+		for _, item := range insights {
+			fsdByID[item.DriveID] = drivehistorysvc.FSDValue{
+				Confidence: string(item.Confidence), Distance: item.FSDDistanceM, Share: item.FSDSharePct,
+			}
+		}
+	}
+	rows := drivehistorysvc.NewRecords(drives, fsdByID)
+	locale := language.Make(filters.Locale)
+	switch view {
+	case "overview":
+		return http.StatusOK, drivehistorysvc.Summarize(rows, start, prior, zone), nil
+	case "values":
+		return http.StatusOK, drivehistorysvc.Facets(rows, field, locale), nil
+	case "ids":
+		matches := filters.Match(rows, zone, locale)
+		if len(matches) > apibulk.MaxIDs {
+			return http.StatusBadRequest, nil, apibulk.ErrIDsTooMany
+		}
+		return http.StatusOK, drivehistorysvc.IDs(matches), nil
+	default:
+		return http.StatusOK, filters.Paginate(filters.Match(rows, zone, locale), locale, limit, offset), nil
+	}
 }
 
 // Constants used by the SI-canonical drives queries (migration 000185).

@@ -1,1333 +1,4 @@
 {
-  "ownership": {
-    "action": {
-      "cancel": "Cancel",
-      "edit": "Edit",
-      "header": "Actions",
-      "remove": "Remove",
-      "save": "Save"
-    },
-    "compliance": {
-      "apportion": {
-        "empty": "No drives with usable coordinates in this window.",
-        "subtitle": "Confidence is 95% when both endpoints fall in the same box, 70% when only one does, and 60% for a cross-border split.",
-        "title": "Apportionment by jurisdiction"
-      },
-      "delete": {
-        "title": "Delete this jurisdiction rate?",
-        "message": "The “{{name}}” rate will be removed permanently. This cannot be undone."
-      },
-      "digest": {
-        "body": "A stable fingerprint of the apportionment above. If the underlying drives change, the digest changes — which is exactly what makes a sealed filing meaningful.",
-        "title": "Period digest"
-      },
-      "filing": {
-        "charge": "Charge",
-        "digest": "Seal",
-        "distance": "Distance",
-        "energy": "Energy",
-        "period": "Period",
-        "status": "Status"
-      },
-      "filingForm": {
-        "end": "Period end",
-        "start": "Period start",
-        "submit": "Seal period"
-      },
-      "filings": {
-        "add": "Seal a period",
-        "empty": "No periods sealed yet.",
-        "subtitle": "Sealing a period snapshots the distance, energy and charge behind a digest, so a later dispute can be settled against the exact figures you filed.",
-        "title": "Sealed filings"
-      },
-      "navTitle": "Jurisdictional compliance",
-      "notice": {
-        "body": "Rates are the ones you enter; boundaries are simple bounding boxes. A drive that starts in one jurisdiction and ends in another is split evenly and flagged at reduced confidence. Use this to prepare and cross-check a filing — never as the filing itself.",
-        "title": "A worksheet, not a tax return"
-      },
-      "rate": {
-        "bbox": "Bounding box",
-        "code": "Jurisdiction",
-        "grid": "Grid intensity",
-        "registration": "Annual registration",
-        "roadUsage": "Road-usage rate"
-      },
-      "rateForm": {
-        "code": "Jurisdiction code",
-        "codeHint": "e.g. US-WA",
-        "grid": "Grid intensity (g CO₂e / Wh)",
-        "gridHint": "{{value}} g per kWh",
-        "label": "Display name",
-        "maxLat": "Max latitude",
-        "maxLng": "Max longitude",
-        "minLat": "Min latitude",
-        "minLng": "Min longitude",
-        "registration": "Annual registration",
-        "roadUsage": "Road-usage rate (minor / m)",
-        "save": "Save jurisdiction"
-      },
-      "rates": {
-        "add": "Add jurisdiction",
-        "empty": "No jurisdiction rates defined yet.",
-        "subtitle": "When boxes overlap, the smallest one that contains the point wins — so a city can sit inside a state.",
-        "title": "Jurisdiction rate table"
-      },
-      "row": {
-        "confidence": "Confidence",
-        "distance": "Distance",
-        "drives": "Drives",
-        "emissions": "Attributed emissions",
-        "emissionsRate": "{{value}} g per km",
-        "energy": "Energy",
-        "jurisdiction": "Jurisdiction",
-        "liability": "Total liability",
-        "registration": "Registration",
-        "roadUsage": "Road-usage charge"
-      },
-      "stat": {
-        "assigned": "Assigned to a jurisdiction",
-        "distance": "Total distance",
-        "drives": "{{count}} drives",
-        "emissions": "Attributed emissions",
-        "liability": "Total liability",
-        "roadUsage": "Road-usage charge",
-        "unassigned": "Unassigned",
-        "mixedCurrency": "Mixed currencies; see the jurisdiction amounts below.",
-        "unknownCurrency": "The recorded liability currency is unknown.",
-        "periodSource": "Recorded apportionment window; source coverage and limitations are shown in the evidence below.",
-        "unknownPeriod": "No recorded apportionment window is available.",
-        "unknownDrives": "Drive count unknown"
-      },
-      "subtitle": "Apportion every metre you drove to the jurisdiction it happened in, price it against that jurisdiction’s road-usage rate, and seal the period into an immutable filing record.",
-      "summary": {
-        "title": "Period liability"
-      },
-      "title": "Jurisdictional compliance & road-usage charge",
-      "unsupported": {
-        "polygon": "True polygon boundaries — jurisdictions are approximated by bounding boxes",
-        "submit": "Submitting to a tax authority, and any legal interpretation of what is owed"
-      },
-      "brief": {
-        "title": "Recorded period liability",
-        "description": "Distance, road-usage liability and attributed emissions for the recorded apportionment window.",
-        "recorded": "Recorded apportionment"
-      }
-    },
-    "consumables": {
-      "card": {
-        "adjusted": "Duty-adjusted life",
-        "binding": "Bound by {{limit}}",
-        "harsh": "harsh duty cycle",
-        "health": "Remaining life",
-        "multiplier": "Wear ×{{value}}",
-        "ofRated": "{{value}} of rated life",
-        "remaining": "Remaining",
-        "replace": "Projected replacement",
-        "used": "Distance on part",
-        "wearCost": "Part wear cost",
-        "history": "Service history ({{count}} events)"
-      },
-      "econ": {
-        "blended": "Blended wear cost",
-        "blendedHint": "per 1 000 metres driven",
-        "odometer": "Odometer",
-        "parts": "Parts tracked"
-      },
-      "economics": {
-        "title": "Wear economics"
-      },
-      "event": {
-        "cost": "Cost",
-        "kind": "Event",
-        "note": "Note",
-        "odometer": "Odometer",
-        "submit": "Log event"
-      },
-      "eventKind": {
-        "inspect": "Inspection",
-        "note": "Note",
-        "replace": "Replacement",
-        "rotate": "Rotation",
-        "service": "Service"
-      },
-      "delete": {
-        "title": "Delete this part?",
-        "message": "“{{name}}” and its service history will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "category": "Category",
-        "cost": "Replacement cost",
-        "installed": "Installed on",
-        "label": "Part label",
-        "notes": "Notes",
-        "odometer": "Odometer at install",
-        "position": "Position",
-        "positionHint": "e.g. front-left",
-        "ratedDays": "Rated life (days)",
-        "ratedDaysHint": "Filters and fluids age on the calendar too",
-        "ratedDistance": "Rated life (distance)",
-        "save": "Save part"
-      },
-      "item": {
-        "cost": "Cost",
-        "inService": "in service",
-        "installed": "Installed",
-        "label": "Part",
-        "log": "Log event",
-        "rated": "Rated life",
-        "retired": "Retired"
-      },
-      "items": {
-        "add": "Record part",
-        "empty": "No parts recorded yet.",
-        "title": "Part register"
-      },
-      "lifecycles": {
-        "empty": "Record a part below and its lifecycle projection appears here.",
-        "title": "Part-by-part projection"
-      },
-      "navTitle": "Consumables lifecycle",
-      "notice": {
-        "body": "The wear multiplier is derived from your own drives, clamped to a defensible range. It is a projection, not a measurement of physical wear — always inspect before relying on it for a safety-critical part.",
-        "title": "Duty cycle beats the manual"
-      },
-      "stat": {
-        "due": "Due soon",
-        "lifetime": "Spent to date",
-        "next": "Next replacement",
-        "overdue": "Overdue",
-        "stress": "Average duty stress",
-        "stressHint": "1.00 is the reference profile",
-        "twelve": "Next 12 months"
-      },
-      "stress": {
-        "baseline": "Reference",
-        "empty": "Not enough drives yet to characterise your duty cycle.",
-        "label": "Duty-cycle factor",
-        "multiplier": "Wear multiplier",
-        "observed": "Your vehicle",
-        "subtitle": "Each factor compares a measured trait of your driving against a reference profile. Multipliers compound, then clamp.",
-        "title": "Why your wear rate differs"
-      },
-      "subtitle": "Rated life assumes an average car. Yours is not average — this projects each part against your measured speed profile, regen share, power draw and climate, then tells you which limit will actually retire it.",
-      "summary": {
-        "title": "Fleet wear posture"
-      },
-      "title": "Consumables & wear-parts lifecycle",
-      "unsupported": {
-        "physical": "Measuring physical wear — no tread-depth or pad-thickness sensor exists on the vehicle",
-        "recall": "Manufacturer service bulletins and recalls affecting a part"
-      },
-      "brief": {
-        "title": "Projected wear and replacement costs",
-        "scope": "Selected vehicle and recorded parts; costs and replacement dates are projections"
-      },
-      "economicsBrief": {
-        "title": "Blended wear cost and recorded distance",
-        "description": "Blended wear cost retains the recorded currency per 1 000 metres, independently of the odometer display unit."
-      }
-    },
-    "driver": {
-      "assign": {
-        "drive": "Drive ID",
-        "driver": "Driver",
-        "pick": "Select a driver",
-        "submit": "Confirm label"
-      },
-      "chart": {
-        "aria": "Bar chart of drive share and aggression score per behaviour cluster",
-        "empty": "Not enough drives in this window to separate behaviour clusters.",
-        "inner": "Share of drives by cluster",
-        "title": "Cluster mix and driving intensity",
-        "col": {
-          "cluster": "Cluster",
-          "share": "Share of drives",
-          "aggression": "Aggression score"
-        }
-      },
-      "cluster": {
-        "aggression": "Aggression",
-        "cohesion": "Cohesion",
-        "cost": "Energy cost share",
-        "distance": "Distance",
-        "drives": "Drives",
-        "efficiency": "Efficiency",
-        "labelled": "{{count}} labelled drives",
-        "name": "Behaviour cluster",
-        "night": "Night share",
-        "regen": "Regen share",
-        "speed": "Avg speed",
-        "unlabelled": "Not yet named"
-      },
-      "clusters": {
-        "empty": "No clusters formed yet.",
-        "subtitle": "Cohesion is the mean feature distance inside the cluster — lower is tighter.",
-        "title": "Cluster characteristics"
-      },
-      "delete": {
-        "title": "Delete this driver profile?",
-        "message": "The “{{name}}” profile and its trip attributions will be removed permanently. This cannot be undone."
-      },
-      "fingerprints": {
-        "empty": "No drives with sufficient telemetry in this window.",
-        "more": "Showing {{shown}} of {{total}} drives",
-        "subtitle": "Every drive scored against each cluster centroid. Labelling one drive re-anchors the whole cluster.",
-        "title": "Drive fingerprints"
-      },
-      "form": {
-        "accent": "Accent colour",
-        "name": "Display name",
-        "primary": "Primary driver",
-        "accents": {
-          "cyan": "cyan",
-          "emerald": "emerald",
-          "amber": "amber",
-          "purple": "purple",
-          "rose": "rose",
-          "indigo": "indigo"
-        }
-      },
-      "fp": {
-        "ambiguous": "ambiguous",
-        "assign": "Label",
-        "attribution": "Attributed to",
-        "confidence": "Confidence",
-        "distance": "Distance",
-        "drive": "Drive",
-        "duration": "Duration",
-        "features": "Dominant traits",
-        "inferred": "inferred",
-        "labelled": "confirmed",
-        "margin": "Separation margin"
-      },
-      "navTitle": "Driver fingerprinting",
-      "notice": {
-        "body": "Clusters are derived only from drive dynamics already stored on this server. No cameras, no seat sensors, no accounts. A cluster stays anonymous until you choose to name it.",
-        "title": "Behavioural, never biometric"
-      },
-      "profile": {
-        "created": "Created",
-        "name": "Driver",
-        "primary": "primary"
-      },
-      "profiles": {
-        "add": "Add driver",
-        "empty": "No driver profiles created yet.",
-        "subtitle": "Name a cluster once by labelling any drive it contains; the whole cluster inherits the name.",
-        "title": "Named drivers"
-      },
-      "stat": {
-        "ambiguous": "Ambiguous drives",
-        "ambiguousHint": "Two clusters fit almost equally well",
-        "clusters": "Distinct clusters",
-        "inferred": "Inferred drives",
-        "labelled": "Confirmed drives",
-        "separation": "Separation score"
-      },
-      "subtitle": "Group drives by how they were driven — speed discipline, power draw, regen use and departure hour — then attach a name once and let every future drive inherit it.",
-      "summary": {
-        "title": "Separation quality"
-      },
-      "title": "Driver fingerprinting & attribution",
-      "unnamed": "Cluster {{id}}",
-      "unsupported": {
-        "identity": "Proving who was physically in the seat — this infers behaviour, not identity",
-        "passengers": "Distinguishing a driver who deliberately changes style from a second driver"
-      },
-      "verdict": {
-        "moderate": "Clusters overlap somewhat. Label a few more drives per cluster to sharpen the boundary.",
-        "strong": "Clusters are well separated — attributions can be trusted for cost splitting.",
-        "title": "Interpretation",
-        "weak": "Behaviour is too similar to separate reliably. Treat attributions as indicative only."
-      },
-      "brief": {
-        "title": "Cluster separation and attribution",
-        "description": "Behavioural clusters are anonymous until labelled. Inferred and ambiguous drives remain distinct from confirmed drives."
-      }
-    },
-    "error": {
-      "body": "Review the inputs and try again.",
-      "title": "Request could not be completed"
-    },
-    "evidence": {
-      "empty": "No supporting evidence was returned.",
-      "sampleLine": "{{count}} samples · {{date}}",
-      "sources": "Evidence sources",
-      "subtitle": "Measured observations are separated from modelled assumptions and from fields the engine will not compute.",
-      "title": "Evidence, quality, and limitations"
-    },
-    "form": {
-      "currency": "ISO currency code",
-      "moneyHint": "Display equivalent: {{value}}"
-    },
-    "governance": {
-      "delete": {
-        "title": "Delete this retention policy?",
-        "message": "The retention policy for “{{name}}” will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "bucket": "Downsample bucket (seconds)",
-        "dataset": "Dataset",
-        "downsampleAfter": "Downsample after (days)",
-        "downsampleHint": "Leave blank to keep full resolution",
-        "enabled": "Enabled",
-        "hold": "Legal hold",
-        "pickDataset": "Select a dataset",
-        "retention": "Retention (days)",
-        "save": "Save policy"
-      },
-      "impact": {
-        "blocked": "legal hold",
-        "dataset": "Dataset",
-        "downsampling": "Rows downsampled",
-        "empty": "Run the dry-run plan above to see what a policy would reclaim.",
-        "expiring": "Rows expiring",
-        "fidelity": "Fidelity lost",
-        "flags": "Flags",
-        "growth": "{{value}} / day",
-        "reclaim": "Reclaimable",
-        "retained": "{{count}} retained",
-        "retention": "Keeping {{span}}",
-        "runway": "Growth runway",
-        "runwayDays": "{{count}} days",
-        "subtitle": "Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.",
-        "title": "Dry-run impact"
-      },
-      "impactStat": {
-        "bytes": "Reclaimable",
-        "fidelity": "Fidelity traded away",
-        "mode": "Executed",
-        "never": "Never — dry run",
-        "rows": "Rows in plan"
-      },
-      "inventory": {
-        "bytes": "On disk",
-        "dataset": "Dataset",
-        "empty": "No governable datasets were found.",
-        "hypertable": "hypertable",
-        "include": "Include",
-        "included": "In plan",
-        "perRow": "Bytes / row",
-        "rows": "Rows",
-        "select": "Plan",
-        "span": "History span",
-        "subtitle": "Live sizes read from the database catalog. Toggle datasets to scope the dry run.",
-        "title": "Dataset inventory",
-        "ungoverned": "no policy"
-      },
-      "navTitle": "Data retention governance",
-      "notice": {
-        "body": "Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.",
-        "title": "Plan only — nothing is ever deleted here",
-        "datasetTitle": "Plan only — dataset rows are not deleted here",
-        "policyWritesBody": "Saving or removing a retention policy changes the stored policy. Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows. Dataset enforcement is not performed on this screen."
-      },
-      "policies": {
-        "add": "Define policy",
-        "empty": "No retention policies defined.",
-        "subtitle": "A policy declares intent. It becomes a plan only when you run the simulation.",
-        "title": "Retention policies"
-      },
-      "policy": {
-        "bucket": "Bucket",
-        "dataset": "Dataset",
-        "disabled": "disabled",
-        "downsample": "Downsample after",
-        "hold": "legal hold",
-        "retention": "Retention"
-      },
-      "run": {
-        "bytes": "Reclaimable",
-        "dataset": "Dataset",
-        "executed": "Executed",
-        "expiring": "Expiring",
-        "fidelity": "Fidelity lost",
-        "mode": "Mode",
-        "dryRun": "dry run"
-      },
-      "runs": {
-        "empty": "No plans recorded yet.",
-        "subtitle": "An append-only history of every plan computed, so retention decisions are auditable after the fact.",
-        "title": "Plan ledger"
-      },
-      "simulate": "Run dry-run plan",
-      "stat": {
-        "enforcing": "Enforcing",
-        "governed": "Under a policy",
-        "holds": "Legal holds",
-        "holdsHint": "Exempt from every plan",
-        "mode": "Enforcement mode",
-        "planOnly": "Plan only",
-        "total": "Total governed footprint",
-        "ungoverned": "No policy"
-      },
-      "subtitle": "See exactly what every table costs you on disk, model a retention policy, and quantify the analytical fidelity you would trade away — before anything is deleted.",
-      "summary": {
-        "title": "Storage posture"
-      },
-      "title": "Data retention & lifecycle governance",
-      "unsupported": {
-        "delete": "Actually deleting rows — this screen is deliberately read-only",
-        "index": "Index and TOAST overhead attribution below table granularity",
-        "datasetDeletion": "Deleting or downsampling dataset rows — policy changes and recorded plans do not enforce retention"
-      },
-      "brief": {
-        "title": "Governed storage and policy coverage",
-        "description": "Policy coverage describes intent, not deletion. Legal holds remain exempt from every plan.",
-        "scope": "Current database catalog and retention policies; coverage does not imply enforcement",
-        "modeUnknown": "Enforcement mode unknown; this screen only computes dry-run plans."
-      },
-      "impactBrief": {
-        "title": "Computed dry-run totals",
-        "scope": "Latest requested dry-run plan; no rows are deleted"
-      },
-      "warning": {
-        "legalHold": "A legal hold is active, so nothing would be removed even if execution were enabled.",
-        "highExpiry": "More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.",
-        "noAffectedRows": "Nothing is old enough to be affected by this policy yet."
-      }
-    },
-    "insurance": {
-      "factor": {
-        "baseline": "Baseline",
-        "better": "Higher is better",
-        "contribution": "Contribution",
-        "direction": "Direction",
-        "name": "Underwriting factor",
-        "observed": "Observed",
-        "samples": "Samples",
-        "score": "Score",
-        "weight": "Weight",
-        "worse": "Higher is worse"
-      },
-      "factors": {
-        "empty": "No factor had enough samples to score in this window.",
-        "subtitle": "Every weighted signal behind the score, with the baseline it was measured against.",
-        "title": "Factor decomposition"
-      },
-      "delete": {
-        "title": "Delete this policy?",
-        "message": "Policy “{{name}}” and its telematics program enrolment will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "deductible": "Deductible",
-        "end": "Coverage end (optional)",
-        "insurer": "Insurer",
-        "maxDiscount": "Maximum telematics discount (%)",
-        "premium": "Annual premium",
-        "ref": "Policy reference",
-        "save": "Save policy baseline",
-        "start": "Coverage start",
-        "subtitle": "Money is entered in ISO-4217 minor units so no cent is lost to floating point.",
-        "telematics": "Telematics programme enrolled",
-        "title": "Policy baseline"
-      },
-      "lever": {
-        "confidence": "Confidence",
-        "delta": "Risk score delta",
-        "difficulty": "Difficulty",
-        "effort": "Effort",
-        "hours": "{{value}} h/week",
-        "label": "Improvement lever",
-        "rank": "Rank",
-        "save": "Projected saving",
-        "target": "Target reduction"
-      },
-      "levers": {
-        "empty": "No lever produced a material saving at the current score.",
-        "subtitle": "What each behavioural change is worth, ordered by payoff per unit of effort.",
-        "title": "Ranked improvement levers"
-      },
-      "notice": {
-        "body": "The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.",
-        "title": "Modelled, not quoted"
-      },
-      "packet": {
-        "empty": "A packet hash is produced once a profile has been computed.",
-        "hash": "SHA-256 content digest",
-        "subtitle": "A stable content hash over the exposure, factors, and window. Quote it when disputing a rating so both sides know they are looking at the same dataset.",
-        "title": "Insurer evidence packet"
-      },
-      "policy": {
-        "coverage": "Coverage {{from}} → {{to}}",
-        "openEnded": "open-ended"
-      },
-      "premium": {
-        "add": "Add policy",
-        "baseline": "Baseline annual premium",
-        "cap": "Cap {{value}}",
-        "deductible": "Deductible",
-        "delta": "Difference",
-        "discount": "Applied discount",
-        "edit": "Edit policy",
-        "empty": "Register a policy below to simulate a telematics-adjusted premium.",
-        "expectedLoss": "Expected annual loss",
-        "modelled": "Modelled annual premium",
-        "perDistance": "Cost per distance",
-        "subtitle": "What the stored policy would cost if the telematics discount tracked the measured loss cost.",
-        "title": "Premium simulation"
-      },
-      "stat": {
-        "drives": "{{count}} drives",
-        "duration": "Time behind the wheel",
-        "exposure": "Exposure distance",
-        "frequency": "Frequency index",
-        "frequencyHint": "Expected claim count driver",
-        "lossCost": "Loss cost index",
-        "lossCostHint": "Frequency × severity, 1.0 = baseline",
-        "night": "Night distance",
-        "percentile": "Peer percentile",
-        "percentileHint": "Against your own history distribution",
-        "score": "Risk score",
-        "scoreHint": "0 = best, 100 = worst",
-        "severity": "Severity index",
-        "severityHint": "Expected claim size driver",
-        "overnightTripDistance": "Distance of trips starting overnight",
-        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
-      },
-      "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
-      "summary": {
-        "empty": "Select a vehicle to build an underwriting profile.",
-        "subtitle": "Exposure-normalised risk over the selected window.",
-        "title": "Underwriting position"
-      },
-      "title": "Insurance telematics studio",
-      "trend": {
-        "chart": "Rolling risk score",
-        "chartAria": "Area chart of rolling insurance risk score over the analysis window",
-        "empty": "At least two buckets of driving are needed to plot a trajectory.",
-        "score": "Risk score",
-        "subtitle": "Rolling risk score and loss cost across the window — a rising line means underwriting exposure is growing.",
-        "title": "Risk trajectory",
-        "col": {
-          "bucket": "Period"
-        }
-      },
-      "unsupported": {
-        "claims": "Actual claim history — the model uses driving exposure only",
-        "quote": "Binding quotes, carrier acceptance, or regulatory rate approval"
-      },
-      "brief": {
-        "title": "Modelled underwriting indices"
-      },
-      "exposureBrief": {
-        "title": "Recorded driving exposure",
-        "description": "Exposure distance and duration retain the selected observation window; peer percentile compares against your own history."
-      },
-      "premiumBrief": {
-        "title": "Policy-based premium model",
-        "scope": "Stored policy and selected risk window; annual amounts retain the recorded currency"
-      },
-      "costBrief": {
-        "title": "Policy loss and distance costs",
-        "description": "Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis."
-      },
-      "checksum": {
-        "title": "Risk-summary checksum",
-        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, selected timezone, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
-        "empty": "A risk-summary checksum is produced once a profile has been computed.",
-        "hash": "Limited risk-summary checksum (SHA-256)"
-      }
-    },
-    "limitations": {
-      "empty": "No additional limitations were returned.",
-      "title": "Limitations"
-    },
-    "quality": {
-      "coverage": "Coverage",
-      "samples": "Samples",
-      "title": "Data quality",
-      "unavailable": "Quality metadata has not been computed yet.",
-      "window": "Observation window"
-    },
-    "verdict": {
-      "active": "active",
-      "ambiguous": "ambiguous",
-      "cancel": "cancel",
-      "degrading": "degrading",
-      "disputed": "disputed",
-      "due_soon": "due soon",
-      "duplicate": "duplicate",
-      "exact": "exact",
-      "expired": "expired",
-      "expiring_soon": "expiring soon",
-      "healthy": "healthy",
-      "high": "high",
-      "improving": "improving",
-      "insufficient": "insufficient",
-      "keep": "keep",
-      "lapsed": "lapsed",
-      "limited": "limited",
-      "moderate": "moderate",
-      "monitor": "monitor",
-      "open": "open",
-      "overdue": "overdue",
-      "preferred": "preferred",
-      "probable": "probable",
-      "reconciled": "reconciled",
-      "retired": "retired",
-      "review": "review",
-      "settled": "settled",
-      "stable": "stable",
-      "standard": "standard",
-      "strong": "strong",
-      "substandard": "substandard",
-      "sufficient": "sufficient",
-      "too_early": "too early",
-      "trusted": "trusted",
-      "unevaluated": "unevaluated",
-      "uninvoiced": "uninvoiced",
-      "unknown": "unknown",
-      "unmatched": "unmatched",
-      "unreliable": "unreliable",
-      "watch": "watch",
-      "weak": "weak"
-    },
-    "reconcile": {
-      "audit": {
-        "empty": "Select a statement above to run the audit.",
-        "subtitle": "Net variance is what the provider owes you (positive) or what you under-paid (negative).",
-        "title": "Reconciliation result"
-      },
-      "bucket": {
-        "amount": "Amount",
-        "label": "Discrepancy category",
-        "lines": "Lines",
-        "no": "Explained",
-        "recoverable": "Recoverable",
-        "share": "Share of variance",
-        "yes": "Disputable"
-      },
-      "buckets": {
-        "empty": "No material variance was attributed on this statement.",
-        "subtitle": "Every currency unit of disagreement is assigned a cause, so a dispute never rests on \"the number looks wrong\".",
-        "title": "Variance attribution"
-      },
-      "dispute": {
-        "claimed": "Amount claimed",
-        "digest": "Dispute packet digest",
-        "empty": "Audit a statement before opening a dispute.",
-        "none": "No disputes recorded on this statement.",
-        "noReasons": "No recoverable category found",
-        "note": "Note to the provider",
-        "open": "Open dispute",
-        "recovered": "recovered {{value}}",
-        "submit": "Record dispute",
-        "subtitle": "The packet digest fixes exactly which lines and measurements your claim rests on.",
-        "title": "Dispute desk"
-      },
-      "delete": {
-        "title": "Delete this invoice?",
-        "message": "Invoice “{{name}}” and its reconciled lines will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "addLine": "Add line",
-        "lineEnergy": "Billed energy (Wh)",
-        "lineLocation": "Location",
-        "lineRef": "Line reference",
-        "lines": "Statement lines",
-        "lineTotal": "Line total",
-        "lineWhen": "Occurred at",
-        "periodEnd": "Period end",
-        "periodStart": "Period start",
-        "provider": "Provider",
-        "ref": "Invoice reference",
-        "save": "Import and reconcile",
-        "total": "Statement total"
-      },
-      "invoice": {
-        "audit": "Audit",
-        "lines": "Lines",
-        "period": "Billing period",
-        "ref": "Invoice",
-        "status": "Status",
-        "total": "Billed"
-      },
-      "invoices": {
-        "empty": "No statements imported yet for this vehicle.",
-        "exportScope": "Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.",
-        "import": "Import statement",
-        "subtitle": "Import a statement, then pick one to audit line by line.",
-        "title": "Provider statements"
-      },
-      "line": {
-        "billed": "Billed",
-        "billedEnergy": "Billed energy",
-        "energyDelta": "Energy Δ",
-        "expected": "Expected",
-        "match": "Match",
-        "measuredEnergy": "Measured energy",
-        "reasons": "Attribution",
-        "ref": "Line",
-        "timeDelta": "Time Δ",
-        "unnamed": "Unnamed line",
-        "variance": "Variance"
-      },
-      "lines": {
-        "empty": "This statement has no lines to reconcile.",
-        "title": "Line-by-line audit"
-      },
-      "notice": {
-        "body": "Lines are matched on start time and delivered energy, then scored. A line only becomes disputable when the measured session disagrees beyond tolerance — never merely because it was unmatched.",
-        "title": "Your telemetry is the reference"
-      },
-      "stat": {
-        "billed": "Billed total",
-        "billedEnergy": "Billed energy",
-        "energyVariance": "Energy variance",
-        "expected": "Expected from telemetry",
-        "matched": "Matched lines",
-        "recoverable": "Disputable amount",
-        "unmatched": "Unmatched lines",
-        "variance": "Net variance"
-      },
-      "subtitle": "Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.",
-      "title": "Charging invoice reconciliation",
-      "uninvoiced": {
-        "empty": "Every measured session in this period appears on the statement.",
-        "energy": "Measured energy",
-        "location": "Location",
-        "narrative": "Why it matters",
-        "session": "Session",
-        "subtitle": "Measured sessions inside the billing period with no matching line. Usually free or home charging — occasionally a statement that is genuinely incomplete.",
-        "title": "Sessions the provider never billed"
-      },
-      "unsupported": {
-        "submit": "Submitting the dispute to the provider — the packet is prepared, not sent",
-        "tax": "Tax and idle-fee legality, which vary by site contract"
-      },
-      "brief": {
-        "title": "Statement amounts and variance",
-        "scope": "Selected statement and matched telemetry; amounts retain the statement currency"
-      },
-      "energyBrief": {
-        "title": "Statement matching and energy",
-        "description": "Matched and unmatched lines remain separate; measured energy is retained beside the energy variance."
-      }
-    },
-    "subscription": {
-      "billing": {
-        "annual": "Annual",
-        "monthly": "Monthly",
-        "once": "One-time"
-      },
-      "chart": {
-        "aria": "Bar chart of return on spend percentage for each subscription, coloured by verdict",
-        "empty": "No subscription has enough measured usage to compute a return yet.",
-        "inner": "Return on spend, per subscription",
-        "title": "Return by subscription",
-        "col": {
-          "name": "Subscription",
-          "roi": "Return on spend",
-          "verdict": "Verdict"
-        }
-      },
-      "delete": {
-        "title": "Delete this subscription?",
-        "message": "“{{name}}” and its ROI history will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "benchmark": "Benchmark (minor / unit)",
-        "benchmarkHint": "What one unit of this usage would cost without the subscription",
-        "billing": "Billing period",
-        "ended": "Ended",
-        "endedHint": "Leave blank while active",
-        "kind": "Kind",
-        "metric": "Usage metric",
-        "name": "Name",
-        "price": "Price per period",
-        "save": "Save subscription",
-        "started": "Started",
-        "newDraft": "Start new draft",
-        "benchmarkBasis": "{{currency}} minor / {{unit}} (stored unit; not a display-unit rate)",
-        "utcDateBasis": "Business dates are saved at midnight UTC; displayed instants use your saved timezone."
-      },
-      "kind": {
-        "oneTime": "One-time purchase",
-        "recurring": "Recurring subscription"
-      },
-      "list": {
-        "add": "Add subscription",
-        "benchmark": "Benchmark rate",
-        "empty": "No subscriptions recorded for this vehicle.",
-        "metric": "Value metric",
-        "name": "Subscription",
-        "ongoing": "ongoing",
-        "period": "Active",
-        "price": "Price",
-        "title": "Subscription register"
-      },
-      "navTitle": "Subscription ROI",
-      "notice": {
-        "body": "Realised value is measured usage multiplied by the benchmark rate you set — what the same usage would have cost without the subscription. A subscription active for under 30 days is reported as too early to judge, never as a loss.",
-        "title": "Value is what you would otherwise pay"
-      },
-      "roi": {
-        "empty": "Record a subscription below to start measuring its return.",
-        "subtitle": "Confidence falls when the active period is short or the usage metric has sparse data — a low-confidence \"cancel\" is a prompt to look, not to act.",
-        "title": "Per-subscription verdict"
-      },
-      "row": {
-        "activeDays": "{{count}} active days",
-        "breakEven": "Break-even usage",
-        "monthly": "Monthly cost",
-        "name": "Subscription",
-        "narrative": "Reasoning",
-        "net": "Net",
-        "perMonth": "{{value}} / month",
-        "roi": "ROI",
-        "spend": "Spent to date",
-        "usage": "Measured usage",
-        "utilisation": "{{value}} of break-even",
-        "value": "Realised value",
-        "verdict": "Verdict"
-      },
-      "stat": {
-        "monthly": "Monthly commitment",
-        "roi": "Portfolio ROI",
-        "saving": "Cancel-candidate saving",
-        "savingHint": "per month, if all cancelled",
-        "spend": "Spent to date",
-        "value": "Realised value"
-      },
-      "subtitle": "Price every recurring charge against the usage it actually delivered, express the break-even in units you can act on, and see exactly how much cancelling the weak ones would return.",
-      "summary": {
-        "title": "Portfolio economics"
-      },
-      "title": "Subscription & feature ROI",
-      "unsupported": {
-        "cancel": "Cancelling a subscription with the provider — this measures, it does not transact",
-        "intangible": "Convenience and enjoyment, which have real value but no measurable unit here"
-      },
-      "brief": {
-        "title": "Subscription commitment and realised value"
-      },
-      "metric": {
-        "supercharging_energy": "Supercharging energy",
-        "driving_distance": "Driving distance",
-        "connectivity_time": "Connectivity time",
-        "charging_sessions": "Charging sessions",
-        "drive_count": "Drive count"
-      },
-      "unit": {
-        "session": "session",
-        "drive": "drive"
-      },
-      "rateBasis": "{{value}} {{currency}} minor / {{unit}}"
-    },
-    "tariff": {
-      "bands": {
-        "empty": "Run a replay to break down band usage.",
-        "none": "This plan has a single undifferentiated rate.",
-        "rank": "Rank {{rank}}",
-        "subtitle": "Band occupancy for each plan — this is the mechanism behind the ranking, not a projection.",
-        "title": "Where your energy actually landed"
-      },
-      "chart": {
-        "aria": "Bar chart comparing annualised cost of each evaluated tariff plan",
-        "caption": "Annualised cost comparison",
-        "cost": "Annual cost",
-        "empty": "Run a replay to populate this chart.",
-        "subtitle": "Green is the cheapest ranked plan; grey bars are the alternatives you would be paying instead.",
-        "title": "Annualised cost by plan",
-        "statusCurrent": "Current plan",
-        "statusBest": "Cheapest",
-        "statusAlt": "Alternative",
-        "col": {
-          "plan": "Plan",
-          "status": "Status"
-        }
-      },
-      "controls": {
-        "all": "No plans selected — every stored plan will be evaluated.",
-        "run": "Replay load against plans",
-        "selected": "{{count}} plans selected",
-        "shiftable": "Shiftable load (%)",
-        "subtitle": "Shiftable share is the fraction of energy you could realistically move into the cheapest band without changing when you drive.",
-        "switchFee": "Switching fee (minor units)",
-        "title": "Comparison parameters"
-      },
-      "form": {
-        "addBand": "Add band",
-        "bandEnd": "Ends",
-        "bandLabel": "Label",
-        "bandPrice": "Price (minor per Wh)",
-        "bands": "Price bands",
-        "bandStart": "Starts",
-        "demand": "Demand charge (minor per W)",
-        "export": "Export price (minor per Wh)",
-        "isCurrent": "This is my current plan",
-        "name": "Plan name",
-        "provider": "Provider",
-        "save": "Save rate plan",
-        "standing": "Standing charge (minor/day)",
-        "structure": "Rate structure",
-        "defaultRateLabel": "Standard"
-      },
-      "structure": {
-        "flat": "Flat",
-        "tou": "Time of use",
-        "tiered": "Tiered",
-        "realTime": "Real time",
-        "demand": "Demand"
-      },
-      "notice": {
-        "body": "Each plan is priced against the exact sessions you actually charged, bucketed into their real time-of-day bands. Annualisation scales the observed window — it does not predict future consumption.",
-        "title": "Replay, not forecast"
-      },
-      "plan": {
-        "bands": "Price bands",
-        "compare": "Compare",
-        "compareNamed": "Compare {{name}}",
-        "current": "Current",
-        "demand": "Demand charge",
-        "name": "Plan",
-        "noProvider": "No provider recorded",
-        "onPlan": "On plan",
-        "standing": "Standing charge",
-        "structure": "Structure"
-      },
-      "plans": {
-        "add": "Add plan",
-        "empty": "No plans yet — add the plan you are on today plus any you are considering.",
-        "subtitle": "Author any plan your utility offers. Prices are stored per watt-hour in currency minor units so exotic structures stay exact.",
-        "title": "Your rate plan library"
-      },
-      "result": {
-        "annual": "Annualised cost",
-        "breakdown": "Energy / standing / demand",
-        "breakEven": "Break-even",
-        "currentTag": "current",
-        "days": "{{count}} d",
-        "delta": "vs current",
-        "effective": "Effective price",
-        "peak": "Peak demand",
-        "plan": "Plan",
-        "rank": "Rank",
-        "shift": "Load-shift upside"
-      },
-      "results": {
-        "empty": "No plan produced a priced result — check that your plans have at least one price band.",
-        "title": "Ranked plan economics"
-      },
-      "stat": {
-        "observed": "Observed energy",
-        "plans": "Plans evaluated",
-        "saving": "Best-case annual saving",
-        "sessions": "{{count}} sessions",
-        "shift": "Shiftable share modelled"
-      },
-      "subtitle": "Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.",
-      "summary": {
-        "empty": "Run a replay to see how much your plan choice is worth.",
-        "title": "Arbitrage summary"
-      },
-      "title": "Utility tariff arbitrage lab",
-      "delete": {
-        "title": "Delete this tariff?",
-        "message": "“{{name}}” and its rate bands will be removed permanently. This cannot be undone."
-      },
-      "unsupported": {
-        "future": "Future utility price changes, seasonal reindexing, or regulatory riders",
-        "home": "Household load outside the vehicle — only measured charging sessions are priced"
-      },
-      "brief": {
-        "title": "Returned tariff replay comparison",
-        "description": "Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.",
-        "scope": "Latest replay selection and model assumptions; source coverage remains in the evidence",
-        "submittedScope": "Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}",
-        "currencyUnknown": "Replay currency not supplied; the tariff editor currency is not a result denomination."
-      }
-    },
-    "trust": {
-      "calibration": {
-        "aria": "Bar chart of mean absolute error and mean bias grouped by prediction magnitude bin",
-        "chart": "Mean absolute error and bias per bin",
-        "empty": "Select a scorecard with enough scored samples to plot its calibration.",
-        "first": "First scored {{when}}",
-        "for": "Showing {{model}} → {{target}}",
-        "last": "Last scored {{when}}",
-        "title": "Calibration by prediction magnitude",
-        "col": {
-          "bin": "Prediction bin",
-          "error": "Mean absolute error",
-          "bias": "Mean bias",
-          "samples": "Samples"
-        }
-      },
-      "card": {
-        "bias": "Bias",
-        "coverage": "Interval coverage",
-        "drift": "Drift",
-        "grade": "Trust",
-        "inspect": "Calibration",
-        "mape": "MAPE",
-        "median": "Median APE",
-        "model": "Model / target",
-        "rmse": "RMSE",
-        "samples": "Scored / pending",
-        "skill": "Skill vs naive"
-      },
-      "cards": {
-        "empty": "No models have enough scored predictions yet in this window.",
-        "subtitle": "Drift ratio compares recent-half error against early-half error. Above 1.5 means the model is getting worse.",
-        "title": "Model scorecards"
-      },
-      "form": {
-        "high": "Interval high",
-        "horizon": "Horizon (days)",
-        "low": "Interval low",
-        "model": "Model name",
-        "reference": "Reference",
-        "referenceHint": "What produced this forecast",
-        "submit": "Record forecast",
-        "target": "Target quantity",
-        "unit": "SI unit",
-        "unitHint": "Derived from the target so stored predictions stay SI-canonical.",
-        "value": "Predicted value"
-      },
-      "navTitle": "Prediction accuracy lab",
-      "notice": {
-        "body": "A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.",
-        "title": "Scored against reality, not against itself"
-      },
-      "outcome": {
-        "submit": "Score prediction",
-        "value": "Observed value"
-      },
-      "pred": {
-        "error": "Error",
-        "horizon": "Horizon",
-        "inside": "inside",
-        "interval": "In interval",
-        "model": "Model",
-        "observed": "Observed",
-        "outside": "outside",
-        "pending": "pending",
-        "predicted": "Predicted",
-        "score": "Score it",
-        "when": "Predicted at",
-        "reference": "Reference",
-        "sourceError": "Signed source error"
-      },
-      "predictions": {
-        "add": "Record prediction",
-        "empty": "No predictions recorded for this vehicle yet.",
-        "subtitle": "Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.",
-        "title": "Prediction ledger"
-      },
-      "stat": {
-        "portfolio": "Portfolio trust score",
-        "scored": "Scored / recorded",
-        "trusted": "Trusted models",
-        "unreliable": "Unreliable",
-        "watch": "On watch"
-      },
-      "subtitle": "Every forecast this platform makes is written down, then scored against what actually happened. Bias, calibration, skill against a naive baseline, and drift over time decide whether a model earns your trust.",
-      "summary": {
-        "title": "Portfolio trust"
-      },
-      "title": "Prediction accuracy & Model trust lab",
-      "unsupported": {
-        "cause": "Explaining why a model drifted; it reports that it did",
-        "retrain": "Retraining or auto-correcting a model — this lab measures, it does not tune"
-      },
-      "brief": {
-        "title": "Recorded model trust and scoring"
-      }
-    },
-    "unsupported": {
-      "title": "Explicitly not computed"
-    },
-    "warranty": {
-      "bundle": {
-        "body": "A stable digest over the coverage terms and readiness state used for this assessment. Quote it when you open a claim so both sides reference the same snapshot.",
-        "title": "Evidence bundle"
-      },
-      "card": {
-        "binding": "Binding limit",
-        "breach": "Projected to reach the floor around {{when}}",
-        "capacity": "Battery retention vs. warranty floor",
-        "closing": "Claim window closes in {{span}}",
-        "distance": "Distance consumed",
-        "distanceHint": "{{remaining}} remaining",
-        "headroom": "{{value}} headroom",
-        "pace": "At your measured pace of {{pace}} per year",
-        "projected": "Projected end {{when}}",
-        "readiness": "Claim readiness",
-        "time": "Time consumed",
-        "timeHint": "{{remaining}} remaining · expires {{when}}"
-      },
-      "check": {
-        "detail": "What the data shows",
-        "label": "Requirement",
-        "severity": "If unmet",
-        "state": "State"
-      },
-      "claim": {
-        "amount": "Amount",
-        "note": "Evidence note",
-        "opened": "Opened",
-        "status": "Status",
-        "title": "Claim"
-      },
-      "claimForm": {
-        "amount": "Amount",
-        "note": "Evidence note",
-        "status": "Status",
-        "submit": "Record claim",
-        "title": "Claim title"
-      },
-      "claims": {
-        "empty": "No claims recorded yet.",
-        "subtitle": "Record what you asked for and what came back, so the next claim starts from a known history.",
-        "title": "Claim ledger"
-      },
-      "coverages": {
-        "empty": "Add a warranty below to see how fast you are consuming it.",
-        "title": "Coverage burn-down"
-      },
-      "delete": {
-        "title": "Delete this warranty?",
-        "message": "“{{name}}” and its claims will be removed permanently. This cannot be undone."
-      },
-      "form": {
-        "deductible": "Deductible",
-        "floor": "Capacity floor (%)",
-        "floorHint": "Battery coverage only — leave blank otherwise",
-        "kind": "Coverage type",
-        "label": "Label",
-        "notes": "Notes",
-        "provider": "Provider",
-        "save": "Save coverage",
-        "start": "Coverage start",
-        "startOdo": "Odometer at start",
-        "termDays": "Term (days)",
-        "termDistance": "Term distance",
-        "termHint": "4 years = 1461 days"
-      },
-      "list": {
-        "add": "Add coverage",
-        "empty": "No warranties recorded yet.",
-        "title": "Recorded coverages"
-      },
-      "navTitle": "Warranty command",
-      "notice": {
-        "body": "TeslaSync does not know your contract. Enter the term as written on your paperwork; every projection below is then computed from your own driving and battery data.",
-        "title": "Terms come from your documents"
-      },
-      "readiness": {
-        "empty": "No coverage recorded, so nothing to evaluate.",
-        "subtitle": "Each requirement is evaluated against data already on this server, so you know what a reviewer would find.",
-        "title": "Claim readiness checklist"
-      },
-      "row": {
-        "claim": "Claim",
-        "deductible": "Deductible",
-        "floor": "Capacity floor",
-        "label": "Coverage",
-        "start": "Starts",
-        "term": "Term"
-      },
-      "stat": {
-        "active": "Active coverages",
-        "claimed": "Total claimed",
-        "expiring": "Expiring within 90 days",
-        "next": "Next expiry",
-        "odometer": "Odometer",
-        "odometerHint": "Derived from recorded drives"
-      },
-      "status": {
-        "approved": "Approved",
-        "closed": "Closed",
-        "denied": "Denied",
-        "draft": "Draft",
-        "submitted": "Submitted",
-        "expiring": "Expiring"
-      },
-      "subtitle": "Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.",
-      "summary": {
-        "title": "Coverage posture"
-      },
-      "title": "Warranty coverage & claim readiness",
-      "unsupported": {
-        "legal": "Interpreting contract exclusions — readiness is factual, not legal advice",
-        "submit": "Filing the claim with the provider on your behalf"
-      },
-      "brief": {
-        "title": "Recorded warranty coverage and expiry",
-        "scope": "Selected vehicle and recorded coverage terms; expiry projections use recorded driving"
-      },
-      "kind": {
-        "basic": "Basic",
-        "drivetrain": "Drivetrain",
-        "battery": "Battery",
-        "corrosion": "Corrosion",
-        "tires": "Tires",
-        "aftermarket": "Aftermarket",
-        "extended": "Extended"
-      },
-      "binding": {
-        "time": "Time",
-        "distance": "Distance",
-        "capacity": "Capacity"
-      },
-      "severity": {
-        "critical": "Critical",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low"
-      }
-    },
-    "window": {
-      "days": "{{count}} days",
-      "label": "Analysis window"
-    },
-    "ghost": {
-      "title": "Ghost-driver alerts",
-      "subtitle": "Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.",
-      "count": "{{count}} flagged",
-      "scanning": "Scanning recent drives…",
-      "clear": "No unknown-driver activity in this window — every scanned drive fits a known profile.",
-      "col": {
-        "drive": "Drive",
-        "score": "Ghost score",
-        "trip": "Trip",
-        "deviation": "Deviation",
-        "reason": "Why flagged"
-      },
-      "ratio": "{{ratio}}× typical",
-      "confidence": "{{pct}} confidence",
-      "error": {
-        "title": "Ghost scan failed"
-      },
-      "alert": {
-        "title": "{{count}} of {{scanned}} drives look like someone else",
-        "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label."
-      }
-    },
-    "source": {
-      "empty": "No supported data is available yet.",
-      "error": "This source could not be loaded."
-    },
-    "brief": {
-      "window": "Selected vehicle · {{count}}-day analysis window; coverage is described below",
-      "selectionRequired": "Selection required",
-      "unavailable": "Source unavailable",
-      "retained": "Retained source",
-      "loading": "Loading source",
-      "notComputed": "Not computed",
-      "refreshing": "Refreshing source",
-      "returned": "Source returned",
-      "eyebrow": "Ownership evidence",
-      "bounds": "Recorded bounds {{from}} → {{to}}",
-      "boundsUnknown": "Recorded analysis bounds not supplied",
-      "observedAt": "Source as of {{date}}",
-      "freshnessUnknown": "Source freshness unknown",
-      "loadedAt": "Client loaded {{date}}",
-      "provenance": "Returned source values; model assumptions and limitations remain in the evidence below."
-    }
-  },
   "vehicleSettings": {
     "title": "Per-vehicle settings",
     "subtitle": "Override individual settings for this vehicle. Resets fall back to your account-wide values.",
@@ -1457,6 +128,21 @@
       }
     }
   },
+  "automations": {
+    "builder": {
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
+      }
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",
@@ -1486,6 +172,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chart": {
     "a11y": {
       "metricSelector": "{{title}} metric"
@@ -1495,10 +188,61 @@
       "value": "Value"
     }
   },
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
   "confirm": {
     "removeDraftRate": {
       "message": "The rate row is removed from the draft rate plan.",
       "title": "Remove this rate?"
+    }
+  },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last6h": "Last 6 hours",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "loadingCalendar": "Loading calendar…",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -1661,6 +405,34 @@
       }
     }
   },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
+  },
   "draft": {
     "discardDraft": "Discard draft",
     "restored": "Draft restored from {{when}}.",
@@ -1797,6 +569,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "fleetOps": {
     "workOrderDialog": {
       "costMinor": "Cost (minor units)"
@@ -1826,6 +611,9 @@
       "latitudeRange": "Latitude must be between {{min}} and {{max}}",
       "longitudeRange": "Longitude must be between {{min}} and {{max}}"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "impersonation": {
     "toast": {
@@ -1872,6 +660,21 @@
       "driveCount": "Drive count"
     }
   },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
+  },
   "operationalMode": {
     "writeBlocked": "Return to live mode before making operational changes.",
     "writeNotice": {
@@ -1915,6 +718,1468 @@
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
   },
+  "ownership": {
+    "action": {
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "header": "Actions",
+      "remove": "Remove",
+      "save": "Save"
+    },
+    "brief": {
+      "bounds": "Recorded bounds {{from}} → {{to}}",
+      "boundsUnknown": "Recorded analysis bounds not supplied",
+      "eyebrow": "Ownership evidence",
+      "freshnessUnknown": "Source freshness unknown",
+      "loadedAt": "Client loaded {{date}}",
+      "loading": "Loading source",
+      "notComputed": "Not computed",
+      "observedAt": "Source as of {{date}}",
+      "provenance": "Returned source values; model assumptions and limitations remain in the evidence below.",
+      "refreshing": "Refreshing source",
+      "retained": "Retained source",
+      "returned": "Source returned",
+      "selectionRequired": "Selection required",
+      "unavailable": "Source unavailable",
+      "window": "Selected vehicle · {{count}}-day analysis window; coverage is described below"
+    },
+    "compliance": {
+      "apportion": {
+        "empty": "No drives with usable coordinates in this window.",
+        "subtitle": "Confidence is 95% when both endpoints fall in the same box, 70% when only one does, and 60% for a cross-border split.",
+        "title": "Apportionment by jurisdiction"
+      },
+      "brief": {
+        "description": "Distance, road-usage liability and attributed emissions for the recorded apportionment window.",
+        "recorded": "Recorded apportionment",
+        "title": "Recorded period liability"
+      },
+      "delete": {
+        "message": "The “{{name}}” rate will be removed permanently. This cannot be undone.",
+        "title": "Delete this jurisdiction rate?"
+      },
+      "digest": {
+        "body": "A stable fingerprint of the apportionment above. If the underlying drives change, the digest changes — which is exactly what makes a sealed filing meaningful.",
+        "title": "Period digest"
+      },
+      "filing": {
+        "charge": "Charge",
+        "digest": "Seal",
+        "distance": "Distance",
+        "energy": "Energy",
+        "period": "Period",
+        "status": "Status"
+      },
+      "filingForm": {
+        "end": "Period end",
+        "start": "Period start",
+        "submit": "Seal period"
+      },
+      "filings": {
+        "add": "Seal a period",
+        "empty": "No periods sealed yet.",
+        "subtitle": "Sealing a period snapshots the distance, energy and charge behind a digest, so a later dispute can be settled against the exact figures you filed.",
+        "title": "Sealed filings"
+      },
+      "navTitle": "Jurisdictional compliance",
+      "notice": {
+        "body": "Rates are the ones you enter; boundaries are simple bounding boxes. A drive that starts in one jurisdiction and ends in another is split evenly and flagged at reduced confidence. Use this to prepare and cross-check a filing — never as the filing itself.",
+        "title": "A worksheet, not a tax return"
+      },
+      "rate": {
+        "bbox": "Bounding box",
+        "code": "Jurisdiction",
+        "grid": "Grid intensity",
+        "registration": "Annual registration",
+        "roadUsage": "Road-usage rate"
+      },
+      "rateForm": {
+        "code": "Jurisdiction code",
+        "codeHint": "e.g. US-WA",
+        "grid": "Grid intensity (g CO₂e / Wh)",
+        "gridHint": "{{value}} g per kWh",
+        "label": "Display name",
+        "maxLat": "Max latitude",
+        "maxLng": "Max longitude",
+        "minLat": "Min latitude",
+        "minLng": "Min longitude",
+        "registration": "Annual registration",
+        "roadUsage": "Road-usage rate (minor / m)",
+        "save": "Save jurisdiction"
+      },
+      "rates": {
+        "add": "Add jurisdiction",
+        "empty": "No jurisdiction rates defined yet.",
+        "subtitle": "When boxes overlap, the smallest one that contains the point wins — so a city can sit inside a state.",
+        "title": "Jurisdiction rate table"
+      },
+      "row": {
+        "confidence": "Confidence",
+        "distance": "Distance",
+        "drives": "Drives",
+        "emissions": "Attributed emissions",
+        "emissionsRate": "{{value}} g per km",
+        "energy": "Energy",
+        "jurisdiction": "Jurisdiction",
+        "liability": "Total liability",
+        "registration": "Registration",
+        "roadUsage": "Road-usage charge"
+      },
+      "stat": {
+        "assigned": "Assigned to a jurisdiction",
+        "distance": "Total distance",
+        "drives": "{{count}} drives",
+        "emissions": "Attributed emissions",
+        "liability": "Total liability",
+        "mixedCurrency": "Mixed currencies; see the jurisdiction amounts below.",
+        "periodSource": "Recorded apportionment window; source coverage and limitations are shown in the evidence below.",
+        "roadUsage": "Road-usage charge",
+        "unassigned": "Unassigned",
+        "unknownCurrency": "The recorded liability currency is unknown.",
+        "unknownDrives": "Drive count unknown",
+        "unknownPeriod": "No recorded apportionment window is available."
+      },
+      "subtitle": "Apportion every metre you drove to the jurisdiction it happened in, price it against that jurisdiction’s road-usage rate, and seal the period into an immutable filing record.",
+      "summary": {
+        "title": "Period liability"
+      },
+      "title": "Jurisdictional compliance & road-usage charge",
+      "unsupported": {
+        "polygon": "True polygon boundaries — jurisdictions are approximated by bounding boxes",
+        "submit": "Submitting to a tax authority, and any legal interpretation of what is owed"
+      }
+    },
+    "consumables": {
+      "brief": {
+        "scope": "Selected vehicle and recorded parts; costs and replacement dates are projections",
+        "title": "Projected wear and replacement costs"
+      },
+      "card": {
+        "adjusted": "Duty-adjusted life",
+        "binding": "Bound by {{limit}}",
+        "harsh": "harsh duty cycle",
+        "health": "Remaining life",
+        "history": "Service history ({{count}} events)",
+        "multiplier": "Wear ×{{value}}",
+        "ofRated": "{{value}} of rated life",
+        "remaining": "Remaining",
+        "replace": "Projected replacement",
+        "used": "Distance on part",
+        "wearCost": "Part wear cost"
+      },
+      "delete": {
+        "message": "“{{name}}” and its service history will be removed permanently. This cannot be undone.",
+        "title": "Delete this part?"
+      },
+      "econ": {
+        "blended": "Blended wear cost",
+        "blendedHint": "per 1 000 metres driven",
+        "odometer": "Odometer",
+        "parts": "Parts tracked"
+      },
+      "economics": {
+        "title": "Wear economics"
+      },
+      "economicsBrief": {
+        "description": "Blended wear cost retains the recorded currency per 1 000 metres, independently of the odometer display unit.",
+        "title": "Blended wear cost and recorded distance"
+      },
+      "event": {
+        "cost": "Cost",
+        "kind": "Event",
+        "note": "Note",
+        "odometer": "Odometer",
+        "submit": "Log event"
+      },
+      "eventKind": {
+        "inspect": "Inspection",
+        "note": "Note",
+        "replace": "Replacement",
+        "rotate": "Rotation",
+        "service": "Service"
+      },
+      "form": {
+        "category": "Category",
+        "cost": "Replacement cost",
+        "installed": "Installed on",
+        "label": "Part label",
+        "notes": "Notes",
+        "odometer": "Odometer at install",
+        "position": "Position",
+        "positionHint": "e.g. front-left",
+        "ratedDays": "Rated life (days)",
+        "ratedDaysHint": "Filters and fluids age on the calendar too",
+        "ratedDistance": "Rated life (distance)",
+        "save": "Save part"
+      },
+      "item": {
+        "cost": "Cost",
+        "inService": "in service",
+        "installed": "Installed",
+        "label": "Part",
+        "log": "Log event",
+        "rated": "Rated life",
+        "retired": "Retired"
+      },
+      "items": {
+        "add": "Record part",
+        "empty": "No parts recorded yet.",
+        "title": "Part register"
+      },
+      "lifecycles": {
+        "empty": "Record a part below and its lifecycle projection appears here.",
+        "title": "Part-by-part projection"
+      },
+      "navTitle": "Consumables lifecycle",
+      "notice": {
+        "body": "The wear multiplier is derived from your own drives, clamped to a defensible range. It is a projection, not a measurement of physical wear — always inspect before relying on it for a safety-critical part.",
+        "title": "Duty cycle beats the manual"
+      },
+      "stat": {
+        "due": "Due soon",
+        "lifetime": "Spent to date",
+        "next": "Next replacement",
+        "overdue": "Overdue",
+        "stress": "Average duty stress",
+        "stressHint": "1.00 is the reference profile",
+        "twelve": "Next 12 months"
+      },
+      "stress": {
+        "baseline": "Reference",
+        "empty": "Not enough drives yet to characterise your duty cycle.",
+        "label": "Duty-cycle factor",
+        "multiplier": "Wear multiplier",
+        "observed": "Your vehicle",
+        "subtitle": "Each factor compares a measured trait of your driving against a reference profile. Multipliers compound, then clamp.",
+        "title": "Why your wear rate differs"
+      },
+      "subtitle": "Rated life assumes an average car. Yours is not average — this projects each part against your measured speed profile, regen share, power draw and climate, then tells you which limit will actually retire it.",
+      "summary": {
+        "title": "Fleet wear posture"
+      },
+      "title": "Consumables & wear-parts lifecycle",
+      "unsupported": {
+        "physical": "Measuring physical wear — no tread-depth or pad-thickness sensor exists on the vehicle",
+        "recall": "Manufacturer service bulletins and recalls affecting a part"
+      }
+    },
+    "driver": {
+      "assign": {
+        "drive": "Drive ID",
+        "driver": "Driver",
+        "pick": "Select a driver",
+        "submit": "Confirm label"
+      },
+      "brief": {
+        "description": "Behavioural clusters are anonymous until labelled. Inferred and ambiguous drives remain distinct from confirmed drives.",
+        "title": "Cluster separation and attribution"
+      },
+      "chart": {
+        "aria": "Bar chart of drive share and aggression score per behaviour cluster",
+        "col": {
+          "aggression": "Aggression score",
+          "cluster": "Cluster",
+          "share": "Share of drives"
+        },
+        "empty": "Not enough drives in this window to separate behaviour clusters.",
+        "inner": "Share of drives by cluster",
+        "title": "Cluster mix and driving intensity"
+      },
+      "cluster": {
+        "aggression": "Aggression",
+        "cohesion": "Cohesion",
+        "cost": "Energy cost share",
+        "distance": "Distance",
+        "drives": "Drives",
+        "efficiency": "Efficiency",
+        "labelled": "{{count}} labelled drives",
+        "name": "Behaviour cluster",
+        "night": "Night share",
+        "regen": "Regen share",
+        "speed": "Avg speed",
+        "unlabelled": "Not yet named"
+      },
+      "clusters": {
+        "empty": "No clusters formed yet.",
+        "subtitle": "Cohesion is the mean feature distance inside the cluster — lower is tighter.",
+        "title": "Cluster characteristics"
+      },
+      "delete": {
+        "message": "The “{{name}}” profile and its trip attributions will be removed permanently. This cannot be undone.",
+        "title": "Delete this driver profile?"
+      },
+      "fingerprints": {
+        "empty": "No drives with sufficient telemetry in this window.",
+        "more": "Showing {{shown}} of {{total}} drives",
+        "subtitle": "Every drive scored against each cluster centroid. Labelling one drive re-anchors the whole cluster.",
+        "title": "Drive fingerprints"
+      },
+      "form": {
+        "accent": "Accent colour",
+        "accents": {
+          "amber": "amber",
+          "cyan": "cyan",
+          "emerald": "emerald",
+          "indigo": "indigo",
+          "purple": "purple",
+          "rose": "rose"
+        },
+        "name": "Display name",
+        "primary": "Primary driver"
+      },
+      "fp": {
+        "ambiguous": "ambiguous",
+        "assign": "Label",
+        "attribution": "Attributed to",
+        "confidence": "Confidence",
+        "distance": "Distance",
+        "drive": "Drive",
+        "duration": "Duration",
+        "features": "Dominant traits",
+        "inferred": "inferred",
+        "labelled": "confirmed",
+        "margin": "Separation margin"
+      },
+      "navTitle": "Driver fingerprinting",
+      "notice": {
+        "body": "Clusters are derived only from drive dynamics already stored on this server. No cameras, no seat sensors, no accounts. A cluster stays anonymous until you choose to name it.",
+        "title": "Behavioural, never biometric"
+      },
+      "profile": {
+        "created": "Created",
+        "name": "Driver",
+        "primary": "primary"
+      },
+      "profiles": {
+        "add": "Add driver",
+        "empty": "No driver profiles created yet.",
+        "subtitle": "Name a cluster once by labelling any drive it contains; the whole cluster inherits the name.",
+        "title": "Named drivers"
+      },
+      "stat": {
+        "ambiguous": "Ambiguous drives",
+        "ambiguousHint": "Two clusters fit almost equally well",
+        "clusters": "Distinct clusters",
+        "inferred": "Inferred drives",
+        "labelled": "Confirmed drives",
+        "separation": "Separation score"
+      },
+      "subtitle": "Group drives by how they were driven — speed discipline, power draw, regen use and departure hour — then attach a name once and let every future drive inherit it.",
+      "summary": {
+        "title": "Separation quality"
+      },
+      "title": "Driver fingerprinting & attribution",
+      "unnamed": "Cluster {{id}}",
+      "unsupported": {
+        "identity": "Proving who was physically in the seat — this infers behaviour, not identity",
+        "passengers": "Distinguishing a driver who deliberately changes style from a second driver"
+      },
+      "verdict": {
+        "moderate": "Clusters overlap somewhat. Label a few more drives per cluster to sharpen the boundary.",
+        "strong": "Clusters are well separated — attributions can be trusted for cost splitting.",
+        "title": "Interpretation",
+        "weak": "Behaviour is too similar to separate reliably. Treat attributions as indicative only."
+      }
+    },
+    "error": {
+      "body": "Review the inputs and try again.",
+      "title": "Request could not be completed"
+    },
+    "evidence": {
+      "empty": "No supporting evidence was returned.",
+      "sampleLine": "{{count}} samples · {{date}}",
+      "sources": "Evidence sources",
+      "subtitle": "Measured observations are separated from modelled assumptions and from fields the engine will not compute.",
+      "title": "Evidence, quality, and limitations"
+    },
+    "form": {
+      "currency": "ISO currency code",
+      "moneyHint": "Display equivalent: {{value}}"
+    },
+    "ghost": {
+      "alert": {
+        "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label.",
+        "title": "{{count}} of {{scanned}} drives look like someone else"
+      },
+      "clear": "No unknown-driver activity in this window — every scanned drive fits a known profile.",
+      "col": {
+        "deviation": "Deviation",
+        "drive": "Drive",
+        "reason": "Why flagged",
+        "score": "Ghost score",
+        "trip": "Trip"
+      },
+      "confidence": "{{pct}} confidence",
+      "count": "{{count}} flagged",
+      "ratio": "{{ratio}}× typical",
+      "scanning": "Scanning recent drives…",
+      "subtitle": "Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.",
+      "title": "Ghost-driver alerts"
+    },
+    "governance": {
+      "brief": {
+        "description": "Policy coverage describes intent, not deletion. Legal holds remain exempt from every plan.",
+        "modeUnknown": "Enforcement mode unknown; this screen only computes dry-run plans.",
+        "scope": "Current database catalog and retention policies; coverage does not imply enforcement",
+        "title": "Governed storage and policy coverage"
+      },
+      "delete": {
+        "message": "The retention policy for “{{name}}” will be removed permanently. This cannot be undone.",
+        "title": "Delete this retention policy?"
+      },
+      "form": {
+        "bucket": "Downsample bucket (seconds)",
+        "dataset": "Dataset",
+        "downsampleAfter": "Downsample after (days)",
+        "downsampleHint": "Leave blank to keep full resolution",
+        "enabled": "Enabled",
+        "hold": "Legal hold",
+        "pickDataset": "Select a dataset",
+        "retention": "Retention (days)",
+        "save": "Save policy"
+      },
+      "impact": {
+        "blocked": "legal hold",
+        "dataset": "Dataset",
+        "downsampling": "Rows downsampled",
+        "empty": "Run the dry-run plan above to see what a policy would reclaim.",
+        "expiring": "Rows expiring",
+        "fidelity": "Fidelity lost",
+        "flags": "Flags",
+        "growth": "{{value}} / day",
+        "reclaim": "Reclaimable",
+        "retained": "{{count}} retained",
+        "retention": "Keeping {{span}}",
+        "runway": "Growth runway",
+        "runwayDays": "{{count}} days",
+        "subtitle": "Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.",
+        "title": "Dry-run impact"
+      },
+      "impactBrief": {
+        "scope": "Latest requested dry-run plan; no rows are deleted",
+        "title": "Computed dry-run totals"
+      },
+      "impactStat": {
+        "bytes": "Reclaimable",
+        "fidelity": "Fidelity traded away",
+        "mode": "Executed",
+        "never": "Never — dry run",
+        "rows": "Rows in plan"
+      },
+      "inventory": {
+        "bytes": "On disk",
+        "dataset": "Dataset",
+        "empty": "No governable datasets were found.",
+        "hypertable": "hypertable",
+        "include": "Include",
+        "included": "In plan",
+        "perRow": "Bytes / row",
+        "rows": "Rows",
+        "select": "Plan",
+        "span": "History span",
+        "subtitle": "Live sizes read from the database catalog. Toggle datasets to scope the dry run.",
+        "title": "Dataset inventory",
+        "ungoverned": "no policy"
+      },
+      "navTitle": "Data retention governance",
+      "notice": {
+        "datasetTitle": "Plan only — dataset rows are not deleted here",
+        "policyWritesBody": "Saving or removing a retention policy changes the stored policy. Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows. Dataset enforcement is not performed on this screen."
+      },
+      "policies": {
+        "add": "Define policy",
+        "empty": "No retention policies defined.",
+        "subtitle": "A policy declares intent. It becomes a plan only when you run the simulation.",
+        "title": "Retention policies"
+      },
+      "policy": {
+        "bucket": "Bucket",
+        "dataset": "Dataset",
+        "disabled": "disabled",
+        "downsample": "Downsample after",
+        "hold": "legal hold",
+        "retention": "Retention"
+      },
+      "run": {
+        "bytes": "Reclaimable",
+        "dataset": "Dataset",
+        "dryRun": "dry run",
+        "executed": "Executed",
+        "expiring": "Expiring",
+        "fidelity": "Fidelity lost",
+        "mode": "Mode"
+      },
+      "runs": {
+        "empty": "No plans recorded yet.",
+        "subtitle": "An append-only history of every plan computed, so retention decisions are auditable after the fact.",
+        "title": "Plan ledger"
+      },
+      "simulate": "Run dry-run plan",
+      "stat": {
+        "enforcing": "Enforcing",
+        "governed": "Under a policy",
+        "holds": "Legal holds",
+        "holdsHint": "Exempt from every plan",
+        "mode": "Enforcement mode",
+        "planOnly": "Plan only",
+        "total": "Total governed footprint",
+        "ungoverned": "No policy"
+      },
+      "subtitle": "See exactly what every table costs you on disk, model a retention policy, and quantify the analytical fidelity you would trade away — before anything is deleted.",
+      "summary": {
+        "title": "Storage posture"
+      },
+      "title": "Data retention & lifecycle governance",
+      "unsupported": {
+        "datasetDeletion": "Deleting or downsampling dataset rows — policy changes and recorded plans do not enforce retention",
+        "index": "Index and TOAST overhead attribution below table granularity"
+      },
+      "warning": {
+        "highExpiry": "More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.",
+        "legalHold": "A legal hold is active, so nothing would be removed even if execution were enabled.",
+        "noAffectedRows": "Nothing is old enough to be affected by this policy yet."
+      }
+    },
+    "insurance": {
+      "brief": {
+        "title": "Modelled underwriting indices"
+      },
+      "checksum": {
+        "empty": "A risk-summary checksum is produced once a profile has been computed.",
+        "hash": "Limited risk-summary checksum (SHA-256)",
+        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, selected timezone, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
+        "title": "Risk-summary checksum"
+      },
+      "costBrief": {
+        "description": "Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis.",
+        "title": "Policy loss and distance costs"
+      },
+      "delete": {
+        "message": "Policy “{{name}}” and its telematics program enrolment will be removed permanently. This cannot be undone.",
+        "title": "Delete this policy?"
+      },
+      "exposureBrief": {
+        "title": "Recorded driving exposure"
+      },
+      "factor": {
+        "baseline": "Baseline",
+        "better": "Higher is better",
+        "contribution": "Contribution",
+        "direction": "Direction",
+        "name": "Underwriting factor",
+        "observed": "Observed",
+        "samples": "Samples",
+        "score": "Score",
+        "weight": "Weight",
+        "worse": "Higher is worse"
+      },
+      "factors": {
+        "empty": "No factor had enough samples to score in this window.",
+        "subtitle": "Every weighted signal behind the score, with the baseline it was measured against.",
+        "title": "Factor decomposition"
+      },
+      "form": {
+        "deductible": "Deductible",
+        "end": "Coverage end (optional)",
+        "insurer": "Insurer",
+        "maxDiscount": "Maximum telematics discount (%)",
+        "premium": "Annual premium",
+        "ref": "Policy reference",
+        "save": "Save policy baseline",
+        "start": "Coverage start",
+        "subtitle": "Money is entered in ISO-4217 minor units so no cent is lost to floating point.",
+        "telematics": "Telematics programme enrolled",
+        "title": "Policy baseline"
+      },
+      "lever": {
+        "confidence": "Confidence",
+        "delta": "Risk score delta",
+        "difficulty": "Difficulty",
+        "effort": "Effort",
+        "hours": "{{value}} h/week",
+        "label": "Improvement lever",
+        "rank": "Rank",
+        "save": "Projected saving",
+        "target": "Target reduction"
+      },
+      "levers": {
+        "empty": "No lever produced a material saving at the current score.",
+        "subtitle": "What each behavioural change is worth, ordered by payoff per unit of effort.",
+        "title": "Ranked improvement levers"
+      },
+      "notice": {
+        "body": "The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.",
+        "title": "Modelled, not quoted"
+      },
+      "policy": {
+        "coverage": "Coverage {{from}} → {{to}}",
+        "openEnded": "open-ended"
+      },
+      "premium": {
+        "add": "Add policy",
+        "baseline": "Baseline annual premium",
+        "cap": "Cap {{value}}",
+        "deductible": "Deductible",
+        "delta": "Difference",
+        "discount": "Applied discount",
+        "edit": "Edit policy",
+        "empty": "Register a policy below to simulate a telematics-adjusted premium.",
+        "expectedLoss": "Expected annual loss",
+        "modelled": "Modelled annual premium",
+        "perDistance": "Cost per distance",
+        "subtitle": "What the stored policy would cost if the telematics discount tracked the measured loss cost.",
+        "title": "Premium simulation"
+      },
+      "premiumBrief": {
+        "scope": "Stored policy and selected risk window; annual amounts retain the recorded currency",
+        "title": "Policy-based premium model"
+      },
+      "stat": {
+        "drives": "{{count}} drives",
+        "duration": "Time behind the wheel",
+        "exposure": "Exposure distance",
+        "frequency": "Frequency index",
+        "frequencyHint": "Expected claim count driver",
+        "lossCost": "Loss cost index",
+        "lossCostHint": "Frequency × severity, 1.0 = baseline",
+        "overnightTripDistance": "Distance of trips starting overnight",
+        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 in the selected clock. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands.",
+        "percentile": "Peer percentile",
+        "score": "Risk score",
+        "scoreHint": "0 = best, 100 = worst",
+        "severity": "Severity index",
+        "severityHint": "Expected claim size driver"
+      },
+      "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
+      "summary": {
+        "empty": "Select a vehicle to build an underwriting profile.",
+        "subtitle": "Exposure-normalised risk over the selected window.",
+        "title": "Underwriting position"
+      },
+      "title": "Insurance telematics studio",
+      "trend": {
+        "chart": "Rolling risk score",
+        "chartAria": "Area chart of rolling insurance risk score over the analysis window",
+        "col": {
+          "bucket": "Period"
+        },
+        "empty": "At least two buckets of driving are needed to plot a trajectory.",
+        "score": "Risk score",
+        "subtitle": "Rolling risk score and loss cost across the window — a rising line means underwriting exposure is growing.",
+        "title": "Risk trajectory"
+      },
+      "unsupported": {
+        "claims": "Actual claim history — the model uses driving exposure only",
+        "quote": "Binding quotes, carrier acceptance, or regulatory rate approval"
+      }
+    },
+    "limitations": {
+      "empty": "No additional limitations were returned.",
+      "title": "Limitations"
+    },
+    "quality": {
+      "coverage": "Coverage",
+      "samples": "Samples",
+      "title": "Data quality",
+      "unavailable": "Quality metadata has not been computed yet.",
+      "window": "Observation window"
+    },
+    "reconcile": {
+      "audit": {
+        "empty": "Select a statement above to run the audit.",
+        "title": "Reconciliation result"
+      },
+      "brief": {
+        "scope": "Selected statement and matched telemetry; amounts retain the statement currency",
+        "title": "Statement amounts and variance"
+      },
+      "bucket": {
+        "amount": "Amount",
+        "label": "Discrepancy category",
+        "lines": "Lines",
+        "no": "Explained",
+        "recoverable": "Recoverable",
+        "share": "Share of variance",
+        "yes": "Disputable"
+      },
+      "buckets": {
+        "empty": "No material variance was attributed on this statement.",
+        "subtitle": "Every currency unit of disagreement is assigned a cause, so a dispute never rests on \"the number looks wrong\".",
+        "title": "Variance attribution"
+      },
+      "delete": {
+        "message": "Invoice “{{name}}” and its reconciled lines will be removed permanently. This cannot be undone.",
+        "title": "Delete this invoice?"
+      },
+      "dispute": {
+        "claimed": "Amount claimed",
+        "digest": "Dispute packet digest",
+        "empty": "Audit a statement before opening a dispute.",
+        "noReasons": "No recoverable category found",
+        "none": "No disputes recorded on this statement.",
+        "note": "Note to the provider",
+        "open": "Open dispute",
+        "recovered": "recovered {{value}}",
+        "submit": "Record dispute",
+        "subtitle": "The packet digest fixes exactly which lines and measurements your claim rests on.",
+        "title": "Dispute desk"
+      },
+      "energyBrief": {
+        "description": "Matched and unmatched lines remain separate; measured energy is retained beside the energy variance.",
+        "title": "Statement matching and energy"
+      },
+      "form": {
+        "addLine": "Add line",
+        "lineEnergy": "Billed energy (Wh)",
+        "lineLocation": "Location",
+        "lineRef": "Line reference",
+        "lineTotal": "Line total",
+        "lineWhen": "Occurred at",
+        "lines": "Statement lines",
+        "periodEndExclusive": "Period end (exclusive)",
+        "periodStart": "Period start",
+        "provider": "Provider",
+        "ref": "Invoice reference",
+        "save": "Import and reconcile",
+        "total": "Statement total"
+      },
+      "invoice": {
+        "audit": "Audit",
+        "lines": "Lines",
+        "period": "Billing period",
+        "ref": "Invoice",
+        "status": "Status",
+        "total": "Billed"
+      },
+      "invoices": {
+        "empty": "No statements imported yet for this vehicle.",
+        "exportScope": "Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.",
+        "import": "Import statement",
+        "subtitle": "Import a statement, then pick one to audit line by line.",
+        "title": "Provider statements"
+      },
+      "line": {
+        "billed": "Billed",
+        "billedEnergy": "Billed energy",
+        "energyDelta": "Energy Δ",
+        "expected": "Expected",
+        "match": "Match",
+        "measuredEnergy": "Measured energy",
+        "reasons": "Attribution",
+        "ref": "Line",
+        "timeDelta": "Time Δ",
+        "unnamed": "Unnamed line",
+        "variance": "Variance"
+      },
+      "lines": {
+        "empty": "This statement has no lines to reconcile.",
+        "title": "Line-by-line audit"
+      },
+      "review": {
+        "addRate": "Use an independently documented flat session rate in the same currency and at the billed boundary",
+        "auditBasis": "Based on the entered statement and independent evidence. Missing comparisons do not support a recovery estimate.",
+        "battery": "Vehicle battery",
+        "billedBoundary": "Billed meter boundary",
+        "billedCharge": "Billed energy charge",
+        "billedIdle": "Billed idle or occupancy fee",
+        "billedTax": "Billed tax",
+        "changedCheck": "This statement check changed. Cancel and open the current review before saving.",
+        "checkLines": "Review the statement lines",
+        "clearCheck": "Turn off and clear statement check",
+        "clearEvidence": "Remove only the private check settings and independent evidence. Imported statements, charging sessions, and local dispute history will be kept.",
+        "complete": "I entered every line and the statement has no unlisted adjustments or credits",
+        "componentBasis": "Entered components: energy {{energy}}, idle or occupancy {{idle}}, tax {{tax}}, other fees {{fees}}. Sum {{sum}}; billed line total {{billed}}.",
+        "confirmChange": "Use this evidence only for my private statement check",
+        "consent": "Compare only this statement and this vehicle’s completed sessions. Results are private, never pushed, and removed with the imported statement.",
+        "coverage": "{{matched}} session matches and {{comparable}} comparable lines of {{total}} statement lines. An entered site and a unique completed session within two minutes are required for meter and rate comparisons.",
+        "editCheck": "Edit statement check",
+        "enable": "Enable private statement check for this import",
+        "enableAgain": "Enable statement check again",
+        "energyGap": "Energy outside the comparable range: {{delta}}.",
+        "handled": "This statement is already handled. No new review is suggested.",
+        "identity": "Private statement checks require a verified sign-in. Ordinary statement import is unchanged.",
+        "inputHint": "Use the session start and the same site name recorded in Charging. Leave unknown amounts blank and enter zero only if documented. Use independent readings and rates only. Nothing is sent to the provider.",
+        "insufficient": "No comparison is supported by the evidence entered. Missing readings, fee breakdowns and rates are not assumed to be zero.",
+        "limitations": "Differences are billed minus comparable. This is not a finding of overbilling. Check the original meter, rate and fee records; taxes and idle fees are listed separately, not ruled valid or invalid.",
+        "lineGap": "Difference not covered by the entered line components: {{delta}}.",
+        "localNote": "Note for this local dispute",
+        "material": "Check the unexplained difference",
+        "maxLoss": "Documented upper loss bound (Wh)",
+        "meterBasis": "Entered {{observedBoundary}} reading: {{observed}}. Billed at {{billedBoundary}}: {{billed}}; comparable range {{lower}} to {{upper}}.",
+        "meterEnergy": "Independent meter reading (Wh)",
+        "noticeBody": "A charging estimate may not measure the same energy as a station meter. A private statement check is optional at import and uses independent readings, applicable flat rates, and itemized fees.",
+        "noticeTitle": "A difference is not proof of overbilling",
+        "observedBoundary": "Independent meter boundary",
+        "off": "Off. No sessions are compared for this statement.",
+        "otherFees": "All other line fees (zero if fully itemized and none)",
+        "quiet": "No material difference was found in the components that could be compared.",
+        "rateAmount": "Documented energy rate amount",
+        "rateEnergy": "Energy covered by that rate amount (Wh)",
+        "rateGap": "Energy charge: {{billed}} billed vs {{expected}} at the entered flat rate (difference {{delta}}).",
+        "replaceEvidence": "Edit only the independent evidence. The imported billing amounts and dispute history stay unchanged.",
+        "saveCheck": "Save statement check",
+        "session": "Matched session #{{id}} at {{start}}",
+        "stale": "Showing the last comparison. Refresh before relying on it.",
+        "statementGap": "Fully entered statement: {{billed}} total vs {{lines}} in lines (difference {{delta}}).",
+        "station": "Station or wall meter",
+        "threshold": "Minimum material money difference",
+        "title": "Private statement check",
+        "unknown": "Unknown or not comparable"
+      },
+      "stat": {
+        "billed": "Billed total",
+        "billedEnergy": "Billed energy",
+        "energyVariance": "Energy variance",
+        "expected": "Expected from telemetry",
+        "matched": "Matched lines",
+        "recoverable": "Disputable amount",
+        "unmatched": "Unmatched lines",
+        "variance": "Net variance"
+      },
+      "subtitle": "Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.",
+      "title": "Charging invoice reconciliation",
+      "uninvoiced": {
+        "empty": "Every measured session in this period appears on the statement.",
+        "energy": "Measured energy",
+        "location": "Location",
+        "narrative": "Why it matters",
+        "session": "Session",
+        "subtitle": "Measured sessions inside the billing period with no matching line. Usually free or home charging — occasionally a statement that is genuinely incomplete.",
+        "title": "Sessions the provider never billed"
+      },
+      "unsupported": {
+        "submit": "Submitting the dispute to the provider — the packet is prepared, not sent",
+        "tax": "Tax and idle-fee legality, which vary by site contract"
+      }
+    },
+    "source": {
+      "empty": "No supported data is available yet.",
+      "error": "This source could not be loaded."
+    },
+    "subscription": {
+      "billing": {
+        "annual": "Annual",
+        "monthly": "Monthly",
+        "once": "One-time"
+      },
+      "brief": {
+        "title": "Subscription commitment and realised value"
+      },
+      "chart": {
+        "aria": "Bar chart of return on spend percentage for each subscription, coloured by verdict",
+        "col": {
+          "name": "Subscription",
+          "roi": "Return on spend",
+          "verdict": "Verdict"
+        },
+        "empty": "No subscription has enough measured usage to compute a return yet.",
+        "inner": "Return on spend, per subscription",
+        "title": "Return by subscription"
+      },
+      "delete": {
+        "message": "“{{name}}” and its ROI history will be removed permanently. This cannot be undone.",
+        "title": "Delete this subscription?"
+      },
+      "form": {
+        "benchmark": "Benchmark (minor / unit)",
+        "benchmarkBasis": "{{currency}} minor / {{unit}} (stored unit; not a display-unit rate)",
+        "benchmarkHint": "What one unit of this usage would cost without the subscription",
+        "billing": "Billing period",
+        "ended": "Ended",
+        "endedHint": "Leave blank while active",
+        "kind": "Kind",
+        "metric": "Usage metric",
+        "name": "Name",
+        "newDraft": "Start new draft",
+        "price": "Price per period",
+        "save": "Save subscription",
+        "started": "Started",
+        "utcDateBasis": "Business dates are saved at midnight UTC; displayed instants use your saved timezone."
+      },
+      "kind": {
+        "oneTime": "One-time purchase",
+        "recurring": "Recurring subscription"
+      },
+      "list": {
+        "add": "Add subscription",
+        "benchmark": "Benchmark rate",
+        "empty": "No subscriptions recorded for this vehicle.",
+        "metric": "Value metric",
+        "name": "Subscription",
+        "ongoing": "ongoing",
+        "period": "Active",
+        "price": "Price",
+        "title": "Subscription register"
+      },
+      "metric": {
+        "charging_sessions": "Charging sessions",
+        "connectivity_time": "Connectivity time",
+        "drive_count": "Drive count",
+        "driving_distance": "Driving distance",
+        "supercharging_energy": "Supercharging energy"
+      },
+      "navTitle": "Subscription ROI",
+      "notice": {
+        "body": "Realised value is measured usage multiplied by the benchmark rate you set — what the same usage would have cost without the subscription. A subscription active for under 30 days is reported as too early to judge, never as a loss.",
+        "title": "Value is what you would otherwise pay"
+      },
+      "rateBasis": "{{value}} {{currency}} minor / {{unit}}",
+      "renewal": {
+        "active": "Active. A private review is ready.",
+        "cadence": "Billing cadence",
+        "cancel": "Cancel renewal settings",
+        "changed": "Needs setup. Check and confirm the current subscription terms.",
+        "choose": "Choose a recurring subscription",
+        "clear": "Turn off and clear renewal review",
+        "clearDetail": "Remove this private review and stop its checks? The subscription record and vehicle history will be kept.",
+        "confirm": "Confirm private renewal review",
+        "consent": "Use my recorded renewal date and price of {{price}} and this vehicle’s recorded activity for a private review.",
+        "coverage": "Recorded on {{days}} days from {{from}} up to {{through}}. Missing records are not zero usage.",
+        "date": "Recorded renewal date",
+        "description": "Off by default. Record a renewal date to review the saved price and observed activity before deciding.",
+        "dismiss": "Dismiss this renewal review",
+        "dismissed": "Dismissed for this renewal date.",
+        "edit": "Edit renewal settings",
+        "excluded_one": "Excluded {{count}} drive without a valid measured distance.",
+        "excluded_other": "Excluded {{count}} drives without a valid measured distance.",
+        "finished": "No current review. Record the next renewal date to schedule another check.",
+        "lead": "Days before renewal to review",
+        "next": "Next check: {{date}}.",
+        "noEvidence": "There is not enough reliable recorded usage to display a total.",
+        "none": "Add a recurring subscription on this page before setting a renewal date.",
+        "off": "Off. No renewal is scheduled.",
+        "offline": "Reconnect to view or change a private renewal review.",
+        "open": "Open private renewal review",
+        "pause": "Pause renewal review",
+        "paused": "Paused. No review will be prepared.",
+        "price": "Recorded price per billing period",
+        "ready": "Review the recorded subscription renewal",
+        "resume": "Resume review",
+        "select": "Recurring subscription",
+        "setup": "Set up renewal review",
+        "signIn": "Sign in to set up a private renewal review.",
+        "title": "Private subscription renewal review",
+        "unavailable": "This subscription is not available for the selected vehicle and sign-in.",
+        "unsupported": "This subscription’s usage is not measured by the available records.",
+        "vehicle": "Select a vehicle to set up a private renewal review.",
+        "waiting": "Active. Waiting for the recorded review window.",
+        "why": "Why this? You confirmed the renewal date. The recorded activity does not prove that the subscription caused it. Check the provider’s terms before deciding; TeslaSync does not cancel or renew anything.",
+        "zone": "Renewal time zone"
+      },
+      "roi": {
+        "empty": "Record a subscription below to start measuring its return.",
+        "subtitle": "Confidence falls when the active period is short or the usage metric has sparse data — a low-confidence \"cancel\" is a prompt to look, not to act.",
+        "title": "Per-subscription verdict"
+      },
+      "row": {
+        "activeDays": "{{count}} active days",
+        "breakEven": "Break-even usage",
+        "monthly": "Monthly cost",
+        "name": "Subscription",
+        "narrative": "Reasoning",
+        "net": "Net",
+        "perMonth": "{{value}} / month",
+        "roi": "ROI",
+        "spend": "Spent to date",
+        "usage": "Measured usage",
+        "utilisation": "{{value}} of break-even",
+        "value": "Realised value",
+        "verdict": "Verdict"
+      },
+      "stat": {
+        "monthly": "Monthly commitment",
+        "roi": "Portfolio ROI",
+        "saving": "Cancel-candidate saving",
+        "savingHint": "per month, if all cancelled",
+        "spend": "Spent to date",
+        "value": "Realised value"
+      },
+      "subtitle": "Price every recurring charge against the usage it actually delivered, express the break-even in units you can act on, and see exactly how much cancelling the weak ones would return.",
+      "summary": {
+        "title": "Portfolio economics"
+      },
+      "title": "Subscription & feature ROI",
+      "unit": {
+        "drive": "drive",
+        "session": "session"
+      },
+      "unsupported": {
+        "cancel": "Cancelling a subscription with the provider — this measures, it does not transact",
+        "intangible": "Convenience and enjoyment, which have real value but no measurable unit here"
+      }
+    },
+    "tariff": {
+      "bands": {
+        "empty": "Run a replay to break down band usage.",
+        "none": "This plan has a single undifferentiated rate.",
+        "rank": "Rank {{rank}}",
+        "subtitle": "Band occupancy for each plan — this is the mechanism behind the ranking, not a projection.",
+        "title": "Where your energy actually landed"
+      },
+      "brief": {
+        "currencyUnknown": "Replay currency not supplied; the tariff editor currency is not a result denomination.",
+        "description": "Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.",
+        "scope": "Latest replay selection and model assumptions; source coverage remains in the evidence",
+        "submittedScope": "Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}",
+        "title": "Returned tariff replay comparison"
+      },
+      "chart": {
+        "aria": "Bar chart comparing annualised cost of each evaluated tariff plan",
+        "caption": "Annualised cost comparison",
+        "col": {
+          "plan": "Plan",
+          "status": "Status"
+        },
+        "cost": "Annual cost",
+        "empty": "Run a replay to populate this chart.",
+        "statusAlt": "Alternative",
+        "statusBest": "Cheapest",
+        "statusCurrent": "Current plan",
+        "subtitle": "Green is the cheapest ranked plan; grey bars are the alternatives you would be paying instead.",
+        "title": "Annualised cost by plan"
+      },
+      "controls": {
+        "all": "No plans selected — every stored plan will be evaluated.",
+        "run": "Replay load against plans",
+        "selected": "{{count}} plans selected",
+        "shiftable": "Shiftable load (%)",
+        "subtitle": "Shiftable share is the fraction of energy you could realistically move into the cheapest band without changing when you drive.",
+        "switchFee": "Switching fee (minor units)",
+        "title": "Comparison parameters"
+      },
+      "delete": {
+        "message": "“{{name}}” and its rate bands will be removed permanently. This cannot be undone.",
+        "title": "Delete this tariff?"
+      },
+      "form": {
+        "addBand": "Add band",
+        "bandEnd": "Ends",
+        "bandLabel": "Label",
+        "bandPrice": "Price (minor per Wh)",
+        "bandStart": "Starts",
+        "bands": "Price bands",
+        "defaultRateLabel": "Standard",
+        "demand": "Demand charge (minor per W)",
+        "export": "Export price (minor per Wh)",
+        "isCurrent": "This is my current plan",
+        "name": "Plan name",
+        "provider": "Provider",
+        "save": "Save rate plan",
+        "standing": "Standing charge (minor/day)",
+        "structure": "Rate structure"
+      },
+      "monthly": {
+        "active": "Active. A private tariff comparison is ready.",
+        "altCost": "Alternative: {{name}}",
+        "alternative": "Alternative saved tariff",
+        "amountInvalid": "Enter a valid amount in whole billing increments.",
+        "bills": "Review charging invoices",
+        "cancelSetup": "Cancel tariff review changes",
+        "changed": "Needs setup. The selected place or tariff terms changed. Review them before resuming.",
+        "choose": "Choose an option",
+        "clear": "Turn off and clear tariff review",
+        "clearDetail": "Stop checks and clear the consent and comparison? Saved tariffs, charging records and bills will be kept.",
+        "confirm": "Confirm private tariff review",
+        "consent": "Both saved tariffs apply at this place without rescheduling. The prices and fees entered cover the comparison. Review my selected vehicle here each month.",
+        "coverage": "Coverage",
+        "current": "Current saved tariff",
+        "currentCost": "Current: {{name}}",
+        "description": "Check whether a saved alternative would have cost less at one charging place without changing when you charge. Off by default. This private review does not send notifications outside TeslaSync, contact a provider, or change plans.",
+        "dismiss": "Dismiss this tariff comparison",
+        "edit": "Edit tariff review",
+        "fee": "One-time switch fee (zero if none)",
+        "feeIncluded": "Switch fee deducted",
+        "findings": "Estimated savings at the same charging times",
+        "fixed": "Fixed charges included (current / alternative)",
+        "fixedAmounts": "{{current}} / {{alternative}} over {{days}} days",
+        "lastChecked": "Last checked: {{date}}.",
+        "metered": "All {{count}} observed sessions at this place: {{energy}} billed.",
+        "minimum": "Minimum net monthly saving",
+        "net": "Estimated saving after switch fee",
+        "off": "Off. No monthly tariff check is scheduled.",
+        "offline": "Reconnect to view or change the monthly tariff review.",
+        "open": "Open monthly tariff review",
+        "pause": "Pause tariff review",
+        "paused": "Paused. No new charging history is checked.",
+        "quiet": "Active. Insufficient evidence, small savings and dismissed comparisons stay quiet.",
+        "range": "{{low}} to {{high}}",
+        "receipts": "Add itemized energy-only bills with the charging place and station-meter evidence. Unmatched, disputed or extra-fee bills do not qualify.",
+        "resume": "Resume tariff review",
+        "sameCurrency": "No supported alternative has the currency of this current plan.",
+        "setup": "Set up monthly tariff review",
+        "setupDetail": "Review a charging place and save one current and one alternative flat or time-of-use tariff in the same currency. Then reopen setup.",
+        "setupMissing": "Saved charging place and two tariffs required",
+        "signIn": "Sign in to review tariffs privately.",
+        "site": "Reviewed charging place",
+        "title": "Monthly tariff review",
+        "vehicle": "Select a vehicle to review its charging tariff.",
+        "waiting": "Learning. Waiting for the first scheduled check.",
+        "why": "Why this? The alternative saved enough even at the least favorable rates during recorded sessions. Charging times and energy stay the same. The range reflects unknown energy split between rate bands. This is a charging-only estimate, not a whole-home bill or readiness forecast.",
+        "window": "{{site}}: {{from}} up to {{through}} ({{zone}}). Expires {{expires}}.",
+        "zone": "Charging place time zone",
+        "zoneHint": "Use the place’s IANA time zone, such as America/New_York. Checks run at 9 AM on the second day of the month."
+      },
+      "notice": {
+        "body": "Each plan is priced against the exact sessions you actually charged, bucketed into their real time-of-day bands. Annualisation scales the observed window — it does not predict future consumption.",
+        "title": "Replay, not forecast"
+      },
+      "plan": {
+        "bands": "Price bands",
+        "compare": "Compare",
+        "compareNamed": "Compare {{name}}",
+        "current": "Current",
+        "demand": "Demand charge",
+        "name": "Plan",
+        "noProvider": "No provider recorded",
+        "onPlan": "On plan",
+        "standing": "Standing charge",
+        "structure": "Structure"
+      },
+      "plans": {
+        "add": "Add plan",
+        "empty": "No plans yet — add the plan you are on today plus any you are considering.",
+        "subtitle": "Author any plan your utility offers. Prices are stored per watt-hour in currency minor units so exotic structures stay exact.",
+        "title": "Your rate plan library"
+      },
+      "result": {
+        "annual": "Annualised cost",
+        "breakEven": "Break-even",
+        "breakdown": "Energy / standing / demand",
+        "currentTag": "current",
+        "days": "{{count}} d",
+        "delta": "vs current",
+        "effective": "Effective price",
+        "peak": "Peak demand",
+        "plan": "Plan",
+        "rank": "Rank",
+        "shift": "Load-shift upside"
+      },
+      "results": {
+        "empty": "No plan produced a priced result — check that your plans have at least one price band.",
+        "title": "Ranked plan economics"
+      },
+      "stat": {
+        "observed": "Observed energy",
+        "plans": "Plans evaluated",
+        "saving": "Best-case annual saving",
+        "sessions": "{{count}} sessions",
+        "shift": "Shiftable share modelled"
+      },
+      "structure": {
+        "demand": "Demand",
+        "flat": "Flat",
+        "realTime": "Real time",
+        "tiered": "Tiered",
+        "tou": "Time of use"
+      },
+      "subtitle": "Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.",
+      "summary": {
+        "empty": "Run a replay to see how much your plan choice is worth.",
+        "title": "Arbitrage summary"
+      },
+      "title": "Utility tariff arbitrage lab",
+      "unsupported": {
+        "future": "Future utility price changes, seasonal reindexing, or regulatory riders",
+        "home": "Household load outside the vehicle — only measured charging sessions are priced"
+      }
+    },
+    "trust": {
+      "brief": {
+        "title": "Recorded model trust and scoring"
+      },
+      "calibration": {
+        "aria": "Bar chart of mean absolute error and mean bias grouped by prediction magnitude bin",
+        "chart": "Mean absolute error and bias per bin",
+        "col": {
+          "bias": "Mean bias",
+          "bin": "Prediction bin",
+          "error": "Mean absolute error",
+          "samples": "Samples"
+        },
+        "empty": "Select a scorecard with enough scored samples to plot its calibration.",
+        "first": "First scored {{when}}",
+        "for": "Showing {{model}} → {{target}}",
+        "last": "Last scored {{when}}",
+        "title": "Calibration by prediction magnitude"
+      },
+      "card": {
+        "bias": "Bias",
+        "coverage": "Interval coverage",
+        "drift": "Drift",
+        "grade": "Trust",
+        "inspect": "Calibration",
+        "mape": "MAPE",
+        "median": "Median APE",
+        "model": "Model / target",
+        "rmse": "RMSE",
+        "samples": "Scored / pending",
+        "skill": "Skill vs naive"
+      },
+      "cards": {
+        "empty": "No models have enough scored predictions yet in this window.",
+        "subtitle": "Drift ratio compares recent-half error against early-half error. Above 1.5 means the model is getting worse.",
+        "title": "Model scorecards"
+      },
+      "form": {
+        "high": "Interval high",
+        "horizon": "Horizon (days)",
+        "low": "Interval low",
+        "model": "Model name",
+        "reference": "Reference",
+        "referenceHint": "What produced this forecast",
+        "submit": "Record forecast",
+        "target": "Target quantity",
+        "unit": "SI unit",
+        "unitHint": "Derived from the target so stored predictions stay SI-canonical.",
+        "value": "Predicted value"
+      },
+      "navTitle": "Prediction accuracy lab",
+      "notice": {
+        "body": "A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.",
+        "title": "Scored against reality, not against itself"
+      },
+      "outcome": {
+        "submit": "Score prediction",
+        "value": "Observed value"
+      },
+      "pred": {
+        "error": "Error",
+        "horizon": "Horizon",
+        "inside": "inside",
+        "interval": "In interval",
+        "model": "Model",
+        "observed": "Observed",
+        "outside": "outside",
+        "pending": "pending",
+        "predicted": "Predicted",
+        "reference": "Reference",
+        "score": "Score it",
+        "sourceError": "Signed source error",
+        "when": "Predicted at"
+      },
+      "predictions": {
+        "add": "Record prediction",
+        "empty": "No predictions recorded for this vehicle yet.",
+        "subtitle": "Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.",
+        "title": "Prediction ledger"
+      },
+      "stat": {
+        "portfolio": "Portfolio trust score",
+        "scored": "Scored / recorded",
+        "trusted": "Trusted models",
+        "unreliable": "Unreliable",
+        "watch": "On watch"
+      },
+      "subtitle": "Every forecast this platform makes is written down, then scored against what actually happened. Bias, calibration, skill against a naive baseline, and drift over time decide whether a model earns your trust.",
+      "summary": {
+        "title": "Portfolio trust"
+      },
+      "title": "Prediction accuracy & Model trust lab",
+      "unsupported": {
+        "cause": "Explaining why a model drifted; it reports that it did",
+        "retrain": "Retraining or auto-correcting a model — this lab measures, it does not tune"
+      }
+    },
+    "unsupported": {
+      "title": "Explicitly not computed"
+    },
+    "verdict": {
+      "active": "active",
+      "cancel": "cancel",
+      "expired": "expired",
+      "keep": "keep",
+      "moderate": "moderate",
+      "review": "review",
+      "strong": "strong",
+      "too_early": "too early",
+      "unknown": "unknown",
+      "weak": "weak"
+    },
+    "warranty": {
+      "binding": {
+        "capacity": "Capacity",
+        "distance": "Distance",
+        "time": "Time"
+      },
+      "brief": {
+        "scope": "Selected vehicle and recorded coverage terms; expiry projections use recorded driving",
+        "title": "Recorded warranty coverage and expiry"
+      },
+      "bundle": {
+        "body": "A stable digest over the coverage terms and readiness state used for this assessment. Quote it when you open a claim so both sides reference the same snapshot.",
+        "title": "Evidence bundle"
+      },
+      "card": {
+        "binding": "Binding limit",
+        "breach": "Projected to reach the floor around {{when}}",
+        "calendarEnd": "Calendar term ends {{when}}",
+        "capacity": "Battery retention vs. warranty floor",
+        "closing": "Claim window closes in {{span}}",
+        "distance": "Distance consumed",
+        "distanceHint": "{{remaining}} remaining",
+        "headroom": "{{value}} headroom",
+        "pace": "At your measured pace of {{pace}} per year",
+        "projected": "Projected end {{when}}",
+        "readiness": "Claim readiness",
+        "time": "Time consumed",
+        "timeHint": "{{remaining}} remaining · expires {{when}}",
+        "unknownCurrentOdometer": "Usable current odometer not available"
+      },
+      "check": {
+        "detail": "What the data shows",
+        "label": "Requirement",
+        "severity": "If unmet",
+        "state": "State"
+      },
+      "claim": {
+        "amount": "Amount",
+        "note": "Evidence note",
+        "opened": "Opened",
+        "status": "Status",
+        "title": "Claim"
+      },
+      "claimForm": {
+        "amount": "Amount",
+        "note": "Evidence note",
+        "status": "Status",
+        "submit": "Record claim",
+        "title": "Claim title"
+      },
+      "claims": {
+        "empty": "No claims recorded yet.",
+        "subtitle": "Record what you asked for and what came back, so the next claim starts from a known history.",
+        "title": "Claim ledger"
+      },
+      "coverages": {
+        "empty": "Add a warranty below to see how fast you are consuming it.",
+        "title": "Coverage burn-down"
+      },
+      "delete": {
+        "message": "“{{name}}” and its claims will be removed permanently. This cannot be undone.",
+        "title": "Delete this warranty?"
+      },
+      "form": {
+        "deductible": "Deductible",
+        "floor": "Capacity floor (%)",
+        "floorHint": "Battery coverage only — leave blank otherwise",
+        "kind": "Coverage type",
+        "label": "Label",
+        "notes": "Notes",
+        "provider": "Provider",
+        "save": "Save coverage",
+        "start": "Coverage start",
+        "startOdo": "Odometer at start",
+        "startOdoHint": "Leave blank if unknown. Enter 0 only if the warranty started at zero distance.",
+        "termDays": "Term (days)",
+        "termDistance": "Term distance",
+        "termHint": "4 years = 1461 days"
+      },
+      "kind": {
+        "aftermarket": "Aftermarket",
+        "basic": "Basic",
+        "battery": "Battery",
+        "corrosion": "Corrosion",
+        "drivetrain": "Drivetrain",
+        "extended": "Extended",
+        "tires": "Tires"
+      },
+      "list": {
+        "add": "Add coverage",
+        "empty": "No warranties recorded yet.",
+        "title": "Recorded coverages"
+      },
+      "mileage": {
+        "actionTitle": "Review the approaching warranty distance limit",
+        "basis": "{{remaining}} remained at the last recorded odometer reading. The estimate uses {{days}} observation days from {{from}} to {{through}} and the terms you entered.",
+        "changeError": "Could not change the reminder. Refresh and check your sign-in and selected warranty.",
+        "confirmDisable": "Future checks stop and the private projection and reminder are removed. Recorded warranties, claims and drives are kept.",
+        "confirmEnable": "Allow this server to check the selected warranty terms and this vehicle’s recent completed-drive odometer records. One private Action Center reminder appears as the estimated limit approaches. Nothing is sent outside TeslaSync.",
+        "disable": "Turn off mileage reminder",
+        "enable": "Enable private mileage reminder",
+        "limitation": "This is an estimated range, not a coverage decision. Check the original terms and current odometer before contacting the warranty provider.",
+        "noWarranty": "Record the documented warranty terms for this vehicle to opt in.",
+        "off": "Off. No reminder analysis runs for this warranty until you enable it.",
+        "range": "At the recent recorded pace, the distance limit may arrive between {{earliest}} and {{latest}}, before the calendar term ends on {{term}}.",
+        "signIn": "This reminder requires a verified sign-in; it is not available in a shared installation without sign-in.",
+        "title": "Private warranty mileage reminder",
+        "unavailable": "Requested warranty is unavailable for this vehicle",
+        "unknownBaseline": "No mileage reminder is possible without a documented starting odometer. If you have it, add coverage with that reading.",
+        "vehicle": "Select a vehicle in the workspace picker to review a warranty reminder.",
+        "waiting": "Enabled. No current distance-first estimate. The worker checks for enough recent odometer evidence; a calendar-first or stale result does not trigger a reminder.",
+        "warranty": "Warranty to check"
+      },
+      "navTitle": "Warranty command",
+      "notice": {
+        "body": "TeslaSync does not know your contract. Enter the term as written on your paperwork; every projection below is then computed from your own driving and battery data.",
+        "title": "Terms come from your documents"
+      },
+      "readiness": {
+        "empty": "No coverage recorded, so nothing to evaluate.",
+        "subtitle": "Each requirement is evaluated against data already on this server, so you know what a reviewer would find.",
+        "title": "Claim readiness checklist"
+      },
+      "row": {
+        "claim": "Claim",
+        "deductible": "Deductible",
+        "floor": "Capacity floor",
+        "label": "Coverage",
+        "start": "Starts",
+        "term": "Term",
+        "unknownOdometer": "Starting odometer not recorded"
+      },
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium"
+      },
+      "stat": {
+        "active": "Active coverages",
+        "claimed": "Total claimed",
+        "expiring": "Expiring within 90 days",
+        "next": "Next expiry",
+        "odometer": "Odometer",
+        "odometerHint": "Derived from recorded drives"
+      },
+      "status": {
+        "approved": "Approved",
+        "closed": "Closed",
+        "denied": "Denied",
+        "draft": "Draft",
+        "expiring": "Expiring",
+        "submitted": "Submitted",
+        "undetermined": "Coverage undetermined"
+      },
+      "subtitle": "Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.",
+      "summary": {
+        "title": "Coverage posture"
+      },
+      "title": "Warranty coverage & claim readiness",
+      "unsupported": {
+        "legal": "Interpreting contract exclusions — readiness is factual, not legal advice",
+        "submit": "Filing the claim with the provider on your behalf"
+      }
+    },
+    "window": {
+      "days": "{{count}} days",
+      "label": "Analysis window"
+    }
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
+  },
   "problemReport": {
     "context": {
       "appVersion": "App version",
@@ -1949,6 +2214,27 @@
   "productPreferences": {
     "defaultVehicle": {
       "unavailable": "Unavailable vehicle {{id}}"
+    },
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
     }
   },
   "provenance": {
@@ -2043,6 +2329,23 @@
       "desc": "Source layer unknown."
     }
   },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
+  },
   "timeMachine": {
     "ageFresh": "Fresh"
   },
@@ -2112,6 +2415,38 @@
       },
       "create": {
         "success": "Export started"
+      }
+    },
+    "geofence": {
+      "archive": {
+        "success": "Place archived"
+      },
+      "bulkDelete": {
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
+      "category": {
+        "success": "Category updated"
+      },
+      "rename": {
+        "success": "Place renamed"
+      },
+      "reviewed": {
+        "success": "Marked reviewed"
+      },
+      "unarchive": {
+        "success": "Place restored"
+      }
+    },
+    "geofenceRate": {
+      "apply": {
+        "success": "Rate applied to matching sessions"
+      },
+      "create": {
+        "success": "Rate saved"
+      },
+      "delete": {
+        "success": "Scheduled rate cancelled"
       }
     },
     "notifications": {
@@ -2250,9 +2585,33 @@
     "prev": "Back",
     "skip": "Skip tour"
   },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
   "widget": {
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
-    }
+    },
+    "verifiedFields": "{{count}} verified fields"
   }
 }

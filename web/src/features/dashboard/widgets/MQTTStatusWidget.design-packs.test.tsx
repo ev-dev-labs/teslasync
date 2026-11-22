@@ -204,6 +204,11 @@ describe.each(PACKS)('MQTT %s (%s)', (packId, appearance) => {
     const trend = screen.getByRole('img', { name: 'Message rates fetched in this browser session' });
     expect(trend.querySelectorAll('circle')).toHaveLength(2);
     expect(trend.querySelector('polyline')).toBeNull();
+    const inspector = screen.getByRole('slider', { name: 'Inspect observations: Message rates fetched in this browser session' });
+    expect(inspector).toHaveAttribute('aria-valuetext', 'Observation 2 of 2, value 3.50 msg/s');
+    fireEvent.change(inspector, { target: { value: '1' } });
+    expect(screen.getByText('0.00 msg/s')).toBeVisible();
+    expect(inspector).toHaveAttribute('aria-valuetext', 'Observation 1 of 2, value 0.00 msg/s');
     expect(screen.getByText('3.50')).toBeInTheDocument();
     expect(screen.getByText(HISTORY_UNAVAILABLE)).toBeInTheDocument();
     expect(screen.getByText('Session samples use fetch times, not signal timestamps; missing rates are gaps.')).toBeInTheDocument();
@@ -213,6 +218,7 @@ describe.each(PACKS)('MQTT %s (%s)', (packId, appearance) => {
     ] }) }));
     view.rerender(widget(packId));
     expect(screen.queryByRole('img', { name: 'Message rates fetched in this browser session' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
     expect(screen.getByText(HISTORY_UNAVAILABLE)).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
   });

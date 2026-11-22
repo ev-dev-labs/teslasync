@@ -90,6 +90,22 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "date": {
     "preset": {
       "all": "All time",
@@ -105,6 +121,11 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "ytd": "Year to date"
+    }
+  },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
     }
   },
   "delta": {
@@ -267,6 +288,34 @@
       }
     }
   },
+  "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
+    "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
+    "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
+  },
   "draft": {
     "discardDraft": "Discard draft",
     "restored": "Draft restored from {{when}}.",
@@ -427,6 +476,9 @@
   "gas": {
     "pollTriggered": "Gas price poll triggered"
   },
+  "guard": {
+    "sentryActive": "Sentry mode active"
+  },
   "help": {
     "tripLogbook": {
       "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
@@ -501,6 +553,63 @@
     "noDrives": "No drives in this period yet.",
     "noneInFilter": "No drives in this category yet.",
     "ofTotal": "of {{total}} drives",
+    "packet": {
+      "active": "Active. A private packet is ready.",
+      "addReceipt": "Add a receipt reference",
+      "amount": "Receipt {{index}} amount",
+      "cancelSetup": "Cancel packet settings",
+      "chooseDrive": "Choose a completed drive",
+      "clear": "Turn off and clear private packet",
+      "clearDetail": "Stop checks and remove private tags and receipt references? Your original drives and browser-local logbook will be kept.",
+      "confirm": "Confirm private packet setup",
+      "confirmedDrives": "Confirmed business drives",
+      "consent": "Use this vehicle’s completed drives and the purposes and receipts I explicitly enter to prepare private monthly packets.",
+      "currency": "Receipt {{index}} currency code",
+      "description": "Off by default. Review confirmed business drives and matched receipt references before downloading. Browser-local categories and route suggestions do not count as consent.",
+      "dismiss": "Dismiss this month’s packet",
+      "drive": "Drive",
+      "driveNumber": "Drive {{id}}",
+      "driveOption": "Drive {{id}} on {{date}}",
+      "edit": "Edit packet settings",
+      "entryUnavailable": "This drive is not available for a private classification.",
+      "export": "Download reviewed trip packet",
+      "exportDetail": "Download the reviewed JSON packet to this device? It contains your confirmed business drives and receipt references. Nothing is sent to another recipient.",
+      "invalidReceipt": "Complete each receipt with a date, reference, three-letter currency and valid positive amount.",
+      "knownDistance": "Recorded business distance",
+      "matchedReceipts": "Matched receipts",
+      "missingDistance": "Business drives without distance",
+      "next": "Next check: {{date}}.",
+      "noDrives": "No completed drives are in this view. Change the range in View settings to find a drive.",
+      "noReceipts": "No receipt references were matched. This packet can still include confirmed business distance.",
+      "off": "Off. No private packet is scheduled.",
+      "offline": "Reconnect to view or change the private trip packet.",
+      "open": "Open private trip packet",
+      "pause": "Pause private packets",
+      "paused": "Paused. Confirmed tags and receipt references are kept, but no packet is prepared.",
+      "purpose": "Confirmed purpose for this drive",
+      "ready": "Business trip packet ready to review",
+      "receiptDay": "Receipt {{index}} date",
+      "receiptHint": "Enter only receipts you matched to this drive. Use the date on the receipt and its original currency. No files are uploaded.",
+      "receiptReference": "Receipt reference",
+      "receipts": "Matching receipt references",
+      "reference": "Receipt {{index}} reference",
+      "removeAssociations": "Saving a different purpose removes this drive’s receipt references from private packets.",
+      "removeReceipt": "Remove receipt {{index}}",
+      "resume": "Resume private packets",
+      "saveEntry": "Confirm purpose and receipt references",
+      "selectDrive": "Select a drive to confirm its purpose",
+      "setup": "Set up monthly trip packets",
+      "signIn": "Sign in to prepare a private packet.",
+      "title": "Private monthly trip packet",
+      "unclassifiedDrive": "Unclassified drive {{id}}",
+      "unmatchedReceipts": "Receipt references excluded",
+      "vehicle": "Select a vehicle to prepare a private packet.",
+      "waiting": "Active. Waiting for the monthly check or sufficient confirmed evidence.",
+      "why": "Why this? Each included drive was explicitly marked Business for this packet. Unclassified drives and unmatched receipts are not included in the exported business totals. No tax or reimbursement eligibility is inferred.",
+      "window": "Drives started from {{from}} up to {{through}} ({{zone}}).",
+      "zone": "Packet time zone",
+      "zoneHint": "Use the IANA time zone for this logbook, such as America/New_York."
+    },
     "perKm": "/ km",
     "perMile": "/ mi",
     "personal": "Personal",
@@ -554,6 +663,21 @@
     "noAttention": "No current attention items.",
     "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all"
+  },
+  "paint": {
+    "deepBlue": "Deep Blue Metallic",
+    "detected": "Auto-detected",
+    "label": "Paint",
+    "midnightSilver": "Midnight Silver Metallic",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "pickerLabel": "Vehicle paint color",
+    "redMulticoat": "Red Multi-Coat",
+    "reset": "Reset to auto-detected",
+    "solidBlack": "Solid Black"
+  },
+  "personalScope": {
+    "sharedReview": "Without sign-in, anyone with access to TeslaSync can view and manage this review.",
+    "unavailable": "This installation’s access mode could not be verified. Refresh and try again."
   },
   "problemReport": {
     "context": {
@@ -659,6 +783,10 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
   },
   "timeMachine": {
     "ageFresh": "Fresh"
@@ -866,5 +994,31 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "vehicleHero": {
+    "action": {
+      "details": "Details"
+    },
+    "gauge": {
+      "battery": "Battery",
+      "inside": "Inside",
+      "outside": "Outside",
+      "range": "Range"
+    },
+    "locked": "Locked",
+    "noState": "Live telemetry unavailable",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "power": "Power",
+      "sentry": "Sentry",
+      "status": "Status"
+    },
+    "unlocked": "Unlocked"
+  },
+  "widget": {
+    "verifiedFields": "{{count}} verified fields"
   }
 }

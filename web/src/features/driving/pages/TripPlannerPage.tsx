@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   Route,
   Battery,
@@ -242,6 +243,12 @@ export default function TripPlannerPage() {
       </FadeIn>
 
       <TripShareImportBanner status={shareImport} />
+      {vehicleId != null && (
+        <Link to={`/settings/smart-charging?vehicle_id=${vehicleId}#trip-stops`}
+          className="inline-flex min-h-11 items-center text-theme-accent underline underline-offset-2">
+          {t('smartCharging.stopComparison.title', 'Compare reviewed charging stops')}
+        </Link>
+      )}
 
       {/* Row 1 — Hero: control form (left rail) + route map (spans wide) */}
       <FadeIn>

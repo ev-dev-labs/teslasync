@@ -10,6 +10,8 @@ export interface TimelineItemData {
   title: ReactNode;
   subtitle?: ReactNode;
   time: string;
+  /** Optional caller-localized interval from the previous displayed event. */
+  elapsed?: ReactNode;
   color?: string;
 }
 
@@ -42,6 +44,8 @@ export interface TimelineProps {
    * bound is inferred from rows. The range is spoken only when both are known.
    */
   summaryBounds?: { start?: string | null; end?: string | null };
+  /** Give each record a separate surface and visible index. */
+  indexed?: boolean;
 }
 
 export function Timeline({
@@ -51,6 +55,7 @@ export function Timeline({
   label,
   chronology = 'newest-first',
   summaryBounds,
+  indexed = false,
 }: TimelineProps) {
   const { t } = useTranslation();
   const { describeTimeline } = useA11ySummary();
@@ -92,7 +97,7 @@ export function Timeline({
   });
 
   return (
-    <div data-app-part="timeline" className={cn('relative min-w-0 space-y-4', className)}>
+    <div data-app-part="timeline" className={cn('relative @container/timeline min-w-0 space-y-4', className)}>
       <VisuallyHidden>{summary}</VisuallyHidden>
       <ol className="relative space-y-4" aria-label={resolvedLabel}>
         {list.map((item, i) => (
@@ -127,18 +132,20 @@ export function Timeline({
           </span>
 
           {/* content */}
-          <div data-app-part="timeline-content" className="min-w-0 flex-1 pt-0.5">
-            <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
-              <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 basis-48 break-words">
+          <div data-app-part="timeline-content" className={cn('min-w-0 flex-1 pt-0.5', indexed && 'rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2')}>
+            <div className="grid min-w-0 items-baseline gap-x-3 gap-y-0.5 @[28rem]/timeline:grid-cols-[minmax(0,1fr)_minmax(0,9rem)]">
+              <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words [overflow-wrap:anywhere]">
+                {indexed && <span aria-hidden="true" className="me-2 tabular-nums text-[var(--text-muted)]">{String(i + 1).padStart(2, '0')}</span>}
                 {item.title}
               </Text>
-              <Text variant="caption" className="max-w-full break-words">
+              <Text variant="caption" className="min-w-0 max-w-full break-words tabular-nums [overflow-wrap:anywhere]">
                 {item.time}
               </Text>
             </div>
             {item.subtitle != null && item.subtitle !== false && item.subtitle !== '' && (
-              <Text as="p" variant="caption" className="mt-0.5 whitespace-pre-wrap break-words">{item.subtitle}</Text>
+              <Text as="p" variant="caption" className="mt-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{item.subtitle}</Text>
             )}
+            {i > 0 && item.elapsed != null && <Text as="p" variant="caption" className="mt-1 [overflow-wrap:anywhere]">{item.elapsed}</Text>}
           </div>
         </li>
       ))}

@@ -18,10 +18,11 @@ import { DrivePreview } from '../components/continuation-driving-primary/DrivePr
 export default function DrivesListPage() {
   const model = useDrivesListPage();
   const {
-    t, vehicleId, drivesQuery, savedView, handlePullToRefresh, desktopEvidence,
+    t, vehicleId, drivesQuery, savedView, handlePullToRefresh, desktopEvidence, currentStats, matchingTotal,
     previewDrive, setPreviewDrive, navigate, tz, previewFrom, previewTo,
     toDistanceDisplay, toEfficiencyDisplay, formatEnergy, distanceUnit, efficiencyUnit,
   } = model;
+  const hasGrid = currentStats.count > 0 || (matchingTotal ?? 0) > 0;
 
   /* ---- Defensive: no vehicle ---- */
   if (vehicleId == null) {
@@ -60,10 +61,10 @@ export default function DrivesListPage() {
           <FadeIn>
             <AINLDriveSearch />
           </FadeIn>
-          {!desktopEvidence && <DrivesMobileFilters {...model} />}
+          {!desktopEvidence && !hasGrid && <DrivesMobileFilters {...model} />}
           <DrivesOverview {...model} />
           <DrivesTrendAnalysis {...model} />
-          {!desktopEvidence && <DrivesCollectionFilters {...model} />}
+          {!desktopEvidence && !hasGrid && <DrivesCollectionFilters {...model} />}
           <DrivesEvidenceSection model={model} />
           <DrivePreview
             drive={previewDrive}

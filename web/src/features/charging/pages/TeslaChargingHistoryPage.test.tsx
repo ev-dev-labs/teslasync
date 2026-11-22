@@ -143,7 +143,7 @@ describe('Tesla charging history adoption', () => {
     expect(billingReads()).toHaveLength(0);
     expect(screen.queryByText('No priced Supercharger visits yet.')).not.toBeInTheDocument();
     await act(async () => { resolveVehicles?.([vehicle]); });
-    await screen.findByText('€12.50');
+    await screen.findByRole('cell', { name: '€12.50' });
     expect(billingReads().every(([path]) => path.includes(`vin=${vehicle.vin}`))).toBe(true);
   });
 
@@ -156,7 +156,7 @@ describe('Tesla charging history adoption', () => {
     expect(billingReads()).toHaveLength(0);
     expect(screen.queryByText('No charging sessions yet')).not.toBeInTheDocument();
     await act(async () => { onlineManager.setOnline(true); });
-    await screen.findByText('€12.50');
+    await screen.findByRole('cell', { name: '€12.50' });
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeEnabled();
   });
 
@@ -183,7 +183,7 @@ describe('Tesla charging history adoption', () => {
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled();
     installTransport(response());
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
-    await screen.findByText('€12.50');
+    await screen.findByRole('cell', { name: '€12.50' });
     expect(billingReads().every(([path]) => path.includes(`vin=${vehicle.vin}`))).toBe(true);
   });
 
@@ -612,7 +612,7 @@ describe('Tesla charging history adoption', () => {
     const payload = response();
     installTransport(payload);
     mount();
-    await screen.findByText('€12.50');
+    await screen.findByRole('cell', { name: '€12.50' });
     let complete: (() => void) | undefined;
     vi.mocked(request).mockReturnValueOnce(new Promise(resolve => {
       complete = () => resolve(payload);

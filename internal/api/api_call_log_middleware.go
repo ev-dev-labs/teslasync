@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -174,6 +175,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 			}
 
 			start := time.Now()
+			captureRequestBodies := captureBodies && !privateRecommendationPath(r.URL.Path)
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
 			key := &verifiedAppKey{}
 			r = r.WithContext(context.WithValue(r.Context(), verifiedAppKeyContextKey{}, key))
@@ -182,11 +184,11 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 				reqBuf  *cappedBuffer
 				respBuf *cappedBuffer
 			)
-			if captureBodies && r.Body != nil {
+			if captureRequestBodies && r.Body != nil {
 				reqBuf = newCappedBuffer(MaxAPILogBodyBytes)
 				r.Body = teeReadCloser(r.Body, reqBuf)
 			}
-			if captureBodies {
+			if captureRequestBodies {
 				respBuf = newCappedBuffer(MaxAPILogBodyBytes)
 				ww.Tee(respBuf)
 			}
@@ -236,7 +238,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 					entry.StatusCode = http.StatusOK
 				}
 
-				if captureBodies {
+				if captureRequestBodies {
 					if reqBuf != nil && reqBuf.Len() > 0 {
 						body := redactBodyBytes(reqBuf.Bytes(), reqBuf.truncated, contentType(r.Header.Get("Content-Type")))
 						entry.RequestBody = &body
@@ -255,6 +257,27 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 	}
 }
 
+// Personal routine names and recommendation summaries can contain locations
+// even when their JSON keys are not sensitive.
+func privateRecommendationPath(path string) bool {
+	for _, root := range []string{"/api/v1/smart-commute", "/api/v1/smart-charging", "/api/v1/smart-delivery", "/api/v1/action-center",
+		"/api/v1/media/playlist-review", "/api/v1/media/spotify", "/api/v1/media/journey-soundtrack", "/api/v1/media/drive-track",
+		"/api/v1/media/episode-review", "/api/v1/media/favorite-digest", "/api/v1/charging-reconciliation",
+		"/api/v1/analytics/tco/charging-cost-digest", "/api/v1/tariff-lab/monthly-review",
+		"/api/v1/analytics/mileage-budget/review", "/api/v1/analytics/route-efficiency/weekly-digest",
+		"/api/v1/tire-pressure/cold-checks", "/api/v1/warranty-command",
+		"/api/v1/charging/park-reserve", "/api/v1/battery/overnight-drain-review", "/api/v1/battery/capacity-digest",
+		"/api/v1/service-intelligence/recall-watch", "/api/v1/service-intelligence/service-case",
+		"/api/v1/climate/cabin-prep", "/api/v1/climate/scheduled-review", "/api/v1/security/window-rain",
+		"/api/v1/security/parked-closure", "/api/v1/security/parked-unlock", "/api/v1/software-updates/window-review",
+		"/api/v1/ownership/trip-packet", "/api/v1/subscription-roi/renewal", "/api/v1/subscription-roi/subscriptions"} {
+		if path == root || strings.HasPrefix(path, root+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // redactURLAndHeaders parses the request URL and headers, replacing query
 // parameter values whose names match redactKeyPattern with REDACTED, and
 // always redacting Authorization and Cookie header values. Returns the
@@ -262,6 +285,10 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 // request is not mutated.
 func redactURLAndHeaders(req *http.Request) (string, map[string]string) {
 	u := *req.URL
+	switch strings.TrimSuffix(u.Path, "/") {
+	case "/api/v1/smart-charging/solar/connection/callback", "/api/v1/media/spotify/callback":
+		u.RawQuery, u.ForceQuery = "", false
+	}
 	q := u.Query()
 	for k := range q {
 		if redactKeyPattern.MatchString(k) {

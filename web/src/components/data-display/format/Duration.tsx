@@ -1,5 +1,6 @@
 import { formatDurationClock } from '@/lib/dateConvert';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
 export type DurationVariant = 'short' | 'long' | 'compact' | 'clock';
 
@@ -12,10 +13,9 @@ export type DurationVariant = 'short' | 'long' | 'compact' | 'clock';
  */
 const FALLBACK = '—';
 
-interface DurationProps {
+interface DurationProps extends FormattedReadingOptions {
   ms: number | null | undefined;
   variant?: DurationVariant;
-  className?: string;
 }
 
 /**
@@ -29,7 +29,7 @@ interface DurationProps {
  * exactly like the empty state — crucially WITHOUT the `title`, so a
  * "no data" em-dash never carries a misleading "0 ms"/"-100 ms" hover tooltip.
  */
-export function Duration({ ms, variant = 'short', className }: DurationProps) {
+export function Duration({ ms, variant = 'short', label, className }: DurationProps) {
   const { fmtWithUnit, formatDurationMs, formatDurationMsLong, formatDurationMsCompact } = useNumberFormatting();
   let display: string;
   switch (variant) {
@@ -49,12 +49,12 @@ export function Duration({ ms, variant = 'short', className }: DurationProps) {
   }
 
   if (display === FALLBACK) {
-    return <span className={className}>{FALLBACK}</span>;
+    return <FormattedReading label={label} className={className}>{FALLBACK}</FormattedReading>;
   }
 
   return (
-    <span className={className} title={fmtWithUnit(ms, 'ms', 0)}>
+    <FormattedReading label={label} className={className} title={fmtWithUnit(ms, 'ms', 0)}>
       {display}
-    </span>
+    </FormattedReading>
   );
 }

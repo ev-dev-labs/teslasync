@@ -7,6 +7,7 @@ export interface SectionGroup {
   label: string
   labelKey: string
   includeSingleton?: boolean
+  expandInSheet?: boolean
   pages: readonly { to: string; label: string; labelKey: string; icon?: typeof Icons.home; color?: string; badge?: NavBadge }[]
 }
 

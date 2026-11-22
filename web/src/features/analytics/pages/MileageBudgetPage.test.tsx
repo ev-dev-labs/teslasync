@@ -1,5 +1,7 @@
 import { Children, isValidElement, type ReactNode } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render as renderWithWrapper, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataState, DataStateSource } from '@/api/dataState';
 import { deriveDataState } from '@/api/dataState';
@@ -132,6 +134,13 @@ let config: MileageBudgetConfig;
 let distance: 'km' | 'mi';
 let history: DataStateSource<Drive[]>;
 const retry = vi.fn();
+
+function render(element: ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderWithWrapper(element, {
+    wrapper: ({ children }) => <MemoryRouter><QueryClientProvider client={client}>{children}</QueryClientProvider></MemoryRouter>,
+  });
+}
 
 function latestChart(): ChartCardProps {
   return mocks.chart.mock.calls.at(-1)![0] as ChartCardProps;

@@ -47,7 +47,7 @@ describe('Slider', () => {
     expect(slider).toHaveAttribute('value', '50');
   });
 
-  it('renders the formatted display value next to the label', () => {
+  it('shows the formatted reading above the track and the two bounds below it', () => {
     render(
       <Slider
         label="Charge limit"
@@ -58,7 +58,14 @@ describe('Slider', () => {
         onChange={() => {}}
       />,
     );
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    const slider = screen.getByRole('slider', { name: 'Charge limit' });
+    const reading = screen.getByText('80%');
+    expect(reading.compareDocumentPosition(slider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const bound of ['50%', '100%']) {
+      const endpoint = screen.getByText(bound);
+      expect(slider.compareDocumentPosition(endpoint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(endpoint.parentElement).toHaveAttribute('aria-hidden', 'true');
+    }
   });
 
   it('puts the formatted value into aria-valuetext for assistive tech', () => {
@@ -226,8 +233,7 @@ describe('Slider', () => {
     expect(slider).not.toHaveClass('appearance-none', 'accent-cyan-500');
     expect(slider.parentElement).toHaveClass('h-11', 'md:h-9');
     expect(slider.parentElement?.parentElement).toHaveClass('custom-slider', 'min-w-0');
-    expect(screen.getByText('A long caption that must stay visible').parentElement)
-      .toHaveClass('flex-wrap');
+    expect(screen.getByText('A long caption that must stay visible')).toHaveClass('break-words');
     expect(screen.getByText('2 long formatted units')).toHaveClass('break-words');
     expect(slider).not.toHaveAttribute('onkeydown');
   });

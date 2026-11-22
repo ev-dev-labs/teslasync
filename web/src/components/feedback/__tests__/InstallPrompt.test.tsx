@@ -186,7 +186,7 @@ describe('InstallPrompt', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('In Chrome, open the menu and choose Install app.')
     })
-    expect(screen.getByRole('alert').parentElement).toHaveClass('flex-1')
+    expect(screen.getByRole('alert').closest('[data-app-part="feedback-content"]')).toHaveClass('min-w-0', '[overflow-wrap:anywhere]')
     expect(event.prompt).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument()
     expect(log).toHaveBeenCalledOnce()

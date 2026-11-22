@@ -17,7 +17,7 @@ export interface TableFilterValue {
   keys?: string[];
 }
 
-export function DataTableValueFilter({ options, selected, onChange, condition, conditionActive = false, conditionLabel, invalid = false }: {
+export function DataTableValueFilter({ options, selected, onChange, condition, conditionActive = false, conditionLabel, invalid = false, valuesStatus }: {
   options: TableFilterValue[];
   selected: string[] | null;
   onChange: (values: string[] | null) => void;
@@ -25,6 +25,7 @@ export function DataTableValueFilter({ options, selected, onChange, condition, c
   conditionActive?: boolean;
   conditionLabel?: string;
   invalid?: boolean;
+  valuesStatus?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
@@ -47,6 +48,7 @@ export function DataTableValueFilter({ options, selected, onChange, condition, c
   return (
     <div className="min-w-0 space-y-3">
       {invalid && <ErrorText>{t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')}</ErrorText>}
+      {valuesStatus ?? <>
       <Input
         ref={searchRef}
         size="sm"
@@ -110,6 +112,7 @@ export function DataTableValueFilter({ options, selected, onChange, condition, c
       {selected?.some((value) => !allKeys.includes(value)) && (
         <Text variant="helper" className="break-words">{t('table.filter.unavailableLoadedValues', 'Some saved selections are not present in the loaded rows. Clear the filter to reset them.')}</Text>
       )}
+      </>}
       {condition && (
         <Accordion
           title={conditionLabel ?? t('table.filter.conditions', 'Conditions')}

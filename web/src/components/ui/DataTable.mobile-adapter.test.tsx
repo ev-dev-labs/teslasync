@@ -58,6 +58,7 @@ describe('real DataTable mobile bridge', () => {
     resize(390)
     const row = view.container.querySelector('[data-row-key="2"]') as HTMLElement
     expect(row).toHaveClass('!min-h-16', '!py-2')
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }))
     fireEvent.click(screen.getByRole('radio', { name: 'Comfortable' }))
     expect(row).not.toHaveClass('!min-h-16', '!py-2')
     fireEvent.click(screen.getByRole('radio', { name: 'Compact' }))

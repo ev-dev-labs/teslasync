@@ -118,11 +118,11 @@ export function CookieConsentBanner({
       className="fixed inset-x-0 bottom-0 z-[70] px-4 pb-4 sm:px-6 sm:pb-6 pointer-events-none"
     >
       <div data-app-part="feedback" data-app-feedback-kind="toast" data-app-tone="info" className="mx-auto max-w-3xl rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-md shadow-2xl pointer-events-auto">
-        <div data-app-part="feedback-layout" className="flex items-start gap-3 p-4 sm:p-5">
-          <div className="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-theme-accent/10 text-theme-accent ring-1 ring-theme-accent/20">
+        <div data-app-part="feedback-layout" className="flex min-w-0 items-start gap-3 rounded-[inherit]">
+          <div data-app-part="feedback-icon" className="grid w-8 shrink-0 self-stretch place-items-center rounded-s-[inherit] border-e border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--theme-primary)] sm:w-10">
             <ShieldCheck className="h-4 w-4" aria-hidden />
           </div>
-          <div data-app-part="feedback-content" className="flex-1 min-w-0">
+          <div data-app-part="feedback-content" className="min-w-0 flex-1 py-4 pe-3 [overflow-wrap:anywhere] sm:py-5 sm:pe-5">
             <p
               id="cookie-consent-title"
               data-app-part="feedback-title"

@@ -1,7 +1,9 @@
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldQuestion } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
+import { severityTokens } from '@/lib/tokens'
 import { Text } from '@/components/ui/Typography'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { MaybeLink } from './_MaybeLink'
@@ -37,12 +39,14 @@ export function PermissionGuidanceNotice({
   compact = false,
 }: PermissionGuidanceNoticeProps) {
   const { t } = useTranslation()
+  const titleId = useId()
   const online = useOnlineStatus()
   const resolved =
     kind ?? (evidence ? classifyAccessBlock({ ...evidence, online }) : null)
   if (!resolved) return null
 
   const guidance = accessGuidanceFor(resolved)
+  const warning = severityTokens.warn
 
   return (
     <section
@@ -53,16 +57,27 @@ export function PermissionGuidanceNotice({
       data-testid="permission-guidance"
       data-access-block={guidance.kind}
       className={cn(
-        'flex items-start gap-3 rounded-panel border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
+        'grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 rounded-panel border bg-[var(--surface-1)] text-start forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+        warning.border,
         className,
       )}
-      aria-label={t(guidance.titleKey, guidance.titleFallback)}
+      aria-labelledby={titleId}
     >
-      <ShieldQuestion data-app-part="feedback-icon" className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
-      <div data-app-part="feedback-content" className="min-w-0 flex-1 space-y-2">
-        <Text data-app-part="feedback-title" as="p" size="sm" weight="medium" color="primary">
-          {t(guidance.titleKey, guidance.titleFallback)}
-        </Text>
+      <div data-app-part="feedback-icon" className={cn(
+        'grid w-8 self-stretch place-items-center rounded-s-[inherit] border-e sm:w-10 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
+        warning.bg, warning.border, warning.fg,
+      )} aria-hidden="true">
+        <ShieldQuestion className="h-5 w-5" />
+      </div>
+      <div data-app-part="feedback-content" className="min-w-0 space-y-2 py-2.5 pe-3 [overflow-wrap:anywhere]">
+        <div>
+          <Text data-app-part="feedback-severity" size="xs" weight="semibold" className={cn('block uppercase forced-colors:text-[CanvasText]', warning.fg)}>
+            {t('severity.warn', 'Warning')}
+          </Text>
+          <Text id={titleId} data-app-part="feedback-title" as="p" size="sm" weight="semibold" color="primary">
+            {t(guidance.titleKey, guidance.titleFallback)}
+          </Text>
+        </div>
         <Text data-app-part="feedback-message" as="p" variant="bodySm">
           {t(guidance.explanationKey, guidance.explanationFallback)}
         </Text>
@@ -80,7 +95,7 @@ export function PermissionGuidanceNotice({
               <Text as="p" variant="caption">
                 {t('accessGuidance.stepsLabel', 'How to request access')}
               </Text>
-              <ol className="mt-1 list-decimal space-y-1 pl-5">
+              <ol className="mt-1 list-decimal space-y-1 ps-5">
                 {guidance.steps.map((step) => (
                   <li key={step.key}>
                     <Text as="span" variant="bodySm" color="muted">
@@ -99,7 +114,7 @@ export function PermissionGuidanceNotice({
             data-app-part="feedback-actions button"
             data-app-variant="ghost"
             data-app-size="sm"
-            className="inline-flex text-xs font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
+            className="inline-flex max-w-full items-center text-xs font-medium text-[var(--theme-primary)] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] max-md:min-h-11 forced-colors:focus-visible:outline-[Highlight]"
             data-testid="permission-guidance-action"
           >
             {t(guidance.actionLabelKey, guidance.actionLabelFallback ?? '')}

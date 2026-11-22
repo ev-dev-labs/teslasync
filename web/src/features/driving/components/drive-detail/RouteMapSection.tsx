@@ -66,6 +66,7 @@ interface RouteMapSectionProps {
   speedSegments: SpeedSegment[];
   routePoints?: RoutePoint[];
   fsdEvidence?: FsdEvidenceInterval[];
+  localEvidence?: boolean;
   /** Render only the map body, filling its cell inside the Overview hero. */
   embedded?: boolean;
 }
@@ -79,6 +80,7 @@ export function RouteMapSection({
   speedSegments,
   routePoints,
   fsdEvidence,
+  localEvidence = false,
   embedded = false,
 }: RouteMapSectionProps) {
   const { fmtNumber } = useNumberFormatting();
@@ -155,9 +157,9 @@ export function RouteMapSection({
   const body = safeTrail.length > 0 ? (
     <>
       <div data-app-part="map" data-map-kind="drive-route" className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode={hasRoute ? 'path' : 'stationary'}>
-        <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+        {!localEvidence && <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />}
         <MapContainer center={centerPos} zoom={safeTrail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
-          <MapTileLayer style={mapStyle} />
+          {!localEvidence && <MapTileLayer style={mapStyle} />}
           <MapInvalidator />
           <FitBounds trail={hasRoute ? safeTrail : []} fallbackCenter={anchorPoint} />
           {hasRoute && safeSegments.map((seg, i) => (
@@ -235,9 +237,9 @@ export function RouteMapSection({
     // No recorded route path, but start/end coordinates exist: show both
     // pins joined by a dashed straight line, clearly not a driven path.
     <div data-app-part="map" data-map-kind="drive-route" className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode="endpoints">
-      <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+      {!localEvidence && <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />}
       <MapContainer center={endpointPins[0].position} zoom={13} scrollWheelZoom className="h-full w-full">
-        <MapTileLayer style={mapStyle} />
+        {!localEvidence && <MapTileLayer style={mapStyle} />}
         <MapInvalidator />
         <FitBounds trail={endpointTrail} />
         {endpointPins.length === 2 && (

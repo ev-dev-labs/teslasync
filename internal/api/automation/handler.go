@@ -450,15 +450,19 @@ func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	var undoResults []undoActionResult
 	var reversed, skipped, failed int
+	redacted := false
 
 	for i := len(executedActions) - 1; i >= 0; i-- {
 		ea := executedActions[i]
 
 		// Only reverse successful command actions.
-		if ea.ActionType != "command" {
+		if ea.ActionType != "command" || !ea.Success || ea.Skipped {
 			continue
 		}
-		if !ea.Success {
+		if len(ea.Config) == 0 {
+			redacted = true
+			undoResults = append(undoResults, undoActionResult{Status: "skipped", Error: "reversal data is not recorded"})
+			skipped++
 			continue
 		}
 
@@ -508,6 +512,11 @@ func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
 		}
 
 		undoResults = append(undoResults, result)
+	}
+
+	if reversed == 0 && failed == 0 && (redacted || len(undoResults) == 0) {
+		writeError(w, http.StatusConflict, "the most recent execution has no recorded reversible command")
+		return
 	}
 
 	// Determine overall status.

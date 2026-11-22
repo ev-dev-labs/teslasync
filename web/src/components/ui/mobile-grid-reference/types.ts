@@ -15,7 +15,7 @@ export interface MobileRow<K extends string | number = string> {
   primary: string;
   tag?: string;
   meta: readonly MobileField[];
-  badge?: { value: string; label: string };
+  badge?: { value: string; label: string; variant?: 'neutral' | 'success' | 'warning' | 'info' | 'danger' };
   progress?: { from: number; to: number; label: string };
   rawLabel?: string;
   /** Every source field, including summary-hidden fields, must be reachable on activation. */

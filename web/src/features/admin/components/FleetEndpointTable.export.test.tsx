@@ -97,12 +97,13 @@ describe('FleetEndpointTable existing export serialization', () => {
       method: 'GET',
       operation: 'vehicle.data.fetch_snapshot',
       path: '/api/1/vehicles/{vehicle_id}/data',
+      category: 'Vehicle data',
       access: testCase.expectedAccess,
       auto: testCase.expectedAuto,
     }]);
     expect(await exportText('CSV')).toBe(
-      'HTTP method,Operation,API path,Access,Auto-poll\r\n'
-      + 'GET,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,'
+      'Operation,HTTP method,API path,Category,Access,Auto-poll\r\n'
+      + 'vehicle.data.fetch_snapshot,GET,/api/1/vehicles/{vehicle_id}/data,Vehicle data,'
       + `${testCase.expectedAccess ?? ''},${testCase.expectedAuto ?? ''}`,
     );
   });
@@ -116,20 +117,20 @@ describe('FleetEndpointTable existing export serialization', () => {
 
     const pollSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(pollSwitch).toHaveAttribute('aria-checked', 'true');
-    expect(pollSwitch).toHaveAttribute('aria-disabled', 'true');
-    expect(pollSwitch).toHaveAccessibleDescription(/Turn on Tesla API Polling/);
+    expect(pollSwitch).not.toHaveAttribute('aria-disabled');
+    expect(pollSwitch).toHaveAccessibleDescription(/You can still change this selection/);
     pollSwitch.focus();
     expect(pollSwitch).toHaveFocus();
     fireEvent.click(pollSwitch);
-    expect(onAuto).not.toHaveBeenCalled();
+    expect(onAuto).toHaveBeenCalledExactlyOnceWith(endpoint.key);
     expect(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' })).toBeEnabled();
     expect(JSON.parse(await exportText('JSON'))).toEqual([{
-      method: 'GET', operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data',
+      method: 'GET', operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data', category: 'Vehicle data',
       access: true, auto: true,
     }]);
     expect(await exportText('CSV')).toBe(
-      'HTTP method,Operation,API path,Access,Auto-poll\r\n'
-      + 'GET,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,true,true',
+      'Operation,HTTP method,API path,Category,Access,Auto-poll\r\n'
+      + 'vehicle.data.fetch_snapshot,GET,/api/1/vehicles/{vehicle_id}/data,Vehicle data,true,true',
     );
     expect(access[endpoint.key]).toBe(true);
     expect(auto[endpoint.key]).toBe(true);
@@ -146,7 +147,7 @@ describe('FleetEndpointTable existing export serialization', () => {
     expect(screen.getByText('fetch snapshot')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Endpoint access' })).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(2);
-    expect(screen.getAllByRole('columnheader')).toHaveLength(3);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
     const accessSwitch = screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' });
     const autoSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
     expect(accessSwitch).toHaveAttribute('aria-checked', 'true');
@@ -176,7 +177,7 @@ describe('FleetEndpointTable existing export serialization', () => {
     await exportText('JSON');
     view.rerender(<FleetEndpointTable {...props} access={configuration(false)} auto={configuration(false)} />);
     expect(JSON.parse(await exportText('JSON'))).toEqual([{
-      method: 'GET', operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data',
+      method: 'GET', operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data', category: 'Vehicle data',
       access: false, auto: false,
     }]);
     expect(screen.getAllByRole('row')).toHaveLength(2);
@@ -204,13 +205,13 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
       onEnable={onEnable} onAuto={onAuto} />);
 
     expect(JSON.parse(await exportText('JSON'))).toEqual([
-      { method: 'POST', operation: quoted.key, path: quoted.path, access: false, auto: null },
-      { method: 'GET', operation: endpoint.key, path: endpoint.path, access: true, auto: false },
+      { method: 'POST', operation: quoted.key, path: quoted.path, category: quoted.category, access: false, auto: null },
+      { method: 'GET', operation: endpoint.key, path: endpoint.path, category: endpoint.category, access: true, auto: false },
     ]);
     expect(await exportText('CSV')).toBe(
-      'HTTP method,Operation,API path,Access,Auto-poll\r\n'
-      + 'POST,"vehicle.command.""quoted"",name","/api/1/vehicles/{vehicle_id}/line\n""quoted"",route",false,\r\n'
-      + 'GET,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,true,false',
+      'Operation,HTTP method,API path,Category,Access,Auto-poll\r\n'
+      + '"vehicle.command.""quoted"",name",POST,"/api/1/vehicles/{vehicle_id}/line\n""quoted"",route",Synthetic descriptor only,false,\r\n'
+      + 'vehicle.data.fetch_snapshot,GET,/api/1/vehicles/{vehicle_id}/data,Vehicle data,true,false',
     );
     expect(onEnable).not.toHaveBeenCalled();
     expect(onAuto).not.toHaveBeenCalled();
@@ -242,10 +243,11 @@ describe('FleetEndpointTable retained export matrix continuation', () => {
       tableId={tableId} onEnable={vi.fn()} onAuto={vi.fn()} />);
 
     expect(JSON.parse(await exportText('JSON'))).toEqual([{
-      auto: false, operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data', access: false, method: 'GET',
+      auto: false, operation: 'vehicle.data.fetch_snapshot', path: '/api/1/vehicles/{vehicle_id}/data',
+      access: false, method: 'GET', category: 'Vehicle data',
     }]);
     expect(await exportText('CSV')).toBe(
-      'Operation,API path,Access,Auto-poll,HTTP method\r\nvehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,false,false,GET',
+      'Operation,HTTP method,API path,Category,Access,Auto-poll\r\nvehicle.data.fetch_snapshot,GET,/api/1/vehicles/{vehicle_id}/data,Vehicle data,false,false',
     );
     expect(localStorage.getItem(layoutKey)).toBe(JSON.stringify(layout));
     expect(settings).toEqual({

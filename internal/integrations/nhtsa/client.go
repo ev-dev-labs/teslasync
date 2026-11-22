@@ -232,7 +232,7 @@ func (c *Client) DecodeVIN(ctx context.Context, vin string, opts FetchOptions) (
 }
 
 type recallEnvelope struct {
-	Count   int `json:"Count"`
+	Count   *int `json:"Count"`
 	Results []struct {
 		Manufacturer       string `json:"Manufacturer"`
 		CampaignNumber     string `json:"NHTSACampaignNumber"`
@@ -296,7 +296,8 @@ func (c *Client) Recalls(ctx context.Context, query VehicleQuery, opts FetchOpti
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return RecallResult{}, newUpstreamError("recalls", ErrorKindMalformed, 0, ErrMalformedResponse)
 	}
-	if envelope.Count < 0 || len(envelope.Results) > maxRecallRecords {
+	if envelope.Count == nil || envelope.Results == nil || *envelope.Count != len(envelope.Results) ||
+		len(envelope.Results) > maxRecallRecords {
 		return RecallResult{}, newUpstreamError("recalls", ErrorKindMalformed, 0, ErrMalformedResponse)
 	}
 

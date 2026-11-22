@@ -101,6 +101,13 @@ describe('sidebar collections', () => {
       .toEqual(flattenSidebarItems(reports.items, groups).map(entry => entry.to))
   })
 
+  it('groups the available smart notification areas under Notifications', () => {
+    const section = collectionSidebarSections(navSections, groups).find(item => item.title === 'Notifications')!
+    const [smart] = groupSidebarItems(section.items, groups)
+    expect(smart?.label).toBe('Smart notifications')
+    expect(smart?.entries.map(item => item.to)).toEqual(['/settings/smart-commute', '/settings/smart-charging', '/settings/smart-features'])
+  })
+
   it('keeps pinned pages in the flat list: pins bookmark, they never relocate', () => {
     const sections = collectionSidebarSections(navSections, groups)
     const driving = sections.find(section => section.title === 'Driving')!

@@ -1,0 +1,1 @@
+DROP TABLE smart_commute_navigation_attempts;

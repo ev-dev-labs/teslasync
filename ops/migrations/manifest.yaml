@@ -566,3 +566,873 @@ migrations:
     # Automated implementation review only; not human approval.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-11-10"
+
+  - version: 259
+    name: smart_commute
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated, default-off subject-scoped tables; previous binaries ignore them.
+    rollback_notes: Leave applied on application rollback. Explicit down deletes private routines and consent; export only with the owner's authorization before dropping them.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; foreign-key creation briefly locks the existing vehicles table.
+    reversible: false
+    irreversible_justification: Explicit down removes user-confirmed routines and decisions that cannot be reconstructed from source drives.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 260
+    name: smart_charging_readiness
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated per-subject charging plans and short-lived decisions. Previous binaries ignore both tables.
+    rollback_notes: Leave applied on application rollback. Explicit down deletes private plans and decisions; export only with the owner's authorization before dropping them.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; foreign-key creation briefly locks the existing vehicles and geofences tables.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered trip estimates and decisions that cannot be reconstructed from source telemetry.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 261
+    name: smart_charging_slow_samples
+    forward_compatible: true
+    forward_compatibility_notes: Adds an isolated sampling table; previous binaries ignore it and continue evaluating existing readiness decisions.
+    rollback_notes: Leave applied on application rollback. Explicit down removes only short-lived sampling state; it does not delete plans or source telemetry.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates an empty table and primary key index; foreign-key creation briefly locks the existing charging plans table.
+    reversible: true
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 262
+    name: smart_charging_site_rate_consent
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore the new default-off comparison consent and preserve it on plan updates.
+    rollback_notes: Leave applied on application rollback. Explicit down removes only the per-plan price-comparison consent.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: A brief ACCESS EXCLUSIVE metadata lock adds a boolean with a constant default without rewriting existing rows.
+    reversible: false
+    irreversible_justification: Explicit down deletes price-comparison opt-ins, which must be obtained again rather than inferred.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 263
+    name: smart_personal_push
+    forward_compatible: true
+    forward_compatibility_notes: Adds isolated personal-device and dispatch-attempt tables ignored by earlier binaries.
+    rollback_notes: Leave applied on application rollback. Explicit down removes verified devices and delivery deduplication state; users must enroll again.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Creates empty tables and indexes; a foreign key briefly locks the existing charging plans table.
+    reversible: false
+    irreversible_justification: Explicit down removes user-enrolled device bindings and delivery history that cannot safely be reconstructed.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 264
+    name: smart_charging_trip_legs
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries ignore leg details and cannot correctly evaluate destination charging or trip-review decisions; pause affected plans before running an older binary.
+    requires_downtime: true
+    rollback_notes: Pause affected plans before rolling back application binaries. Explicit down removes leg estimates and invalidates trip-review delivery tokens without deleting source telemetry.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Adds columns and replaces checks under brief ACCESS EXCLUSIVE locks; validation scans charging plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered leg estimates, destination-charging assumptions, and derived trip-review delivery tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 265
+    name: smart_charging_scheduled_start
+    forward_compatible: false
+    forward_compatibility_notes: Earlier workers cannot evaluate the schedule-conflict kind; stop them before enabling the new behavior.
+    requires_downtime: true
+    rollback_notes: Stop readiness workers and pause plans with an intended start before running an older binary. Leave schema applied to preserve the user-entered start times.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Adds two nullable columns and replaces checks. The transactional migration can hold ACCESS EXCLUSIVE locks through validation scans of plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down deletes user-entered intended starts and invalidates derived schedule-conflict delivery tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 266
+    name: smart_charging_schedule_power_ceiling
+    forward_compatible: false
+    forward_compatibility_notes: An older API can drop the ceiling when replacing a plan; stop readiness workers and pause affected plans before running older binaries.
+    requires_downtime: true
+    rollback_notes: Leave the schema applied to preserve the user-entered site power ceilings.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Adds a nullable column and validates a plan check. The transactional migration can hold ACCESS EXCLUSIVE on plans through the validation scan.
+    reversible: false
+    irreversible_justification: Explicit down removes the optional power ceilings and invalidates derived pre-departure schedule conflict tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 267
+    name: smart_departure_overlap
+    forward_compatible: false
+    forward_compatibility_notes: Older APIs can overwrite plans without the conflict windows; older workers cannot evaluate the departure overlap kind.
+    requires_downtime: true
+    rollback_notes: Stop readiness workers and pause plans with departure windows before running older binaries. Preserve the applied schema if the entered windows are needed.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Adds window and opt-in columns and replaces checks. The transactional migration can hold ACCESS EXCLUSIVE locks through validation scans of plans, decisions, and delivery attempts.
+    reversible: false
+    irreversible_justification: Explicit down removes user-entered windows and their derived decisions and delivery tokens.
+    # Automated implementation review only; not human approval.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-19"
+
+  - version: 268
+    name: smart_commute_traffic_consent
+    forward_compatible: false
+    forward_compatibility_notes: Older API versions cannot revoke the reviewed traces when Smart Commute settings or routines are edited.
+    requires_downtime: true
+    rollback_notes: Stop commute processing before using older API versions. If settings were modified with an older API, roll down this migration and require fresh explicit consent before restoring traffic processing.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Creates an empty table and an index on it. Foreign key creation takes a short lock on the referenced routine table.
+    reversible: false
+    irreversible_justification: Explicit down deletes approved representative traces and their consent state; the source drives are not affected.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 269
+    name: smart_commute_personal_push
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries do not revoke commute delivery on re-enrollment or count commute attempts in the shared push budget.
+    requires_downtime: true
+    rollback_notes: Stop notification workers and roll down before starting older API or worker binaries. Commute delivery must be separately opted into again after reapplying.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: The transactional ALTER and unique index can hold write-blocking locks while scanning the existing device registry. The attempts table is new and empty.
+    reversible: false
+    irreversible_justification: Explicit down deletes commute browser preferences and attempt history; it retains charging preferences and traffic consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 270
+    name: smart_commute_arrival_deadline
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries cannot display deadline decisions and could mislabel a slower alternative as faster.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and roll down before starting older API or worker binaries. Users can re-enter deadlines after reapplying; traffic consent and regular comparisons are preserved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes acquire exclusive locks and validate the replacement constraint against the short-lived decisions table.
+    reversible: false
+    irreversible_justification: Explicit down deletes the optional deadlines and their derived decisions.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 271
+    name: smart_charging_site_performance
+    forward_compatible: true
+    forward_compatibility_notes: The opt-in table is additive. Site changes invalidate the opt-in by updating the stored place revision.
+    rollback_notes: Leave applied for an application rollback. Down clears these opt-ins without deleting charging history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the empty table briefly lock the referenced vehicle and place tables.
+    reversible: false
+    irreversible_justification: Explicit down deletes site-specific analysis consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 272
+    name: smart_commute_route_energy
+    forward_compatible: false
+    forward_compatibility_notes: Older binaries cannot interpret energy-only comparisons and could mislabel a slower route as faster.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and roll down before starting older API or worker binaries. Users can re-enable local route-energy comparison after reapplying; ordinary traffic consent and decisions are preserved.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes acquire exclusive locks and validate the replacement constraint against the short-lived decisions table.
+    reversible: false
+    irreversible_justification: Explicit down removes route-energy consent and derived comparison evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 273
+    name: type_commute_route_energy_evidence
+    forward_compatible: false
+    forward_compatibility_notes: The previous application queries the removed JSONB column. Upgrade the worker and API together with the schema.
+    requires_downtime: true
+    rollback_notes: Stop commute processing and apply down before starting the previous version. Down reconstructs the evidence without deleting comparisons.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Transactional changes convert short-lived decisions and validate constraints while holding an exclusive lock.
+    reversible: true
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 274
+    name: smart_public_charging_fee_terms
+    forward_compatible: true
+    forward_compatibility_notes: The private opt-in and reviewed terms are additive and ignored by older binaries.
+    rollback_notes: Leave applied for an application rollback. Explicit down deletes public charging fee terms without changing charging history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the empty table briefly lock the referenced vehicle and place tables.
+    reversible: false
+    irreversible_justification: Explicit down deletes site-specific terms and consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 275
+    name: smart_solar_charging
+    forward_compatible: true
+    forward_compatibility_notes: Older binaries ignore the additive private solar grants, charging consent and samples.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes the private read-only energy grants, solar consent and derived samples.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock the referenced places and vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes encrypted energy grants, solar charging opt-ins and transient observations.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 276
+    name: smart_trip_charging_stops
+    forward_compatible: true
+    forward_compatibility_notes: Older binaries ignore the additive private stop comparison consent and results.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes comparison setup, entered waits and derived results, not trip or charging history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on empty tables briefly lock the referenced plans and places.
+    reversible: false
+    irreversible_justification: Explicit down deletes stop-comparison consent and manually supplied queue observations.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 277
+    name: smart_trip_reviews
+    forward_compatible: true
+    forward_compatibility_notes: The private snapshots and adjustment drafts are additive and ignored by earlier binaries.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes snapshots and adjustments but preserves trips and drives.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock the referenced plans, journeys and places.
+    reversible: false
+    irreversible_justification: Explicit down deletes private baseline and adjustment drafts.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 278
+    name: smart_warranty_reminders
+    forward_compatible: true
+    forward_compatibility_notes: Previous binaries ignore the additive, opt-in reminders table.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes consent and projections, not the registered warranties.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty reminder table briefly locks vehicle_warranties.
+    reversible: false
+    irreversible_justification: Explicit down deletes reminder consent and projections.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 279
+    name: smart_trip_maintenance
+    forward_compatible: true
+    forward_compatibility_notes: Earlier binaries ignore the opt-in table and continue to version and delete charging plans.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes consent, entered trip assumptions and estimates, not charging plans or drives.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty opt-in table briefly locks smart_charging_plans.
+    reversible: false
+    irreversible_justification: Explicit down deletes private trip maintenance setup and evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 280
+    name: smart_cold_tire_reviews
+    forward_compatible: true
+    forward_compatibility_notes: Private gauge observations and results are additive and ignored by earlier binaries.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes private gauge series but leaves TPMS history intact.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty review table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private gauge measurements and derived results.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 281
+    name: smart_recall_watch
+    forward_compatible: true
+    forward_compatibility_notes: Private recall consents and normalized matches are additive.
+    rollback_notes: Leave applied for an application rollback. Down clears private subscriptions and matches only.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty watch table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private recall subscriptions and their matches.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 282
+    name: smart_service_cases
+    forward_compatible: true
+    forward_compatibility_notes: Case drafts and manually selected evidence are additive.
+    rollback_notes: Leave applied for an application rollback. Down deletes private cases and their evidence only.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty case table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes user-authored case drafts and notes.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 283
+    name: smart_cabin_prep
+    forward_compatible: true
+    forward_compatibility_notes: Confirmed one-departure cabin plans are additive and default off.
+    rollback_notes: Leave applied for an application rollback. Down clears only cabin reminders and opt-ins.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock vehicles and verified push devices.
+    reversible: false
+    irreversible_justification: Explicit down deletes private cabin preparation preferences and reminders.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 284
+    name: smart_climate_schedule
+    forward_compatible: true
+    forward_compatibility_notes: Adds private opt-ins and evidence for existing climate automation outcomes; old workers continue their original history writes.
+    rollback_notes: Leave applied for an application rollback. Down clears only private climate review preferences and receipts.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock vehicles, automations, and automation_history.
+    reversible: false
+    irreversible_justification: Explicit down deletes private schedule opt-ins and their attributable evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 285
+    name: smart_park_reserve
+    forward_compatible: true
+    forward_compatibility_notes: Adds private parked-reserve plans and derived estimates; existing battery telemetry and alerts are unchanged.
+    rollback_notes: Leave applied for an application rollback. Down clears only private park plans and their estimates.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes the return time and reserve preferences for private plans.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 286
+    name: smart_overnight_drain
+    forward_compatible: true
+    forward_compatibility_notes: Adds private overnight reviews; existing battery telemetry and alerts remain unchanged.
+    rollback_notes: Leave applied for an application rollback. Down clears only private overnight consent and derived reviews.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private overnight review preferences and derived evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 287
+    name: smart_capacity_trend
+    forward_compatible: true
+    forward_compatibility_notes: Adds private monthly digest consent and derived capacity ranges; source charge history stays unchanged.
+    rollback_notes: Leave applied for an application rollback. Down clears only private monthly capacity plans and derived digests.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes monthly capacity review preferences and derived digests.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 288
+    name: smart_window_rain
+    forward_compatible: true
+    forward_compatibility_notes: Adds private outdoor park watches and dedicated personal-delivery records without changing telemetry or alerts.
+    rollback_notes: Leave applied for application rollback. Down clears only private watch settings and delivery claims.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty watch table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private parking consent and delivery deduplication records.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 289
+    name: smart_parked_closure
+    forward_compatible: true
+    forward_compatibility_notes: Adds private parked-closure consent, evidence and delivery deduplication without changing telemetry.
+    rollback_notes: Leave applied for application rollback. Down clears only private closure settings and delivery claims.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty settings table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private parked-closure preferences and delivery deduplication.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 290
+    name: smart_parked_unlock
+    forward_compatible: true
+    forward_compatibility_notes: Adds private monitored-place consent, derived unlock evidence and delivery deduplication without changing telemetry.
+    rollback_notes: Leave applied for application rollback. Down clears only private unlock settings and delivery claims.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the new empty settings table briefly lock vehicles and geofences.
+    reversible: false
+    irreversible_justification: Explicit down deletes private parked-unlock preferences and delivery deduplication.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 291
+    name: smart_software_window
+    forward_compatible: true
+    forward_compatibility_notes: Adds private software review preferences without changing software history or vehicle commands.
+    rollback_notes: Leave applied for application rollback. Down clears only private software review plans.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty review table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private software update and departure confirmations.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 292
+    name: smart_media_playlists
+    forward_compatible: true
+    forward_compatibility_notes: Adds private playlist previews and encrypted authorization without changing telemetry or media history.
+    rollback_notes: Leave applied for application rollback. Down clears only private local previews, outcomes and connector grants.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the new empty preview table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes playlist review evidence and authorization. It does not change Spotify playlists.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 293
+    name: smart_journey_soundtracks
+    forward_compatible: true
+    forward_compatibility_notes: Adds private consent for a specific completed journey. Does not change driving or playback history.
+    rollback_notes: Leave applied for application rollback. Down clears only private soundtrack review consent.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the empty table briefly lock vehicles and journey_sessions.
+    reversible: false
+    irreversible_justification: Explicit down deletes the subject-bound review preferences.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 294
+    name: smart_drive_track_reviews
+    forward_compatible: true
+    forward_compatibility_notes: Adds private lookup consent and encrypted Spotify library grants without changing drive or playback history.
+    rollback_notes: Leave applied for application rollback. Down clears only private lookup selections, grants and outcomes.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on the empty table briefly lock vehicles and drives.
+    reversible: false
+    irreversible_justification: Explicit down deletes local private reviews, not tracks saved in Spotify.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 295
+    name: smart_episode_reviews
+    forward_compatible: true
+    forward_compatibility_notes: Adds temporary private episode progress reviews without changing driving or telemetry history.
+    rollback_notes: Leave applied for an application rollback. Down clears only private episode selections and unused OAuth state.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private episode progress and associated drive estimates.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 296
+    name: smart_favorite_digests
+    forward_compatible: true
+    forward_compatibility_notes: Adds private weekly shortlist plans, bounded occurrence evidence and explicit local favorite choices.
+    rollback_notes: Leave applied for an application rollback. Down clears these private preferences without touching playback or drive history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private digest consent, suggestions and confirmed favorites.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 297
+    name: charging_invoice_variance_evidence
+    forward_compatible: true
+    forward_compatibility_notes: Adds optional invoice evidence and conservative component coverage; existing invoices and older writers remain opted out.
+    rollback_notes: Leave applied for an application rollback. Explicit down removes variance evidence and component coverage, not invoices or telemetry.
+    expected_duration: <1s at typical private invoice volume
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: ALTER TABLE obtains access-exclusive locks and validates checks on the two invoice tables.
+    reversible: false
+    irreversible_justification: Explicit down deletes optional reconciliation evidence and review consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 298
+    name: smart_charging_cost_digests
+    forward_compatible: true
+    forward_compatibility_notes: Adds private charging cost plans and monthly digests without changing existing charges or invoices.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears just this family's settings and derived digests.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private digest settings and summaries.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 299
+    name: smart_monthly_tariff_reviews
+    forward_compatible: true
+    forward_compatibility_notes: Adds private monthly tariff plans and replay summaries without modifying utility plans, bills or charging sessions.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears only monthly tariff consent and derived summaries.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private monthly tariff consent and derived summaries.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 300
+    name: smart_mileage_term_reviews
+    forward_compatible: true
+    forward_compatibility_notes: Adds private allowance terms and summaries without changing vehicles, drive history or browser-local budgets.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears only private monthly mileage terms and derived digests.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty plan table briefly locks vehicles.
+    reversible: false
+    irreversible_justification: Explicit down deletes private mileage consent and derived summaries.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 301
+    name: smart_trip_packets
+    forward_compatible: true
+    forward_compatibility_notes: Adds private packet consent, explicit classifications and receipt references without modifying drive history or legacy browser categories.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears only private packet settings, purpose tags and receipt associations.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on empty packet tables briefly lock vehicles and drives.
+    reversible: false
+    irreversible_justification: Explicit down deletes private owner-confirmed packet records and receipt associations.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 302
+    name: smart_subscription_renewals
+    forward_compatible: true
+    forward_compatibility_notes: Adds private renewal plans and dated occurrences with durable inbox identity, without modifying subscriptions or telemetry.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears only renewal settings and occurrence metadata.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A foreign key on the empty plan table briefly locks vehicle_subscriptions.
+    reversible: false
+    irreversible_justification: Explicit down deletes private renewal consent and review occurrences.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 303
+    name: smart_weekly_drive_efficiency
+    forward_compatible: true
+    forward_compatibility_notes: Adds private weekly plans and comparison bounds without changing existing drive or signal history.
+    rollback_notes: Leave applied for an application rollback. Explicit down clears only consenting plans and private digest evidence.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Foreign keys on new empty tables briefly lock vehicles and drives.
+    reversible: false
+    irreversible_justification: Explicit down deletes private efficiency consent and derived digest evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 304
+    name: charging_invoice_review_clear
+    forward_compatible: true
+    forward_compatibility_notes: Adds a default-false marker distinguishing explicitly cleared checks from legacy invoice audits. Imported amounts and dispute history are unchanged.
+    rollback_notes: Keep the marker and a reader that honors it if cleared statements must remain excluded from automatic comparisons. Down loses this distinction; removed review input cannot be restored by rollback.
+    expected_duration: <1s on small installations; check validation scales with invoice count
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: ADD COLUMN and the consistency check take a table lock on charging_invoices; verify available downtime for a large statement register.
+    reversible: false
+    irreversible_justification: Explicit down loses the record of which reviews were cleared, but does not restore any removed evidence.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 305
+    name: smart_commute_navigation_attempts
+    forward_compatible: true
+    forward_compatibility_notes: Adds private navigation attempt fences without modifying existing routines, evidence or commands.
+    rollback_notes: Leave applied on application rollback. Do not remove the fences while any version that can send commute navigation is serving requests.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: The foreign key on the new empty table briefly locks smart_commute_routines.
+    reversible: false
+    irreversible_justification: Explicit down loses durable deduplication and outcome history for the latest occurrence per routine.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 306
+    name: smart_commute_comparison_evidence
+    forward_compatible: true
+    forward_compatibility_notes: Adds optional road labels and an indexed drive-overlap predicate without changing existing comparisons, routines, or attempt fences.
+    rollback_notes: Roll back the application before removing these columns and the predicate. Keep migration 305 and its navigation fences in place.
+    expected_duration: <1s under normal lock availability
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Adding two nullable columns briefly takes an exclusive table lock without rewriting comparison rows. The read-only function uses the existing vehicle/start and vehicle/end indexes.
+    reversible: false
+    irreversible_justification: Explicit down drops only short-lived provider road labels. It preserves all comparison timings, settings, source drives, and navigation outcomes.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 307
+    name: smart_departure_conflict_delivery
+    forward_compatible: true
+    forward_compatibility_notes: Adds separate short-lived overlap decisions. Older binaries retain their single-row readiness decision path and use untargeted delivery deduplication.
+    rollback_notes: Roll back the application before removing the new view and conflict decisions. Keep the delivery family index and both existing attempts so rollback and re-upgrade cannot replay an already attempted conflict.
+    expected_duration: A few seconds for the readiness rows and push history; measure the index build before a busy installation upgrades.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Builds the new unique index before replacing the old uniqueness constraint; the index build blocks concurrent push reservations. Schedule during a quiet period if delivery history is large.
+    reversible: false
+    irreversible_justification: Explicit down clears separate short-lived derived conflict decisions and intentionally preserves their delivery deduplication.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 308
+    name: smart_trip_evidence_provenance
+    forward_compatible: true
+    forward_compatibility_notes: Adds optional stop count and arrival proof. Older binaries ignore them; comparisons need renewed consent where the original stop count cannot be verified.
+    rollback_notes: Leave applied on application rollback to retain consent and proof markers. Stop external trip routing before reverting to a binary that cannot check the full station set.
+    expected_duration: <1s under normal lock availability
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Three small personal tables take brief exclusive schema locks; PostgreSQL stores the constant boolean default without rewriting rows.
+    reversible: false
+    irreversible_justification: Explicit down retains original plans, recorded evidence, and allowances but loses their new consent and observation provenance markers.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 309
+    name: warranty_start_odometer_proof
+    forward_compatible: true
+    forward_compatibility_notes: Adds explicit proof for a recorded zero start odometer. Positive legacy records remain usable; older writers cannot create this proof.
+    rollback_notes: Keep the column on application rollback. Older evaluators cannot distinguish an unknown baseline from zero; disable mileage reminder evaluation before reverting to one.
+    expected_duration: <1s under normal lock availability
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: A constant default adds a column without rewriting the warranty table; PostgreSQL takes a brief exclusive schema lock.
+    reversible: false
+    irreversible_justification: Explicit down drops proof of recorded zeroes, not the underlying warranty or source records. Zeroes need new confirmation after re-upgrade.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 310
+    name: smart_battery_evidence_fingerprints
+    forward_compatible: true
+    forward_compatibility_notes: Adds nullable fingerprints. Results written by older workers remain stored but are not shown by the new application.
+    rollback_notes: Leave applied on application rollback. Explicit down and re-up suppress existing results until newly evaluated; plans and measurements are unchanged.
+    expected_duration: <1s on the bounded private result tables
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Both private result tables briefly take exclusive schema locks when adding and checking a nullable column.
+    reversible: false
+    irreversible_justification: Explicit down removes proof that retained results still match the observations originally used.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 311
+    name: wake_request_evidence
+    forward_compatible: true
+    forward_compatibility_notes: Adds an optional request timestamp. Older binaries keep writing completion-only history without asserting request-time evidence.
+    rollback_notes: Leave applied on application rollback. Older commands remain visible in history but do not qualify as request-time evidence after re-upgrade.
+    expected_duration: Depends on command log size; measure the index build before a busy installation upgrades.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: The additive column takes an exclusive schema lock and the partial index scans the legacy table. Schedule while command writes can wait.
+    reversible: false
+    irreversible_justification: Explicit down drops request timestamps, leaving the commands and their original completion history intact.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 312
+    name: window_rain_park_anchor
+    forward_compatible: false
+    requires_downtime: true
+    rollback_notes: Stop both the window-rain API and worker during the upgrade. On application rollback leave the constraint in place and keep the watch unavailable until the application supports anchors again.
+    expected_duration: A few seconds on the bounded private watch table under normal lock availability.
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: Updates unanchored active watches and validates a check under an exclusive schema lock. Older writers cannot arm a watch that satisfies the new anchor.
+    reversible: false
+    irreversible_justification: Existing active watches lose their coarse location and require fresh outdoor consent. Down does not recreate those locations or watches.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 313
+    name: smart_charging_early_stop
+    forward_compatible: true
+    forward_compatibility_notes: Adds default-off consent, nullable interruption evidence and a distinct occurrence family. Older binaries ignore the new consent and cannot dispatch early-stop advice.
+    rollback_notes: Prefer application rollback with schema retained. Explicit down withdraws early-stop tokens and clears this opt-in without changing other plans or attempts.
+    expected_duration: A few seconds on private decision and attempt tables; depends on index size and available locks.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Schema constraints take exclusive locks; the private delivery occurrence index is rebuilt.
+    reversible: false
+    irreversible_justification: Explicit down intentionally discards early-stop consent, evidence and delivery attempts.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 314
+    name: smart_backup_charging
+    forward_compatible: true
+    forward_compatibility_notes: Creates empty opt-in watch and delivery tables. Older binaries do not write either table.
+    rollback_notes: Retain empty or inactive tables on application rollback; explicit down removes private watches and invalidates their tokens.
+    expected_duration: A few seconds under normal lock availability on referenced tables.
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: New tables and indexes are empty; foreign keys and the device-consent trigger briefly lock referenced tables.
+    reversible: false
+    irreversible_justification: Explicit down drops private outage watches and delivery attempts; they must not be reconstructed automatically.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 315
+    name: automation_history_revision
+    forward_compatible: true
+    forward_compatibility_notes: Adds nullable provenance without rewriting execution history. Older binaries ignore it; unproven runs are excluded only from the new repeated-failure card.
+    rollback_notes: Retain the column for application rollback. Explicit down drops revision provenance only, preserving outcomes and history.
+    expected_duration: A brief metadata change; waits for an exclusive lock on automation_history.
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: No backfill or new index. ALTER TABLE briefly acquires an exclusive lock.
+    reversible: false
+    irreversible_justification: A down/up round trip cannot safely reconstruct which rule revision a historical execution actually evaluated.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 316
+    name: smart_shared_charger
+    forward_compatible: true
+    forward_compatibility_notes: Adds private charger plan, consent, and reminder tables that older binaries do not use.
+    rollback_notes: Leave the tables in place on application rollback. Explicit down removes only the scoped plans, confirmations, and single in-app occurrences.
+    expected_duration: A brief schema change with no backfill.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Foreign keys briefly lock vehicles and geofences. New indexes and checks are built on empty tables.
+    reversible: false
+    irreversible_justification: Explicit down drops shared charger plans and participant confirmations; they must never be reconstructed without consent.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 317
+    name: smart_shared_trip
+    forward_compatible: true
+    forward_compatibility_notes: Adds scoped plans and consent entries without changing existing trip or vehicle data.
+    rollback_notes: Leave the tables when rolling back the app. Explicit down drops comparison scopes and consent entries only.
+    expected_duration: A brief schema change with no backfill.
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: The vehicle foreign key takes a brief referenced-table lock. New indexes and checks are built on empty tables.
+    reversible: false
+    irreversible_justification: Explicit down removes scoped trip grants and confirmation evidence; require new consent if re-enabled.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 318
+    name: here_estimate_health
+    forward_compatible: true
+    forward_compatibility_notes: Adds private provider-health tables and a predicate without changing the existing shared incident schema.
+    rollback_notes: Older binaries cannot read the private notices but do not enforce the new estimate fences. Stop readers before explicit down.
+    expected_duration: A brief schema change; two new tables, three initial feed rows, and no existing data rewrite.
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Schema objects and indexes are new. No existing table is locked for a rewrite.
+    reversible: false
+    irreversible_justification: Explicit down drops private upstream transition history and recovery fencing; prior outages cannot be reconstructed.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-20"
+
+  - version: 319
+    name: smart_feature_preferences
+    forward_compatible: true
+    forward_compatibility_notes: Adds preferences and work fence timestamps without changing existing setup. Workers and API replicas must all be upgraded before relying on pauses.
+    rollback_notes: Keep this migration applied on binary rollback; older binaries do not enforce feature pauses. Explicit down removes the preferences and fence timestamps.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: low
+    lock_details: Brief access-exclusive locks for additive columns. Push timestamp columns use a stable statement-time default, so PostgreSQL can add them without data rewrites.
+    reversible: false
+    irreversible_justification: Explicit down drops account-level feature preferences.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-11-21"

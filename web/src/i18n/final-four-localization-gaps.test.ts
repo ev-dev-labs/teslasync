@@ -198,7 +198,8 @@ describe('final four genuine localization gaps — production source contracts',
     expect(option(call, 'defaultValue', source)).toBe("'Try again in {{seconds}}s'")
     expect(source.text).toContain('const retryReady = secondsLeft <= 0;')
     expect(source.text).toContain('{!retryReady && (')
-    expect(source.text).toContain('{onRetry && retryReady && (')
+    expect(source.text).toContain('const showRetry = retryReady && onRetry != null;')
+    expect(source.text).toContain('{showRetry && (')
     expect(source.text).toContain('onClick={onRetry}')
   })
 

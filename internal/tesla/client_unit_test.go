@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -314,6 +315,49 @@ func TestSendCommandKnownSuccess(t *testing.T) {
 		if err != nil {
 			t.Errorf("SendCommand(%q) error = %v", cmd, err)
 		}
+	}
+}
+
+func TestSendCommandPreservesProxyResponseInterruption(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusBadGateway} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			headers := make(chan struct{})
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(status)
+				w.(http.Flusher).Flush()
+				<-r.Context().Done()
+			}))
+			defer server.Close()
+
+			client := newTestClient(server)
+			client.commandProxyURL = server.URL
+			baseTransport := client.proxyClient.Transport
+			client.proxyClient.Transport = vehicleManagementRoundTripFunc(func(request *http.Request) (*http.Response, error) {
+				response, err := baseTransport.RoundTrip(request)
+				if err == nil {
+					close(headers)
+				}
+				return response, err
+			})
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			finished := make(chan error, 1)
+			go func() { finished <- client.SendCommand(ctx, "TESTVIN1", "lock", nil) }()
+			select {
+			case <-headers:
+			case <-ctx.Done():
+				t.Fatal("proxy did not send response headers")
+			}
+			cancel()
+			err := <-finished
+			if status == http.StatusOK {
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("SendCommand error = %v, want context cancellation", err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), "HTTP 502") {
+				t.Fatalf("SendCommand error = %v, want proxy rejection", err)
+			}
+		})
 	}
 }
 

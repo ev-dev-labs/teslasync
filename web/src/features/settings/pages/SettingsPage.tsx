@@ -121,14 +121,16 @@ export default function SettingsPage() {
   const settingsLeaseKey = 'settings/general'
   useEditLease(settingsLeaseKey)
 
-  // Legacy /settings#ai → /integrations/helix redirect. Fires before the
-  // hash-anchor scroll effect below so #ai never resolves to a missing
-  // section. Replaces history so the back button skips the stale entry.
+  // Keep old deep links working after their sections move to dedicated pages.
   useEffect(() => {
     if (location.hash === '#ai') {
       navigate('/integrations/helix', { replace: true })
+    } else if (location.hash === '#smart-commute') {
+      navigate({ pathname: '/settings/smart-commute', search: location.search }, { replace: true })
+    } else if (location.hash === '#smart-charging') {
+      navigate({ pathname: '/settings/smart-charging', search: location.search }, { replace: true })
     }
-  }, [location.hash, navigate])
+  }, [location.hash, location.search, navigate])
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
@@ -257,6 +259,12 @@ export default function SettingsPage() {
                 <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
                   <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
                   <div className="grid grid-cols-settings-shortcuts gap-4">
+                    <SettingsActionCard
+                      href="/settings/smart-features"
+                      icon={<Icon icon={Zap} size="lg" />}
+                      title={t('settings.smartFeatures.title', 'Smart Features')}
+                      description={t('settings.smartFeatures.subtitle', 'Allow or pause individual recommendations and reminders.')}
+                    />
                     <SettingsActionCard
                       href="/data-export"
                       iconColor="green"

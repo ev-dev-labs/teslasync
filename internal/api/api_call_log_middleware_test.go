@@ -178,6 +178,108 @@ func newTestRouterWithLogger(t *testing.T, store APICallLogger, captureBodies bo
 	return r
 }
 
+func TestPersonalRecommendationBodiesAreNeverCaptured(t *testing.T) {
+	for _, path := range []string{
+		"/api/v1/smart-commute",
+		"/api/v1/smart-commute/routines/123",
+		"/api/v1/smart-commute/routines/123/navigation",
+		"/api/v1/smart-charging/plans",
+		"/api/v1/smart-charging/plans/123/snooze",
+		"/api/v1/smart-delivery/devices",
+		"/api/v1/smart-delivery/devices/123/verify",
+		"/api/v1/action-center",
+		"/api/v1/action-center/ac_example/history",
+		"/api/v1/media/playlist-review",
+		"/api/v1/media/playlist-review/save",
+		"/api/v1/media/journey-soundtrack/42",
+		"/api/v1/media/drive-track/42/spotify/save",
+		"/api/v1/media/episode-review",
+		"/api/v1/media/favorite-digest",
+		"/api/v1/media/spotify/connection",
+		"/api/v1/charging-reconciliation/invoices",
+		"/api/v1/charging-reconciliation/invoices/123/report",
+		"/api/v1/charging-reconciliation/invoices/123/review",
+		"/api/v1/charging-reconciliation/invoices/123/disputes",
+		"/api/v1/analytics/tco/charging-cost-digest",
+		"/api/v1/tariff-lab/monthly-review",
+		"/api/v1/tire-pressure/cold-checks",
+		"/api/v1/warranty-command/warranties/123/reminder",
+		"/api/v1/charging/park-reserve",
+		"/api/v1/battery/overnight-drain-review",
+		"/api/v1/battery/capacity-digest",
+		"/api/v1/service-intelligence/recall-watch",
+		"/api/v1/service-intelligence/service-case",
+		"/api/v1/service-intelligence/service-case/evidence/123",
+		"/api/v1/service-intelligence/service-case/preview",
+		"/api/v1/service-intelligence/service-case/export",
+		"/api/v1/climate/cabin-prep",
+		"/api/v1/climate/scheduled-review",
+		"/api/v1/security/window-rain",
+		"/api/v1/security/parked-closure",
+		"/api/v1/security/parked-unlock",
+		"/api/v1/software-updates/window-review",
+		"/api/v1/analytics/mileage-budget/review",
+		"/api/v1/ownership/trip-packet",
+		"/api/v1/subscription-roi/renewal",
+		"/api/v1/analytics/route-efficiency/weekly-digest",
+		"/api/v1/subscription-roi/subscriptions",
+	} {
+		t.Run(path, func(t *testing.T) {
+			store := &fakeAPILogStore{}
+			handler := APICallLogMiddleware(store, true, nil)(http.HandlerFunc(echoBody))
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"summary":"synthetic private address"}`))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-TeslaSync-Expected-Principal", "subject:synthetic-owner")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "synthetic private address") {
+				t.Fatalf("request was not processed normally: %d %q", rec.Code, rec.Body.String())
+			}
+			entries := store.Entries()
+			if len(entries) != 1 || entries[0].RequestBody != nil || entries[0].ResponseBody != nil {
+				t.Fatalf("personal payload was captured: %+v", entries)
+			}
+			if entries[0].RequestHeaders["X-Teslasync-Expected-Principal"] != "REDACTED" {
+				t.Fatalf("identity race guard was not redacted: %+v", entries[0].RequestHeaders)
+			}
+		})
+	}
+}
+
+func TestOAuthCallbackCredentialsAreNeverCaptured(t *testing.T) {
+	for _, callback := range []string{
+		"/api/v1/smart-charging/solar/connection/callback",
+		"/api/v1/media/spotify/callback",
+	} {
+		t.Run(callback, func(t *testing.T) { checkCallbackPrivacy(t, callback) })
+	}
+}
+
+func checkCallbackPrivacy(t *testing.T, callback string) {
+	t.Helper()
+	store := &fakeAPILogStore{}
+	handler := APICallLogMiddleware(store, true, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("code") != "synthetic-code" || r.URL.Query().Get("state") != "synthetic-state" {
+			t.Fatal("callback credentials were stripped from the request")
+		}
+		http.Redirect(w, r, "/settings/smart-charging?solar=connected", http.StatusSeeOther)
+	}))
+	req := httptest.NewRequest(http.MethodGet, callback+"?code=synthetic-code&state=synthetic-state&error_description=private-data", nil)
+	req.Header.Set("Cookie", "teslasync_solar_state=synthetic-state.7")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	entries := store.Entries()
+	if rec.Code != http.StatusSeeOther || len(entries) != 1 {
+		t.Fatalf("status=%d, entries=%d; want one logged redirect", rec.Code, len(entries))
+	}
+	entry := entries[0]
+	if entry.Endpoint != callback || entry.RequestHeaders["Cookie"] != "REDACTED" ||
+		entry.RequestBody != nil || entry.ResponseBody != nil {
+		t.Fatalf("expected a credential-free callback record: %+v", entry)
+	}
+}
+
 // T01: happy path GET /api/v1/vehicles → exactly one entry, service tag
 // "teslasync-api", correct method/endpoint/status, body fields nil when
 // capture is OFF.

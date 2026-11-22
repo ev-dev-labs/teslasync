@@ -12,8 +12,8 @@ for (const theme of ['light', 'dark'] as const) {
       const main = page.locator('main');
       const link = main.getByRole('link', { name: /Export dashboard/ });
       const linked = link.locator('[data-surface-variant="standalone"]');
-      const sibling = main.getByRole('heading', { name: 'Onboarding tour', exact: true })
-        .locator('xpath=ancestor::*[@data-surface-variant="standalone"][1]');
+      const sibling = main.getByRole('link', { name: /^Smart Features/ })
+        .locator('[data-surface-variant="standalone"]');
       await expect(linked).toBeVisible();
       await expect(sibling).toBeVisible();
       const geometry = await link.evaluate(element => {
@@ -34,9 +34,12 @@ for (const theme of ['light', 'dark'] as const) {
         body: JSON.stringify(geometry), contentType: 'application/json',
       });
       await page.screenshot({ path: test.info().outputPath(`linked-grid-${width}-${theme}.png`) });
-      const [surfaceBox, siblingBox] = await Promise.all([linked.boundingBox(), sibling.boundingBox()]);
+      const [surfaceBox, cellBox, siblingBox] = await Promise.all([
+        linked.boundingBox(), link.boundingBox(), sibling.boundingBox(),
+      ]);
       expect(surfaceBox).not.toBeNull();
       expect(siblingBox).not.toBeNull();
+      expect(surfaceBox).toEqual(cellBox);
       expect(surfaceBox!.y).toBe(siblingBox!.y);
       expect(surfaceBox!.height).toBe(siblingBox!.height);
       await assertMockApiComplete(page, mocks);

@@ -16,11 +16,13 @@ export default function PackDeliveryControls({ value, onChange, disabled }: Prop
   const invalid = !Number.isInteger(value.cooldown_s) || value.cooldown_s % 60 !== 0 || value.cooldown_s < 60 || value.cooldown_s > 604800
   return (
     <>
-        <Input id={`${id}-cooldown`} label={t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
-          aria-label={t('alertPacks.masterCooldown', 'Default cooldown (minutes)')} className="h-11"
-          error={invalid ? `${t('common.invalidNumber', 'Enter a valid number')} (1-10080)` : undefined}
-          type="number" min={1} max={10080} step={1} value={Number.isNaN(value.cooldown_s) ? '' : value.cooldown_s / 60}
-          disabled={disabled} onChange={e => onChange({ ...value, cooldown_s: e.target.value === '' ? NaN : Number(e.target.value) * 60 })} />
+        <div data-pack-default-field className="min-w-0">
+          <Input id={`${id}-cooldown`} label={t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
+            aria-label={t('alertPacks.masterCooldown', 'Default cooldown (minutes)')} className="h-11"
+            error={invalid ? `${t('common.invalidNumber', 'Enter a valid number')} (1-10080)` : undefined}
+            type="number" min={1} max={10080} step={1} value={Number.isNaN(value.cooldown_s) ? '' : value.cooldown_s / 60}
+            disabled={disabled} onChange={e => onChange({ ...value, cooldown_s: e.target.value === '' ? NaN : Number(e.target.value) * 60 })} />
+        </div>
         <Select id={`${id}-mode`} label={t('alertPacks.masterBehavior', 'Default alert behavior')}
           aria-label={t('alertPacks.masterBehavior', 'Default alert behavior')} className="h-11"
           value={value.trigger_mode} disabled={disabled}

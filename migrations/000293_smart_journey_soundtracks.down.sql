@@ -1,0 +1,1 @@
+DROP TABLE smart_journey_soundtrack_reviews;

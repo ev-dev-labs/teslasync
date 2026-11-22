@@ -618,7 +618,7 @@ describe('ConditionBuilder condition access and lookup trust', () => {
       screen.getByLabelText('Automation ID'),
     ];
     for (const control of controls) expect(control).toHaveClass('w-full', 'min-w-0');
-    const fields = screen.getByRole('combobox', { name: 'Signal' }).parentElement?.parentElement;
+    const fields = screen.getByRole('combobox', { name: 'Signal' }).closest('[data-app-part="field"]')?.parentElement;
     expect(fields).toHaveClass('grid', 'grid-cols-1', '@sm/condition:grid-cols-2', '@2xl/condition:grid-cols-4');
     expect(screen.getByRole('group', { name: 'Days' })).toBeInTheDocument();
     for (const button of screen.getAllByRole('button', { name: 'Remove condition' })) {

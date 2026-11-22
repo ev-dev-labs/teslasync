@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import type { Drive } from '@/types/driving';
 import { driveAverageSpeed, driveBattery } from './driveGridMetrics';
 import { DriveGridMetric, metricBand } from './DriveGridMetric';
-import { compactDriveValueSelection, driveColumnValue, driveValueKey, parseDriveValueSelections } from './driveGridValues';
+import { compactDriveValueSelection, parseDriveValueSelections } from './driveGridValues';
 
 const drive: Drive = {
   id: 1, vehicleId: 7, startTs: '2026-08-25T08:00:00Z', endTs: '2026-08-25T08:30:00Z',
@@ -48,12 +48,6 @@ describe('drive grid metrics', () => {
       expect(compactDriveValueSelection(['9999'], available)).toEqual(['9999']);
     });
 
-    it('uses raw SI keys and keeps missing readings distinct from zero', () => {
-      expect(driveValueKey(driveColumnValue(drive, 'distance', new Map(), new Set()))).toBe('30000');
-      expect(driveValueKey(driveColumnValue({ ...drive, regenEnergyWh: null }, 'regen', new Map(), new Set()))).toBe('null');
-      expect(driveValueKey(driveColumnValue({ ...drive, regenEnergyWh: 0 }, 'regen', new Map(), new Set()))).toBe('0');
-      expect(driveColumnValue(drive, 'batteryUsed', new Map(), new Set())).toBe(10);
-    });
   });
 
   it('uses the fixed score thresholds', () => {

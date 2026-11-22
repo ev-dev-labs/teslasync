@@ -76,6 +76,15 @@ type telemetryPayload struct {
 	Signals   []telemetrySignal      `json:"signals"`
 }
 
+func webhookSignalValue(field string, value any) any {
+	if value == nil {
+		if unavailable, ok := codec.UnavailableMediaText(field); ok {
+			return unavailable
+		}
+	}
+	return value
+}
+
 // TelemetryIngest receives Fleet Telemetry data via HTTP POST and dispatches
 // it through the unified normalize.Pipeline. The ingest
 // flow is:
@@ -162,7 +171,7 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 		emittedAt, sourceEmittedAt := timestampOrFallback(sig.Timestamp, batchEmittedAt, batchSourceEmittedAt)
 		atomics = append(atomics, codec.Atomic{
 			Field:           sig.Name,
-			Value:           sig.Value,
+			Value:           webhookSignalValue(sig.Name, sig.Value),
 			EmittedAt:       emittedAt,
 			VehicleID:       payload.VIN,
 			IngestOrigin:    codec.IngestOriginFleetTelemetryHTTP,
@@ -177,7 +186,7 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 		}
 		atomics = append(atomics, codec.Atomic{
 			Field:           k,
-			Value:           v,
+			Value:           webhookSignalValue(k, v),
 			EmittedAt:       batchEmittedAt,
 			VehicleID:       payload.VIN,
 			IngestOrigin:    codec.IngestOriginFleetTelemetryHTTP,

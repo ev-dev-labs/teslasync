@@ -15,9 +15,10 @@ import type { RoadAnomalyCandidate } from '@/types/roadAnomalies';
 
 interface RoadAnomalyPanelProps {
   driveId: string;
+  localEvidence?: boolean;
 }
 
-export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
+export function RoadAnomalyPanel({ driveId, localEvidence = false }: RoadAnomalyPanelProps) {
   const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
@@ -140,7 +141,7 @@ export function RoadAnomalyPanel({ driveId }: RoadAnomalyPanelProps) {
                   scrollWheelZoom={false}
                   className="h-full w-full"
                 >
-                  <MapTileLayer style="dark" />
+                  {!localEvidence && <MapTileLayer style="dark" />}
                   <MapInvalidator />
                   <MarkerCluster points={points} onMarkerClick={(point) => setSelectedCandidateId(String(point.id))} />
                 </MapContainer>

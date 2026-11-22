@@ -2,8 +2,8 @@ import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, use
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
-import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, GripVertical } from 'lucide-react'
+import { tableTokens } from './tableTokens'
+import { ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, AlertTriangle, GripVertical, X } from 'lucide-react'
 import { Pagination, type PaginationProps } from './Pagination'
 import { Button } from './Button'
 import { Select } from './Select'
@@ -16,17 +16,24 @@ import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableHeaderFilter } from './DataTableHeaderFilter'
 import { DataTableValueFilter } from './DataTableValueFilter'
+import { DataTableQueryPicker } from './DataTableQueryPicker'
+import { DataTableQuickFilter, MAX_QUICK_FILTER_VALUES } from './DataTableQuickFilter'
+import { DataTableSortControls } from './DataTableSortControls'
+import { DataTableComparison, type GridComparisonField } from './DataTableComparison'
+import { DataTableSavedViews, type GridView } from './DataTableSavedViews'
 import {
   buildTableFilterValues, compactTableValueSelection, matchesTableValueSelection,
-  selectedTableValueKeys, type TableRawValue, type TableValueSelections,
+  parseTableValueSelections, selectedTableValueKeys, type TableRawValue, type TableValueSelections,
 } from './tableValueFilters'
 import { Text } from './Typography'
 import { DataTableResizer } from './DataTableResizer'
 import { useContextMenu, type ContextMenuItem } from './ContextMenu'
 import { VisuallyHidden } from '../a11y/VisuallyHidden'
 import { TableToolbar, type TableControls } from '../forms/TableToolbar'
-import type { ExportScope } from '../forms/ListExportMenu'
+import { DensityToggle } from '../forms/DensityToggle'
+import type { ExportScope, GridExportScope } from '../forms/ListExportMenu'
 import { useStatusAnnouncer } from '@/hooks/useStatusAnnouncer'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import {
   applyColumnLayout,
   defaultColumnLayout,
@@ -47,6 +54,7 @@ import {
   type CsvColumn,
   type CsvCellValue,
 } from '../../lib/csvExport'
+import './data-table.css'
 
 type RowKey = string | number
 
@@ -153,6 +161,8 @@ export interface Column<T> {
   headerAction?: ReactNode
   /** Optional column-scoped filter opened by the header's filter icon. */
   filter?: ReactNode
+  /** Immediate editor for the same filter, used in the desktop header and field picker. */
+  quickFilter?: ReactNode
   filterActive?: boolean
   onFilterClear?: () => void
   /** Canonical raw value, independent of display units. Opts the column into enabled value filters. */
@@ -168,6 +178,10 @@ export interface Column<T> {
   /** Subtle divider before this column, retained when reordered. */
   groupStart?: boolean
   sortable?: boolean
+  /** Sort accessor for complete loaded collections without a caller-owned sort. */
+  sortValue?: (row: T) => TableRawValue
+  /** Keep this identifying column in view while horizontally scrolling. */
+  pinned?: boolean
   className?: string
   // Column display options:
   /** Default visible column? Defaults to true. Hidden columns appear in the
@@ -223,12 +237,17 @@ interface DataTableProps<T> {
   enableValueFilters?: boolean
   /** Loaded candidates independent of caller-owned search/conditions. */
   filterData?: T[]
+  /** Reset loaded-row filters when explicitly replacing the outer query. */
+  queryResetKey?: number
   keyExtractor: (row: T) => RowKey
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSort?: (key: string) => void
+  defaultSort?: { key: string; direction: 'asc' | 'desc' }
   /** Caller-owned empty wording; internal filters that hide loaded rows use no-match copy instead. */
   emptyMessage?: string
+  /** Body-only loading or error content for an externally managed grid. */
+  emptyContent?: ReactNode
   /** Optional wording when local filters hide loaded rows, distinct from an empty source. */
   noMatchMessage?: string
   className?: string
@@ -329,6 +348,9 @@ interface DataTableProps<T> {
   caption?: string
   /** Page-owned controls placed beside the column menu in the table toolbar. */
   toolbarActions?: ReactNode
+  /** Browser-local named views. External query context is opt-in and validated by its owner on restore. */
+  savedViews?: boolean | { context: string; onRestore: (context: string) => void }
+  comparison?: readonly GridComparisonField<T>[]
   /** Page-owned heading placed on the left of the same toolbar. */
   toolbarHeading?: ReactNode
   /** Delegate toolbar actions/context to a LayoutCard's shared header/summary slots. */
@@ -341,6 +363,13 @@ interface DataTableProps<T> {
   searchable?: boolean
   /** Disable when the page owns a separate selection/action toolbar. */
   showSelectionSummary?: boolean
+  /** Show local loaded counts or server-provided range totals. */
+  showMatchingCount?: boolean | { matching: number; loaded: number } | { matching: number; rangeTotal: number }
+  matchingActions?: ReactNode
+  /** Clear caller-owned filters in one update without changing sort or workspace scope. */
+  onClearAllFilters?: () => void
+  /** For bulk edits that should never include rows outside the current match. */
+  pruneSelectionOnFilter?: boolean
   /** Called whenever the selection changes. */
   onSelectionChange?: (keys: RowKey[]) => void
   /** Renders above the header when `selectedKeys.length > 0`. The selected
@@ -405,6 +434,10 @@ interface DataTableProps<T> {
   exportable?: boolean
   /** Hide the default export-scope explanatory line without changing export behavior. */
   showExportDescription?: boolean
+  /** Offer the complete loaded catalog separately from matching and selected rows. */
+  includeFullExport?: boolean
+  /** Decouple export schema from column visibility and order. */
+  exportColumns?: 'visible' | 'all'
   /** Filename for the exported CSV (without extension). Defaults to a
    *  date-stamped fallback like `table-2026-05-01`. */
   exportFilename?: string
@@ -414,7 +447,7 @@ interface DataTableProps<T> {
   exportRow?: (row: T) => Record<string, CsvCellValue>
   /** Serialize original scoped rows without visible-column projection.
    *  Caller-owned controls.exports takes precedence over this callback. */
-  onExport?: (format: 'csv' | 'json', rows: readonly T[], scope: ExportScope) => void | Promise<void>
+  onExport?: (format: 'csv' | 'json', rows: readonly T[], scope: GridExportScope) => void | Promise<void>
   /** Optional async hook for paginated/server-side data: when provided the
    *  export awaits this fetcher to obtain the full row set instead of using
    *  whatever's currently visible. */
@@ -496,11 +529,14 @@ export function DataTable<T>({
   data,
   enableValueFilters = false,
   filterData,
+  queryResetKey,
   keyExtractor,
-  sortKey,
-  sortDir,
-  onSort,
+  sortKey: controlledSortKey,
+  sortDir: controlledSortDir,
+  onSort: onControlledSort,
+  defaultSort,
   emptyMessage = 'No data',
+  emptyContent,
   noMatchMessage: callerNoMatchMessage,
   className,
   compact,
@@ -530,6 +566,8 @@ export function DataTable<T>({
   columnReorder = Boolean(tableId),
   exportable,
   showExportDescription = true,
+  includeFullExport = false,
+  exportColumns: exportColumnScope = 'visible',
   exportFilename,
   exportRow,
   onExport,
@@ -539,30 +577,40 @@ export function DataTable<T>({
   overscan,
   rowContextMenu,
   toolbarActions,
+  savedViews,
+  comparison,
   toolbarHeading,
   cardLayout = false,
   controls,
   showDensityControl = !toolbarActions,
   searchable = !toolbarActions,
   showSelectionSummary = true,
+  showMatchingCount = false,
+  matchingActions,
+  onClearAllFilters,
+  pruneSelectionOnFilter = false,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
+  const { fmtInt } = useNumberFormatting()
   const frameRef = useRef<HTMLDivElement>(null)
-  const [mobileActive, setMobileActive] = useState(false)
+  const [observedCards, setObservedCards] = useState(false)
   const [compactGroups, setCompactGroups] = useState(false)
+  const [wideTools, setWideTools] = useState(false)
+  const [queryField, setQueryField] = useState('')
   const mobileEnabled = mobilePresentation != null
-  const observeFrame = mobileEnabled || rowGrouping?.actionsColumn != null
+  const mobileActive = mobileEnabled && observedCards
+  const cardMaxWidth = mobilePresentation?.cardMaxWidth
+  const observesGridWidth = mobileEnabled || Boolean(rowGrouping) || enableValueFilters
+    || columns.some(column => column.filter || column.quickFilter || column.sortValue || (onControlledSort && column.sortable))
   useEffect(() => {
-    if (!observeFrame || !frameRef.current || typeof ResizeObserver === 'undefined') {
-      setMobileActive(false)
-      setCompactGroups(false)
-      return
-    }
+    if (!observesGridWidth || !frameRef.current || typeof ResizeObserver === 'undefined') return
     const frame = frameRef.current
     const update = (width: number) => {
       if (width > 0) {
-        setMobileActive(mobileEnabled && isMobileGridWidth(width))
+        const useCards = mobileEnabled && (cardMaxWidth == null ? isMobileGridWidth(width) : width <= cardMaxWidth)
+        setObservedCards(useCards)
         setCompactGroups(isMobileGridWidth(width))
+        setWideTools(width > 700 && !useCards)
       }
     }
     update(frame.getBoundingClientRect().width)
@@ -572,11 +620,25 @@ export function DataTable<T>({
     })
     observer.observe(frame)
     return () => observer.disconnect()
-  }, [mobileEnabled, observeFrame])
+  }, [mobileEnabled, cardMaxWidth, observesGridWidth])
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
   const [valueSelections, setValueSelections] = useState<TableValueSelections>({})
+  const [lastQueryReset, setLastQueryReset] = useState(queryResetKey)
+  if (lastQueryReset !== queryResetKey) {
+    setLastQueryReset(queryResetKey)
+    setValueSelections({})
+  }
+  const [localSort, setLocalSort] = useState(defaultSort)
+  const localSortEnabled = !paginationControls && !onControlledSort && controlledSortKey == null
+    && columns.some(column => column.sortValue)
+  const sortKey = localSortEnabled ? localSort?.key : controlledSortKey
+  const sortDir = localSortEnabled ? localSort?.direction : controlledSortDir
+  const onSort = localSortEnabled ? (key: string) => setLocalSort(previous => ({
+    key, direction: previous?.key === key && previous.direction === 'asc' ? 'desc' : 'asc',
+  })) : onControlledSort
+  const canSort = (column: Column<T>) => localSortEnabled ? Boolean(column.sortValue) : column.sortable
   const valueColumns = useMemo(() => enableValueFilters
     ? columns.flatMap(column => [
       ...(column.filterValue ? [{
@@ -594,7 +656,7 @@ export function DataTable<T>({
   ])), [valueColumns, candidateRows])
   const filteredData = useMemo(() => {
     const query = localSearchEnabled ? deferredLocalSearch.trim().toLocaleLowerCase() : ''
-    return data.filter(row => valueColumns.every(column =>
+    const matching = data.filter(row => valueColumns.every(column =>
       matchesTableValueSelection(column.filterValue?.(row) ?? null, valueSelections[column.key]),
     ) && (!query || columns.some(column => {
       const raw = (row as unknown as Record<string, unknown>)[column.key]
@@ -602,7 +664,17 @@ export function DataTable<T>({
         ?? (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '')
       return text.toLocaleLowerCase().includes(query)
     })))
-  }, [data, valueColumns, valueSelections, columns, localSearchEnabled, deferredLocalSearch])
+    const sortValue = localSortEnabled ? columns.find(column => column.key === sortKey)?.sortValue : undefined
+    if (sortValue) matching.sort((left, right) => {
+      const a = sortValue(left)
+      const b = sortValue(right)
+      if (a == null || b == null) return a === b ? 0 : a == null ? 1 : -1
+      const result = typeof a === 'number' && typeof b === 'number'
+        ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true })
+      return sortDir === 'desc' ? -result : result
+    })
+    return matching
+  }, [data, valueColumns, valueSelections, columns, localSearchEnabled, deferredLocalSearch, localSortEnabled, sortKey, sortDir])
   const searchControls = controls?.search ?? (localSearchEnabled ? {
     value: localSearch,
     onChange: setLocalSearch,
@@ -611,6 +683,18 @@ export function DataTable<T>({
     pending: !Object.is(localSearch, deferredLocalSearch),
   } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
+  const valueFilterChips = valueColumns.filter(column => valueSelections[column.key] != null).map(column => {
+    const options = valueOptions.get(column.key) ?? []
+    const selection = valueSelections[column.key]
+    const selected = new Set(selectedTableValueKeys(selection, options.flatMap(option => option.keys ?? [option.value])))
+    const matching = options.filter(option => (option.keys ?? [option.value]).some(key => selected.has(key)))
+    const text = matching.length === 1 ? matching[0].label : String(matching.length)
+    return { key: column.key, header: column.header, text }
+  })
+  const callerFilterChips = showMatchingCount ? columns.filter(column => column.filterActive && column.onFilterClear
+    && valueSelections[column.key] == null) : []
+  const showSearchChip = Boolean(showMatchingCount && searchControls?.value)
+  const chipCount = callerFilterChips.length + valueFilterChips.length + Number(showSearchChip)
   const groupScope = JSON.stringify([rowGrouping?.resetKey, valueSelections, deferredLocalSearch])
   const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: groupScope, open: {} })
   if (groupExpansion.scope !== groupScope) {
@@ -627,14 +711,21 @@ export function DataTable<T>({
     }))
   }
   // Incoming rows are loaded evidence, not full server history or the current pagination slice.
-  const localFilterNoMatch = data.length > 0 && filteredData.length === 0
+  const localFilterNoMatch = (data.length > 0 || typeof showMatchingCount === 'object'
+    && 'rangeTotal' in showMatchingCount && showMatchingCount.rangeTotal > 0)
+    && filteredData.length === 0
   const noMatchMessage = callerNoMatchMessage ?? t('combobox.noResults', 'No results')
   const resetFiltersLabel = t('common.clearFilters', 'Clear filters')
   const clearFilters = () => {
-    searchControls?.onChange('')
     setValueSelections({})
-    columns.forEach(column => column.onFilterClear?.())
-    mobilePresentation?.onClear?.()
+    setPage(1)
+    setMobilePage(1)
+    if (onClearAllFilters) onClearAllFilters()
+    else {
+      searchControls?.onChange('')
+      columns.forEach(column => column.onFilterClear?.())
+      mobilePresentation?.onClear?.()
+    }
   }
   const mobileFilteredPresentation = mobilePresentation && localFilterNoMatch
     && (!mobilePresentation.state || mobilePresentation.state.kind === 'ready')
@@ -801,6 +892,7 @@ export function DataTable<T>({
     () => applyColumnLayout(columns, layout),
     [columns, layout],
   )
+  const pinnedKey = expandable ? undefined : visibleColumns.find(column => column.pinned)?.key
 
   // ── Mobile allow-list ───────────────────────────────────────────────────
   const effectiveMobileColumns = useMemo(() => {
@@ -848,11 +940,16 @@ export function DataTable<T>({
   // ── Selection ───────────────────────────────────────────────────────────
   const { announceSelection, announceSort } = useStatusAnnouncer()
   const isSelectable = selectable !== 'none'
-  const selection = selectedKeys ?? []
+  const allRowKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor])
+  const matchingKeySet = useMemo(() => pruneSelectionOnFilter ? new Set(allRowKeys) : null, [pruneSelectionOnFilter, allRowKeys])
+  const selection = useMemo(() => matchingKeySet
+    ? (selectedKeys ?? []).filter(key => matchingKeySet.has(key)) : (selectedKeys ?? []), [matchingKeySet, selectedKeys])
+  useEffect(() => {
+    if (matchingKeySet && selection.length !== (selectedKeys?.length ?? 0)) onSelectionChange?.(selection)
+  }, [matchingKeySet, selection, selectedKeys, onSelectionChange])
   const selectionSet = useMemo(() => new Set(selection), [selection])
   const lastClickedKey = useRef<RowKey | null>(null)
 
-  const allRowKeys = useMemo(() => filteredData.map(keyExtractor), [filteredData, keyExtractor])
   const allSelected = isSelectable && allRowKeys.length > 0 && allRowKeys.every(k => selectionSet.has(k))
   const someSelected = isSelectable && allRowKeys.some(k => selectionSet.has(k)) && !allSelected
 
@@ -963,13 +1060,15 @@ export function DataTable<T>({
     [data, isSelectable, selectionSet, keyExtractor],
   )
 
-  const handleExport = useCallback(async (format: 'csv' | 'json', scope: ExportScope) => {
-    const sourceRows = scope === 'selected' ? selectedRows : exportAll ? await exportAll() : filteredData
+  const handleExport = useCallback(async (format: 'csv' | 'json', scope: GridExportScope) => {
+    const sourceRows = scope === 'selected' ? selectedRows
+      : includeFullExport ? scope === 'all' ? candidateRows : filteredData
+        : exportAll ? await exportAll() : filteredData
     if (onExport) {
       await onExport(format, sourceRows, scope)
       return
     }
-    const exportColumns = visibleColumns.flatMap(column => column.exportFields?.length
+    const exportColumns = (exportColumnScope === 'all' ? columns : visibleColumns).flatMap(column => column.exportFields?.length
       ? column.exportFields.map(field => ({ ...field, column }))
       : [{ key: column.key, header: column.header, value: column.exportValue, column }])
     const rows = sourceRows.map(row => {
@@ -1000,15 +1099,20 @@ export function DataTable<T>({
       }))
       downloadCSV(filename, toCSV(rows, csvColumns))
     }
-  }, [exportAll, filteredData, selectedRows, exportFilename, tableId, name, visibleColumns, exportRow, onExport])
+  }, [exportAll, includeFullExport, candidateRows, filteredData, selectedRows, exportFilename, tableId, name,
+    exportColumnScope, columns, visibleColumns, exportRow, onExport])
   const baseExportControls = exportable === false ? undefined : controls?.exports
     ?? (exportable === true || exportAll || (!paginationControls && !toolbarActions) ? {
       onExportCsv: (scope: ExportScope) => handleExport('csv', scope),
       onExportJson: (scope: ExportScope) => handleExport('json', scope),
       selectedCount: selectedRows.length,
-      visibleCount: exportAll ? undefined : filteredData.length,
-      disabled: !exportAll && filteredData.length === 0 && selectedRows.length === 0,
-      description: exportAll
+      visibleCount: exportAll && !includeFullExport ? undefined : filteredData.length,
+      fullCount: includeFullExport && candidateRows.length ? candidateRows.length : undefined,
+      onExportAll: includeFullExport ? (format: 'csv' | 'json') => handleExport(format, 'all') : undefined,
+      disabled: !exportAll && filteredData.length === 0 && selectedRows.length === 0 && !(includeFullExport && candidateRows.length),
+      description: includeFullExport
+        ? t('table.grid.exportScopes', 'Choose matching rows, the full loaded catalog, or your selection.')
+        : exportAll
         ? t('table.export.fullResultScope', 'Non-selected exports use the full-result handler; selection exports include only selected loaded rows.')
         : t('table.export.loadedScope', 'Exports include only matching loaded rows, or selected loaded rows.'),
     } : undefined)
@@ -1096,6 +1200,17 @@ export function DataTable<T>({
   const effectiveRowHeight = rowHeight ?? densityRowHeight
   const effectiveOverscan = overscan ?? 8
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [horizontalOverflow, setHorizontalOverflow] = useState(false)
+  useEffect(() => {
+    const viewport = scrollContainerRef.current
+    if (!pinnedKey || mobileActive || !viewport || typeof ResizeObserver === 'undefined') return
+    const measure = () => setHorizontalOverflow(viewport.scrollWidth > viewport.clientWidth + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(viewport)
+    if (viewport.firstElementChild) observer.observe(viewport.firstElementChild)
+    return () => observer.disconnect()
+  }, [pinnedKey, mobileActive])
   const virtualizer = useVirtualizer({
     count: virtualizationActive ? paginatedData.length : 0,
     getScrollElement: () => scrollContainerRef.current,
@@ -1197,7 +1312,7 @@ export function DataTable<T>({
         tabIndex={isSelectable || expandable ? 0 : undefined}
       >
         {isSelectable && (
-          <td data-app-part="table-cell" className="w-12 min-w-12 p-0 text-center align-middle">
+          <td data-app-part="table-cell" data-grid-selection="" className="w-12 min-w-12 p-0 text-center align-middle">
             {selectable === 'multi' ? (
               <div className="flex justify-center">
                 <Checkbox
@@ -1260,6 +1375,7 @@ export function DataTable<T>({
             key={col.key}
             data-app-part="table-cell"
             data-column-key={col.key}
+            data-grid-identity={pinnedKey === col.key || undefined}
             className={cn(
               cellPaddingClass,
               col.align === 'right' && 'tabular-nums',
@@ -1482,42 +1598,54 @@ export function DataTable<T>({
 
   const hasSelectionSummary = showSelectionSummary && isSelectable && selectedRows.length > 0
   const mobileControlsInToolbar = mobileActive && mobilePresentation?.controlsInToolbar === true
+  const hasColumnTools = valueColumns.length > 0 || columns.some(column => column.filter || column.quickFilter || (onSort && canSort(column)))
+  const showQueryPicker = hasColumnTools && (valueColumns.length > 0 || (mobileActive && !mobileControlsInToolbar)
+    || columns.some(column => column.filter || canSort(column)) && (visibleColumns.length < columns.length || Boolean(effectiveMobileColumns)))
+  const showSavedViews = Boolean(tableId && (savedViews ?? (localSearchEnabled && showColumnMenu
+    && !onControlledSort && !columns.some(column => column.filter))))
   const showToolbar =
     Boolean(toolbarActions || toolbarHeading || controls || densityControls || searchControls || exportControls) ||
-    showColumnMenu ||
+    showColumnMenu || showSavedViews || hasColumnTools ||
     hasSelectionSummary || mobileControlsInToolbar
 
-  const renderFilter = (key: string, label: string, filter?: ReactNode, filterActive?: boolean, onFilterClear?: () => void) =>
+  const clearValueFilter = (key: string) => setValueSelections(previous => {
+    const next = { ...previous }
+    delete next[key]
+    return next
+  })
+  const selectFilterValues = (key: string, keys: string[], values: string[] | null) => {
+    setPage(1)
+    setMobilePage(1)
+    if (values == null) clearValueFilter(key)
+    else setValueSelections(previous => ({ ...previous, [key]: compactTableValueSelection(values, keys) }))
+  }
+  const renderQuickFilter = (key: string, label: string, editor?: ReactNode) => {
+    if (editor) return editor
+    const options = valueOptions.get(key)
+    if (!options?.length || options.length > MAX_QUICK_FILTER_VALUES) return null
+    const keys = options.flatMap(option => option.keys ?? [option.value])
+    return <DataTableQuickFilter column={label} options={options}
+      selected={selectedTableValueKeys(valueSelections[key], keys)}
+      onChange={values => selectFilterValues(key, keys, values)} />
+  }
+  const renderFilterContent = (key: string, filter?: ReactNode, filterActive?: boolean) => {
+    const options = valueOptions.get(key)
+    if (!options) return filter
+    const keys = options.flatMap(option => option.keys ?? [option.value])
+    return <DataTableValueFilter options={options}
+      selected={selectedTableValueKeys(valueSelections[key], keys)}
+      onChange={values => selectFilterValues(key, keys, values)}
+      condition={filter} conditionActive={filterActive} />
+  }
+  const renderFilter = (key: string, label: string, filter?: ReactNode, filterActive?: boolean, onFilterClear?: () => void, presentation?: 'icon' | 'field') =>
     (filter || valueOptions.has(key)) ? (
-    <DataTableHeaderFilter key={key} label={label}
+    <DataTableHeaderFilter key={key} label={label} presentation={presentation}
       active={filterActive || (enableValueFilters && valueSelections[key] != null)}
       onClear={valueOptions.has(key) ? () => {
-        setValueSelections(previous => {
-          const next = { ...previous }
-          delete next[key]
-          return next
-        })
+        clearValueFilter(key)
         onFilterClear?.()
       } : onFilterClear}>
-      {valueOptions.has(key) ? (
-        <DataTableValueFilter
-          options={valueOptions.get(key) ?? []}
-          selected={selectedTableValueKeys(valueSelections[key],
-            (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))}
-          onChange={values => {
-            setPage(1)
-            setValueSelections(previous => {
-              const next = { ...previous }
-              if (values == null) delete next[key]
-              else next[key] = compactTableValueSelection(values,
-                (valueOptions.get(key) ?? []).flatMap(option => option.keys ?? [option.value]))
-              return next
-            })
-          }}
-          condition={filter}
-          conditionActive={filterActive}
-        />
-      ) : filter}
+      {renderFilterContent(key, filter, filterActive)}
     </DataTableHeaderFilter>
   ) : null
   const renderColumnFilter = (col: Column<T>) => <>
@@ -1532,7 +1660,7 @@ export function DataTable<T>({
   }
   const mobileControls = <>
     {visibleColumns.map(col => <div key={col.key} className="flex flex-wrap items-center gap-1">
-      {col.sortable && onSort && <Button size="sm" variant="secondary" className="min-h-11"
+      {canSort(col) && onSort && <Button size="sm" variant="secondary" className="min-h-11"
         aria-label={col.header} onClick={() => onSort(col.key)}>
         {col.header}{sortKey === col.key && (sortDir === 'asc'
           ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
@@ -1549,6 +1677,61 @@ export function DataTable<T>({
       options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
       onChange={event => handlePageSizeChange(Number(event.target.value))} />}
   </>
+  const queryFields = columns.flatMap(column => {
+    const filter = column.filter || column.quickFilter || valueOptions.has(column.key)
+      ? () => renderFilterContent(column.key, column.filter ?? column.quickFilter, column.filterActive) : undefined
+    const sort = canSort(column) && onSort ? () => onSort(column.key) : undefined
+    return [
+      ...(filter || sort ? [{ key: column.key, label: column.header, filter, sort,
+        direction: sortKey === column.key ? sortDir : undefined,
+        quick: () => renderQuickFilter(column.key, column.header, column.quickFilter)
+          ?? renderFilter(column.key, column.header, column.filter, column.filterActive, column.onFilterClear, 'field'),
+      }] : []),
+      ...(column.additionalValueFilters ?? []).filter(field => valueOptions.has(field.key))
+        .map(field => ({ key: field.key, label: field.header, sort: undefined, filter: () => renderFilterContent(field.key),
+          quick: () => renderQuickFilter(field.key, field.header) ?? renderFilter(field.key, field.header, undefined, undefined, undefined, 'field'),
+        })),
+    ]
+  })
+  const queryPicker = queryFields.length > 0 && (showQueryPicker || !wideTools) ? <DataTableQueryPicker fields={queryFields} /> : undefined
+  const sortFields = queryFields.filter(field => field.sort).map(field => ({ value: field.key, label: field.label }))
+  const filterFields = queryFields.filter(field => field.filter)
+  const activeField = filterFields.find(field => field.key === queryField)
+  const searchScope = wideTools && searchControls && filterFields.length > 0 ? {
+    picker: <div className="w-32 shrink-0">
+      <Select size="sm" aria-label={t('table.grid.filterBy', 'Filter by column')} value={activeField?.key ?? ''}
+        onChange={event => setQueryField(event.target.value)}
+        options={[{ value: '', label: t('table.grid.allColumns', 'All columns') },
+          ...filterFields.map(field => ({ value: field.key, label: field.label }))]} />
+    </div>,
+    editor: activeField?.quick(),
+  } : undefined
+  const sortTools = wideTools && onSort && sortFields.length > 0
+    ? <DataTableSortControls fields={sortFields} active={sortKey} direction={sortDir} onSort={onSort} />
+    : undefined
+  const secondaryQueryPicker = !wideTools || !searchScope ? queryPicker : undefined
+  const captureView = (): GridView => ({
+    layout, filters: valueSelections, search: searchControls?.value,
+    sort: localSortEnabled ? localSort : undefined,
+    context: typeof savedViews === 'object' ? savedViews.context : undefined,
+  })
+  const applyView = (view: GridView) => {
+    const validFilters = valueColumns.map(column => column.key)
+    const filters = view.filters && typeof view.filters === 'object'
+      ? Object.fromEntries(validFilters.flatMap(key => Object.prototype.hasOwnProperty.call(view.filters, key) ? [[key, view.filters[key]]] : [])) : {}
+    setValueSelections(parseTableValueSelections(JSON.stringify(filters), validFilters).selections)
+    if (view.layout) persistLayout(view.layout)
+    else resetLayout()
+    if (searchControls) searchControls.onChange(typeof view.search === 'string' ? view.search : '')
+    if (localSortEnabled) {
+      const sort = view.sort
+      setLocalSort(sort && columns.some(column => column.key === sort.key && column.sortValue)
+        && (sort.direction === 'asc' || sort.direction === 'desc') ? sort : defaultSort)
+    }
+    if (typeof savedViews === 'object' && typeof view.context === 'string') savedViews.onRestore(view.context)
+    setPage(1)
+    setMobilePage(1)
+  }
 
   return (
     <>
@@ -1560,29 +1743,41 @@ export function DataTable<T>({
     )}
       data-app-part={variant === 'standalone' ? 'panel' : undefined}
       data-surface-variant={variant}
-      data-app-table-frame="" data-grid-frame="" data-grid-variant={variant}>
+      data-app-table-frame="" data-grid-frame="" data-grid-variant={variant}
+      data-grid-density={effectiveDensity} data-grid-pinned={!mobileActive && Boolean(pinnedKey) && horizontalOverflow || undefined}
+      data-grid-selectable={isSelectable || undefined}>
       {/* Toolbar row (selection bulk-bar + columns picker + export) */}
       {showToolbar && (
         <TableToolbar
           placement={cardLayout ? 'card' : 'inline'}
           collapseBelow={mobileControlsInToolbar ? 'xl' : mobileBreakpoint}
-          className={cn(tableTokens.toolbar, 'rounded-t-xl border-b border-[var(--border-default)] p-3',
+          grid
+          className={cn('rounded-t-xl border-b border-[var(--border-default)]',
             mobileActive && '[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11')}
           search={searchControls}
-          density={densityControls}
+          searchScope={searchScope}
+          primaryActions={sortTools && secondaryQueryPicker ? <>{sortTools}{secondaryQueryPicker}</> : sortTools ?? secondaryQueryPicker}
+          density={showColumnMenu ? undefined : densityControls}
           exports={exportControls}
           heading={(toolbarHeading || hasSelectionSummary) ? <>
             {toolbarHeading}
             {hasSelectionSummary && (
               <DataTableBulkBar count={selectedRows.length} onClear={clearSelection}>
                 {bulkActions?.(selectedRows)}
+                {comparison && <DataTableComparison rows={selectedRows} fields={comparison}
+                  identify={row => {
+                    const key = keyExtractor(row)
+                    return { key, label: rowLabelFor(row, key) ?? String(key) }
+                  }} />}
               </DataTableBulkBar>
             )}
           </> : undefined}
-          actions={mobileControlsInToolbar ? <>
+          actions={(toolbarActions || showSavedViews || mobileControlsInToolbar) ? <>
             {toolbarActions}
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-2">{mobileControls}</div>
-          </> : toolbarActions}
+            {tableId && showSavedViews && <DataTableSavedViews key={tableId} tableId={tableId}
+              capture={captureView} apply={applyView} />}
+            {mobileControlsInToolbar && <div className="flex w-full min-w-0 flex-wrap items-center gap-2">{mobileControls}</div>}
+          </> : undefined}
           columns={showColumnMenu ? (
               <DataTableColumnMenu
                 columns={columns.map(c => ({
@@ -1590,26 +1785,56 @@ export function DataTable<T>({
                   header: c.header,
                   defaultVisible: c.defaultVisible,
                   required: c.required,
+                  pinned: c.pinned,
                 }))}
                 layout={layout}
                 onChange={persistLayout}
                 onReset={resetLayout}
                 reorderable={reorderRequested}
                 toggleable={visibilityRequested}
+                displayControls={densityControls && <DensityToggle {...densityControls}
+                  options={densityControls.options ?? ['compact', 'comfortable']} />}
               />
             ) : undefined}
         />
       )}
 
-      {hasValueFilters && (
-        <Text as="p" size="xs" color="muted" role="status" className="px-3 py-2">
-          {t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
-            filtered: filteredData.length, loaded: candidateRows.length,
-          })}
+      {(hasValueFilters || showMatchingCount || matchingActions) && (
+        <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
+        <Text as="p" size="xs" color="muted" role="status">
+          {typeof showMatchingCount === 'object' && 'rangeTotal' in showMatchingCount
+            ? t('table.filter.rangeRowCount', '{{matching}} matching / {{total}} in range', {
+              matching: fmtInt(showMatchingCount.matching), total: fmtInt(showMatchingCount.rangeTotal),
+            })
+            : t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+              filtered: typeof showMatchingCount === 'object' ? showMatchingCount.matching : filteredData.length,
+              loaded: typeof showMatchingCount === 'object' ? showMatchingCount.loaded : candidateRows.length,
+            })}
         </Text>
+        {showSearchChip && <Button size="sm" variant="secondary" wrapLabel className="min-h-11 max-w-full break-all md:min-h-8"
+          aria-label={t('table.grid.clearColumn', 'Clear {{column}} filter', { column: t('common.search', 'Search') })}
+          icon={<X className="h-3 w-3" aria-hidden="true" />}
+          onClick={() => searchControls?.onChange('')}>{t('common.search', 'Search')}: {searchControls?.value}</Button>}
+        {valueFilterChips.map(column => (
+          <Button key={column.key} size="sm" variant="secondary" wrapLabel className="min-h-11 max-w-full break-all md:min-h-8"
+            aria-label={t('table.grid.clearColumn', 'Clear {{column}} filter', { column: column.header })}
+            icon={<X className="h-3 w-3" aria-hidden="true" />}
+            onClick={() => clearValueFilter(column.key)}>{column.header}: {column.text}</Button>
+        ))}
+        {callerFilterChips.map(column => (
+          <Button key={column.key} size="sm" variant="secondary" wrapLabel className="min-h-11 max-w-full md:min-h-8"
+            aria-label={t('table.grid.clearColumn', 'Clear {{column}} filter', { column: column.header })}
+            icon={<X className="h-3 w-3" aria-hidden="true" />} onClick={column.onFilterClear}>{column.header}</Button>
+        ))}
+        {chipCount > 1 && onClearAllFilters && <Button variant="ghost" size="sm" className="min-h-11 md:min-h-8"
+          onClick={clearFilters}>{resetFiltersLabel}</Button>}
+        {matchingActions && <div className="ms-auto">{matchingActions}</div>}
+        </div>
       )}
       {mobileActive && mobilePresentation ? (
-        <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>
+        emptyContent != null && filteredData.length === 0
+          ? <div className="p-4">{emptyContent}</div>
+          : <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>
           <MobileDataTableAdapter
             rows={paginationEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
             columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
@@ -1634,7 +1859,7 @@ export function DataTable<T>({
             onLoadMore={paginationEnabled && mobilePage * pageSize < filteredData.length
               ? () => setMobilePage(previous => previous + 1) : undefined}
             nextCount={Math.min(pageSize, Math.max(0, filteredData.length - mobilePage * pageSize))}
-            onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}
+            onClear={onClearAllFilters || searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}
             count={mobilePresentation.showRowCount === false ? null : <Text size="sm" color="muted" role="status">
               {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
                 count: Math.min(mobilePage * pageSize, filteredData.length), total: filteredData.length,
@@ -1643,13 +1868,20 @@ export function DataTable<T>({
                 filtered: filteredData.length, loaded: data.length,
               })}
             </Text>}
-            controls={mobileControlsInToolbar ? null : mobileControls}
+            controls={mobileControlsInToolbar ? null : showQueryPicker && mobilePresentation.columnToolsInPicker ? (
+              paginationEnabled && <Select aria-label={t('pagination.pageSize', 'Rows per page')}
+                value={String(pageSize)} options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
+                onChange={event => handlePageSizeChange(Number(event.target.value))} />
+            ) : mobileControls}
           />
         </SectionErrorBoundary>
       ) : <div ref={scrollContainerRef} className={cn(wrapperClass,
         !showToolbar && !footerControls ? 'rounded-xl'
           : !showToolbar ? 'rounded-t-xl' : !footerControls ? 'rounded-b-xl' : undefined,
-      )} style={wrapperStyle} data-grid-viewport="">
+      )} style={wrapperStyle} data-grid-viewport=""
+        tabIndex={pinnedKey && horizontalOverflow ? 0 : undefined}
+        role={pinnedKey && horizontalOverflow ? 'region' : undefined}
+        aria-label={pinnedKey && horizontalOverflow ? accessibleTableName : undefined}>
         {/* Preserve native table semantics, not an ARIA grid with a different cell-navigation contract. */}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
         <table data-app-part="table" data-app-table-variant={variant} data-app-virtualized={virtualizationActive || undefined} tabIndex={footerControls ? 0 : undefined} className={cn(tableTokens.wrapper,
@@ -1686,6 +1918,7 @@ export function DataTable<T>({
                 <th
                   scope="col"
                   data-app-part="table-cell"
+                  data-grid-selection=""
                   className="w-12 min-w-12 p-0 text-center align-middle"
                 >
                   {selectable === 'multi' ? (
@@ -1715,36 +1948,41 @@ export function DataTable<T>({
               )}
               {visibleColumns.map(col => {
                 const w = widthFor(col)
-                const isDragOverTarget = headerReorderEnabled && dragOverKey === col.key
+                const draggable = headerReorderEnabled && !col.pinned
+                const isDragOverTarget = draggable && dragOverKey === col.key
+                const hasInlineFilter = wideTools && !col.headerAction && Boolean(col.quickFilter || col.filter || valueOptions.has(col.key))
+                const quickFilter = hasInlineFilter ? renderQuickFilter(col.key, col.header, col.quickFilter) : null
                 return (
                   <th
                     key={col.key}
                     data-app-part="table-cell"
                     scope="col"
                     aria-label={col.header || undefined}
-                    draggable={headerReorderEnabled || undefined}
-                    onDragStart={headerReorderEnabled ? (e) => handleHeaderDragStart(col.key, e) : undefined}
-                    onDragOver={headerReorderEnabled ? (e) => handleHeaderDragOver(col.key, e) : undefined}
-                    onDragLeave={headerReorderEnabled ? () => handleHeaderDragLeave(col.key) : undefined}
-                    onDrop={headerReorderEnabled ? (e) => handleHeaderDrop(col.key, e) : undefined}
-                    onDragEnd={headerReorderEnabled ? handleHeaderDragEnd : undefined}
+                    draggable={draggable || undefined}
+                    onDragStart={draggable ? (e) => handleHeaderDragStart(col.key, e) : undefined}
+                    onDragOver={draggable ? (e) => handleHeaderDragOver(col.key, e) : undefined}
+                    onDragLeave={draggable ? () => handleHeaderDragLeave(col.key) : undefined}
+                    onDrop={draggable ? (e) => handleHeaderDrop(col.key, e) : undefined}
+                    onDragEnd={draggable ? handleHeaderDragEnd : undefined}
                     data-column-key={col.key}
+                    data-grid-identity={pinnedKey === col.key || undefined}
                     data-drag-over={isDragOverTarget ? 'true' : undefined}
                     className={cn(
                       headCellPaddingClass,
                       colHiddenClass(col.key),
                       alignClass(col.align),
                       'whitespace-nowrap font-semibold',
+                      hasInlineFilter && 'align-bottom',
                       col.groupStart && tableTokens.groupStart,
-                      col.sortable && sortKey === col.key && 'text-[var(--text-primary)]',
+                      canSort(col) && sortKey === col.key && 'text-[var(--text-primary)]',
                       resizable && col.fixedWidth == null && 'relative group/th',
-                      headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',
+                      draggable && 'relative cursor-grab active:cursor-grabbing',
                       isDragOverTarget && 'bg-[var(--surface-2)] outline outline-1 outline-[var(--focus-ring)]',
                       col.className,
                     )}
                     style={w != null ? { width: w, minWidth: w, ...(col.fixedWidth != null ? { maxWidth: w } : {}) } : undefined}
                     aria-sort={
-                      col.sortable && (onSort || sortKey === col.key)
+                      canSort(col) && (onSort || sortKey === col.key)
                         ? sortKey === col.key
                           ? sortDir === 'asc'
                             ? 'ascending'
@@ -1758,12 +1996,12 @@ export function DataTable<T>({
                         : undefined
                     }
                   >
-                    <div className={cn('flex gap-1', Boolean(col.headerAction) && 'flex-col',
-                      col.align === 'right' && (col.headerAction ? 'items-end' : 'justify-end'),
-                      col.align === 'center' && (col.headerAction ? 'items-center' : 'justify-center'))}>
-                    <div className={cn('flex items-center gap-1',
+                    <div className={cn('flex gap-1', (Boolean(col.headerAction) || hasInlineFilter) && 'flex-col',
+                      col.align === 'right' && (col.headerAction ? 'items-end' : !hasInlineFilter && 'justify-end'),
+                      col.align === 'center' && (col.headerAction ? 'items-center' : !hasInlineFilter && 'justify-center'))}>
+                    <div className={cn('flex items-center gap-1', hasInlineFilter ? 'min-h-8' : tableTokens.headLabelMinHeight,
                       col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
-                      {headerReorderEnabled && (
+                      {draggable && (
                         <span
                           aria-hidden="true"
                           data-testid={`datatable-column-grip-${col.key}`}
@@ -1772,14 +2010,16 @@ export function DataTable<T>({
                           <GripVertical className="h-3 w-3" />
                         </span>
                       )}
-                      {col.sortable && onSort ? (
+                      {canSort(col) && onSort ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
+                          data-grid-sort-active={sortKey === col.key || undefined}
                           onClick={() => onSort?.(col.key)}
                           className={cn(
-                            'h-auto min-h-11 gap-1 p-0 text-size-inherit font-semibold select-none md:min-h-6',
+                            tableTokens.headLabelMinHeight,
+                            'h-auto gap-1 p-0 text-[length:inherit] font-semibold leading-[inherit] select-none',
                             'hover:text-[var(--text-secondary)]',
                           )}
                         >
@@ -1796,9 +2036,14 @@ export function DataTable<T>({
                           {col.header}
                         </span>
                       )}
-                    {renderColumnFilter(col)}
+                    {(!hasInlineFilter || quickFilter) && renderColumnFilter(col)}
                     </div>
                     {col.headerAction}
+                    {hasInlineFilter && (
+                      <div data-grid-inline-filter="" className="w-full min-w-0">
+                        {quickFilter ?? renderFilter(col.key, col.header, col.filter, col.filterActive, col.onFilterClear, 'field')}
+                      </div>
+                    )}
                     </div>
                     {resizable && tableId && col.fixedWidth == null && (
                       <DataTableResizer
@@ -1822,12 +2067,12 @@ export function DataTable<T>({
                 <tr data-app-part="table-row">
                   <td data-app-part="table-cell" colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
                     <div className="sticky start-0 w-full max-w-[calc(100cqw-2rem)] space-y-3 whitespace-normal break-words">
-                      {localFilterNoMatch ? (
+                      {emptyContent ?? (localFilterNoMatch ? (
                         <>
                         <Text as="p" variant="bodySm" color="muted" role="status">{noMatchMessage}</Text>
                         <Button size="sm" variant="secondary" onClick={clearFilters}>{resetFiltersLabel}</Button>
                         </>
-                      ) : emptyMessage}
+                      ) : emptyMessage)}
                     </div>
                   </td>
                 </tr>

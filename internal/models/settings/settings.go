@@ -48,6 +48,8 @@ type LegacyPollingConfig struct {
 	// existing installs; new routes default to enabled for on-demand use.
 	FleetEndpoints map[string]bool `json:"fleet_endpoints"`
 	AutoEndpoints  map[string]bool `json:"auto_endpoints"`
+	// Smart Features require an explicit opt-in as well as base access.
+	SmartEndpoints map[string]bool `json:"smart_endpoints"`
 	// Polling endpoints (automatic, worker-driven)
 	VehicleDiscovery bool `json:"vehicle_discovery"` // GET /api/1/vehicles (auto-discovery)
 	ChargeState      bool `json:"charge_state"`      // vehicle_data sub-endpoint

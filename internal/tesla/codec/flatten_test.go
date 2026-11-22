@@ -241,6 +241,17 @@ func TestFlattenDoorStateJSON_MalformedReturnsError(t *testing.T) {
 	}
 }
 
+func TestFlattenDoorStateJSON_DoesNotInventClosedPositions(t *testing.T) {
+	got, err := flattenDoorStateJSON(`{"FrontTrunk":true,"RearTrunk":false,"DriverFront":null}`, fixedEmittedAt, fixedVIN)
+	if err != nil || len(got) != 2 || got[0].Field != "DoorStateFrontTrunk" || got[0].Value != true ||
+		got[1].Field != "DoorStateRearTrunk" || got[1].Value != false {
+		t.Fatalf("want only explicitly observed positions, got %#v (%v)", got, err)
+	}
+	if _, err := flattenDoorStateJSON(`{"FrontTrunk":null}`, fixedEmittedAt, fixedVIN); err == nil {
+		t.Fatal("an all-unknown compound is not a closure observation")
+	}
+}
+
 func TestFlattenScheduledChargingStartTimeJSON_FullyPopulated(t *testing.T) {
 	payload := `{"Hour":7,"Minute":30,"Second":0}`
 	got, err := flattenScheduledChargingStartTimeJSON(payload, fixedEmittedAt, fixedVIN)

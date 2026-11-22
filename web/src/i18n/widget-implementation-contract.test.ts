@@ -41,6 +41,7 @@ import {
   sharedGridCompositionSources,
 } from './verified-widget-implementation-contract';
 import { restoreVerticalNavigationStyleSource } from './verified-horizontal-navigation-contract';
+import { restoreGridAccessSource } from './verified-grid-access-contract';
 
 describe('additive widget implementation preservation', () => {
   it('rejects source drift instead of silently projecting an unverified edit', () => {
@@ -1887,7 +1888,7 @@ describe('additive widget implementation preservation', () => {
     const caller = tableNoMatch.sources[1];
     // Keep every original API-stage proof against verified 555113 bytes.
     // Actual caller/API pair reads still validate the newer shipping endpoint.
-    const noMatchCurrent = (file: string) => restoreTableEmptyViewportSource(file, source(file));
+    const noMatchCurrent = (file: string) => restoreTableEmptyViewportSource(file, restoreGridAccessSource(file, source(file)));
     const previous = (file: string) => restoreTableNoMatchSource(file, noMatchCurrent(file));
     const parsed = (file: string, text: string) =>
       ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -2754,7 +2755,8 @@ describe('additive widget implementation preservation', () => {
   describe('exact native DataTable empty-viewport successor before unchanged API/source proofs', () => {
     const file = 'web/src/components/ui/DataTable.tsx';
     const patch = tableEmptyViewport.sources[0];
-    const current = source(file);
+    const shipping = source(file);
+    const current = restoreGridAccessSource(file, shipping);
     const previous = () => restoreTableEmptyViewportSource(file, current);
     const parse = (text: string) => ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = (text: string) => parse(text).statements.find(node =>
@@ -2798,7 +2800,7 @@ describe('additive widget implementation preservation', () => {
       expect(hash(current)).toBe(patch.after);
       expect(hash(apiStage)).toBe(patch.before);
       expect(hash(preApi)).toBe(tableNoMatch.sources[0].before);
-      const oldOwner = restoreAppDesignSource(file, current);
+      const oldOwner = restoreAppDesignSource(file, shipping);
       expect(hash(oldOwner)).toBe(appDesign.sources.find(entry => entry.file === file)?.before);
       expect(current.trimEnd().split('\n')).toHaveLength(1926);
       expect(apiStage.trimEnd().split('\n')).toHaveLength(1923);
@@ -2808,7 +2810,7 @@ describe('additive widget implementation preservation', () => {
         expect(() => restoreTableEmptyViewportSource(file, changed)).toThrow();
         expect(() => restoreAppDesignSource(file, changed)).toThrow();
       }
-      expect(source(file)).toBe(current);
+      expect(source(file)).toBe(shipping);
     });
 
     it('preserves all24 ordered original calls/defaults/arities/options, imports and complete translator/control projection', () => {
@@ -3220,7 +3222,7 @@ describe('additive widget implementation preservation', () => {
 
     it('retains exact DataTable and all preview producer chains and matches only this exact Settings path', () => {
       const table = tableEmptyViewport.sources[0];
-      expect(hash(source(table.file))).toBe(table.after);
+      expect(hash(restoreGridAccessSource(table.file, source(table.file)))).toBe(table.after);
       expect(hash(restoreAppDesignSource(table.file, source(table.file))))
         .toBe(appDesign.sources.find(entry => entry.file === table.file)?.before);
       for (const producer of appDesign.catalogProducers) {

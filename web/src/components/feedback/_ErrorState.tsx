@@ -96,7 +96,7 @@ export function ErrorState({
       )}
     >
       <div data-app-part="feedback-layout" className={cn('flex flex-wrap items-start', compact ? 'gap-2' : 'gap-3')}>
-        <div data-app-part="feedback-content" className={cn('flex w-full min-w-0 flex-1 basis-full items-start md:basis-64', compact ? 'gap-2' : 'gap-3')}>
+        <div data-app-part="feedback-content" className={cn('flex w-full min-w-0 flex-1 basis-full items-start', compact ? 'gap-2 md:basis-64' : 'gap-3')}>
           <div
             data-app-part="feedback-icon"
             className={cn(
@@ -107,8 +107,8 @@ export function ErrorState({
           >
             <StatusIcon icon={Icon} size={compact ? 'sm' : 'md'} />
           </div>
-          <div data-app-part="feedback-copy" className="flex-1 min-w-0 break-words">
-            <Text data-app-part="feedback-title" as="p" variant="body" className="font-medium">
+          <div data-app-part="feedback-copy" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            <Text data-app-part="feedback-title" as="p" variant="body" weight="semibold">
               {title}
             </Text>
             <Text data-app-part="feedback-message" as="p" variant="bodySm" className="mt-1">
@@ -117,7 +117,7 @@ export function ErrorState({
           </div>
         </div>
         {action && (
-          <div data-app-part="feedback-actions" className="w-full min-w-0 max-w-full break-words md:w-auto [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:py-2 md:[&_button]:min-h-9 md:[&_button]:min-w-0">
+          <div data-app-part="feedback-actions" className={cn('w-full min-w-0 max-w-full break-words [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:py-2 md:[&_button]:min-h-9 md:[&_button]:min-w-0', compact ? 'md:w-auto' : 'border-t border-[var(--border-default)] pt-3')}>
             {action}
           </div>
         )}

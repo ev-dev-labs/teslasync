@@ -1,0 +1,1312 @@
+{
+  "base": "c17497516758c2a644cb5c53bafa63c5b12d3539",
+  "sources": [
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "before": "1afd7d5ed1c43e91b6697d5dd45339514c79fb8f0dc9480e17808d46699296aa",
+      "after": "d33acc533e8287a8bb1369f5cf7f8cc84a515d5820c957485da0eb067363a7b9",
+      "beforeProjection": "7d38fcf1da634c45d1133d034b281180579f92f12bc8a74656bae9e80eeac04c",
+      "afterProjection": "0c966374ef27408f403a06a4c3d92c6deb7500cdbcfd9b05eae8515fc8a2f45d",
+      "hunks": [
+        {
+          "start": 55,
+          "count": 1,
+          "previous": [
+            "import type { JSX, ReactNode } from 'react'"
+          ]
+        },
+        {
+          "start": 209,
+          "count": 1,
+          "previous": [
+            "export function AIBadge({ label }: { label?: string }): JSX.Element {"
+          ]
+        },
+        {
+          "start": 211,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 213,
+          "count": 5,
+          "previous": [
+            "  return ("
+          ]
+        },
+        {
+          "start": 221,
+          "count": 1,
+          "previous": [
+            "      title={t(",
+            "        'helix.tooltip',",
+            "        'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',",
+            "      )}"
+          ]
+        },
+        {
+          "start": 223,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 232,
+          "count": 8,
+          "previous": []
+        },
+        {
+          "start": 321,
+          "count": 18,
+          "previous": []
+        },
+        {
+          "start": 343,
+          "count": 8,
+          "previous": [
+            "        <div",
+            "          className={",
+            "            effectivePlacement === 'inline'",
+            "              ? 'flex min-w-0 flex-wrap items-center justify-between gap-4'",
+            "              : 'flex min-w-0 flex-wrap items-start justify-between gap-4'",
+            "          }",
+            "        >",
+            "          <div className=\"min-w-0 max-w-full flex-1 space-y-1\">",
+            "            <div className=\"flex min-w-0 flex-wrap items-center gap-2\">",
+            "              <PanelTitle className=\"min-w-0 break-words\">{title}</PanelTitle>",
+            "              <AIBadge label={badgeLabel} />"
+          ]
+        },
+        {
+          "start": 352,
+          "count": 1,
+          "previous": [
+            "            <Text as=\"p\" variant=\"bodySm\" className=\"break-words\">{description}</Text>",
+            "            {!canStart && emptyHint && (",
+            "              <HelperText className=\"break-words\">{emptyHint}</HelperText>",
+            "            )}"
+          ]
+        },
+        {
+          "start": 354,
+          "count": 7,
+          "previous": [
+            "          {effectivePlacement === 'inline' && button}"
+          ]
+        },
+        {
+          "start": 362,
+          "count": 0,
+          "previous": [
+            "        {inputSlot}",
+            "        {effectivePlacement === 'below' && (",
+            "          <div className=\"flex flex-wrap items-center justify-end gap-2\">",
+            "            {button}",
+            "          </div>",
+            "        )}",
+            "        {children}",
+            "        <AiOutputPanel",
+            "          text={stream.text}",
+            "          state={stream.state}",
+            "          error={stream.error}",
+            "          activity={stream.activity}",
+            "          usage={stream.usage}",
+            "        />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ai/AiLimitBanner.tsx",
+      "before": "ab219b5cfb43c50fd53625162003648c118ed4759cf5dd05d1686d437aa15dde",
+      "after": "aea18c109b6f4594d5edae3b2b17fc9128a891d8fa18da5f0e455684f4469e08",
+      "beforeProjection": "8cb6b3abd239a5e02b71aeb56f47fe405aa395eb98745053b4ff8c3e2467e73f",
+      "afterProjection": "4159acaef72c50f81b952ab975cde16d9658a026bb99a80a28629193c088a88e",
+      "hunks": [
+        {
+          "start": 131,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 143,
+          "count": 1,
+          "previous": [
+            "      <div className=\"space-y-2\">"
+          ]
+        },
+        {
+          "start": 153,
+          "count": 2,
+          "previous": [
+            "        <div className=\"flex flex-wrap gap-2 pt-1\">",
+            "          {onUseBaseline && info.baselineAvailable && ("
+          ]
+        },
+        {
+          "start": 156,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 165,
+          "count": 1,
+          "previous": [
+            "          {onRetry && retryReady && ("
+          ]
+        },
+        {
+          "start": 167,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 176,
+          "count": 1,
+          "previous": [
+            "        </div>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/charts/Sparkline.tsx",
+      "before": "b9df97f7ffc84be7aef2e33890060919102a35d200ceae099a51051e5f069a5d",
+      "after": "c57af82073b009d0613fa0c39d53da3c74c7127d25bb31febc84bef1837cedf7",
+      "beforeProjection": "8fcacc48ab6c314ea344f77e2b4ab5ca7f5fd1992ff603c162533b281c05452d",
+      "afterProjection": "708e989343f3805a3ed422105b846be13400c39232aec29bc443b233809a3a8c",
+      "hunks": [
+        {
+          "start": 0,
+          "count": 1,
+          "previous": [
+            "import { Fragment, useId, useMemo } from 'react'"
+          ]
+        },
+        {
+          "start": 2,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 20,
+          "count": 4,
+          "previous": []
+        },
+        {
+          "start": 26,
+          "count": 5,
+          "previous": []
+        },
+        {
+          "start": 46,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 50,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 77,
+          "count": 2,
+          "previous": [
+            "      const result: Array<Array<[number, number]>> = []",
+            "      let segment: Array<[number, number]> | null = null"
+          ]
+        },
+        {
+          "start": 88,
+          "count": 6,
+          "previous": [
+            "        segment.push([",
+            "          span > 0 ? ((point.timestamp - start) / span) * width : width / 2,",
+            "          max === min ? height / 2 : yFor(point.value),",
+            "        ])"
+          ]
+        },
+        {
+          "start": 98,
+          "count": 0,
+          "previous": [
+            "    // A lone sample has no interval to interpolate across",
+            "    // (i / (n - 1) === 0 / 0 === NaN), so draw a flat line across the full",
+            "    // width instead of emitting a broken coordinate."
+          ]
+        },
+        {
+          "start": 99,
+          "count": 1,
+          "previous": [
+            "      const y = yFor(clean[0])",
+            "      return [[[0, y], [width, y]]]"
+          ]
+        },
+        {
+          "start": 103,
+          "count": 1,
+          "previous": [
+            "    return [clean.map((v, i) => [(i / denom) * width, yFor(v)])]"
+          ]
+        },
+        {
+          "start": 105,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 111,
+          "count": 38,
+          "previous": []
+        },
+        {
+          "start": 151,
+          "count": 8,
+          "previous": [
+            "  return (",
+            "    <svg data-app-part=\"chart chart-plot\" data-chart-family=\"sparkline\" viewBox={`0 0 ${width} ${height}`} width={width} height={height} className=\"h-auto max-w-full overflow-hidden\" role=\"img\" aria-label={label}>"
+          ]
+        },
+        {
+          "start": 165,
+          "count": 3,
+          "previous": []
+        },
+        {
+          "start": 169,
+          "count": 9,
+          "previous": [
+            "        if (segment.length === 1) return <circle key={index}",
+            "          cx={segment[0][0]} cy={segment[0][1]} r={1.5} fill={color} />",
+            "        const points = segment.map(point => point.join(',')).join(' ')"
+          ]
+        },
+        {
+          "start": 181,
+          "count": 1,
+          "previous": [
+            "            points={`${segment[0][0]},${height} ${points} ${segment[segment.length - 1][0]},${height}`}"
+          ]
+        },
+        {
+          "start": 186,
+          "count": 7,
+          "previous": []
+        },
+        {
+          "start": 195,
+          "count": 27,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "before": "2db3024ca5c6dd1691902ce54a2938e2bda6f1ced6e37b69ce8dd0b9fe720bfa",
+      "after": "d52394f0c7c83d2f19439eecf7f0f5d17e8a153b9141208a1c4175b574e55539",
+      "beforeProjection": "8f204725ae40f400c9e65b10d4e5e741735e356503b156cc9cd3691fc0cf21fb",
+      "afterProjection": "8f204725ae40f400c9e65b10d4e5e741735e356503b156cc9cd3691fc0cf21fb",
+      "hunks": [
+        {
+          "start": 86,
+          "count": 1,
+          "previous": [
+            "        <div className=\"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end\">"
+          ]
+        },
+        {
+          "start": 105,
+          "count": 1,
+          "previous": [
+            "        <div>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/data-display/Timeline.tsx",
+      "before": "34ac1e5bb28a3107ad15c274677678ee599cb4df2caedbe5b349856e71a4ca94",
+      "after": "9df35456f1aadc476981eb9d839fa7d932a4e9903b84993f69e382f29d936776",
+      "beforeProjection": "0c9b7991a0aa4997fa4b1b1bd4398b26a7eaf9c653bd3bbd59dcf4c049da31b0",
+      "afterProjection": "2887751152b65eacbecf7c2909d646d2fa7cfaa22a7e4aeafb926c1bbf4818b6",
+      "hunks": [
+        {
+          "start": 12,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 46,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 57,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 99,
+          "count": 1,
+          "previous": [
+            "    <div data-app-part=\"timeline\" className={cn('relative min-w-0 space-y-4', className)}>"
+          ]
+        },
+        {
+          "start": 134,
+          "count": 4,
+          "previous": [
+            "          <div data-app-part=\"timeline-content\" className=\"min-w-0 flex-1 pt-0.5\">",
+            "            <div className=\"flex min-w-0 flex-wrap items-baseline justify-between gap-2\">",
+            "              <Text size=\"sm\" weight=\"medium\" color=\"primary\" className=\"min-w-0 flex-1 basis-48 break-words\">"
+          ]
+        },
+        {
+          "start": 140,
+          "count": 1,
+          "previous": [
+            "              <Text variant=\"caption\" className=\"max-w-full break-words\">"
+          ]
+        },
+        {
+          "start": 145,
+          "count": 1,
+          "previous": [
+            "              <Text as=\"p\" variant=\"caption\" className=\"mt-0.5 whitespace-pre-wrap break-words\">{item.subtitle}</Text>"
+          ]
+        },
+        {
+          "start": 147,
+          "count": 1,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/ActionConfirmationDialog.tsx",
+      "before": "f4d1a1551b1afc70fb6d663d7300df54ac1140056e49634121d839cbf1b55f5a",
+      "after": "031bba934ced6e5b460b8ed356bb43d656b5bc993cdf7d399e128ac2d50c6d9e",
+      "beforeProjection": "1ea670dc88a9431355a898b0369e29284ca0e77077b0a9eddb82459d658a7819",
+      "afterProjection": "1ea670dc88a9431355a898b0369e29284ca0e77077b0a9eddb82459d658a7819",
+      "hunks": [
+        {
+          "start": 27,
+          "count": 1,
+          "previous": [
+            "      details={<Code>{path}</Code>}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/AlertBanner.tsx",
+      "before": "ea55bde4ca359a6acf79638154c63cfc3c29a6b7409b38f37009cab299536c8a",
+      "after": "c69e38e320829f44149ef4507af202427f904e9b079442be2a07deef99a8fa96",
+      "beforeProjection": "a8c9548a232a598cabba5f723dbbd011a221f3859d85eb899f89d02103873172",
+      "afterProjection": "37c6c90e254f347a32c6d1bfc8feeb84bff752175e1c33fd33cbe29e22988419",
+      "hunks": [
+        {
+          "start": 2,
+          "count": 1,
+          "previous": [
+            "import { cn } from '../../lib/cn'"
+          ]
+        },
+        {
+          "start": 5,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 26,
+          "count": 5,
+          "previous": [
+            "  info: severityTokens.info,",
+            "  success: severityTokens.success,",
+            "  warning: severityTokens.warn,",
+            "  danger: severityTokens.critical,",
+            "}"
+          ]
+        },
+        {
+          "start": 53,
+          "count": 9,
+          "previous": [
+            "  const v = alertVariantMap[variant] ?? alertVariantMap.info"
+          ]
+        },
+        {
+          "start": 63,
+          "count": 8,
+          "previous": [
+            "    <div data-app-part=\"feedback\" data-app-feedback-kind=\"notice\" data-app-tone={variant} className={cn('flex min-w-0 items-start gap-3 rounded-panel border p-4 shadow-none forced-colors:bg-[Canvas] forced-colors:border-[CanvasText] forced-colors:text-[CanvasText]', v.border, v.bg, className)} {...props}>",
+            "      {icon && <div data-app-part=\"feedback-icon\" className={cn('shrink-0 mt-0.5 forced-colors:text-[CanvasText]', v.fg)} aria-hidden>{icon}</div>}",
+            "      <div data-app-part=\"feedback-content\" className=\"flex-1 min-w-0 break-words\">",
+            "        {title && <Text data-app-part=\"feedback-title\" as=\"p\" size=\"sm\" weight=\"semibold\" color=\"primary\" className=\"forced-colors:text-[CanvasText]\">{title}</Text>}",
+            "        <Text data-app-part=\"feedback-message\" as=\"div\" variant=\"body\" className={cn('leading-relaxed forced-colors:text-[CanvasText]', title && 'mt-1')}>{children}</Text>"
+          ]
+        },
+        {
+          "start": 80,
+          "count": 1,
+          "previous": [
+            "          className={cn(",
+            "            'h-11 w-11 md:h-8 md:w-8 shrink-0 rounded-shape-sm p-0',",
+            "          )}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/DataStateNotice.tsx",
+      "before": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+      "after": "10879029d61bb7d809c7fdb99c5f08d7775e21aecab574529f9f1ee68c9bd08b",
+      "beforeProjection": "55a92bd443b116bf8d9b2435963337e03b8caadb5805527bdf4f7738b1096672",
+      "afterProjection": "55a92bd443b116bf8d9b2435963337e03b8caadb5805527bdf4f7738b1096672",
+      "hunks": [
+        {
+          "start": 119,
+          "count": 1,
+          "previous": [
+            "      <span className=\"block text-[var(--text-muted)]\">"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/DraftRestorePrompt.tsx",
+      "before": "3ce5f890a6e0a2a07073e0529de53b3266d2486c44c9a5941fc3a8e3df7aff53",
+      "after": "a7de4bfa5b12bc5b14f6c4be932994392c2c222095ddd35b3590ce3a5b98686b",
+      "beforeProjection": "b6e6c6065d4f09f1594a516c88952596ce8f7971a0ce3cc4654447d0bb03371e",
+      "afterProjection": "3ecf2bcdca5b94f67d8ea58758b711852964248005396da08ed06009fc8f2be1",
+      "hunks": [
+        {
+          "start": 3,
+          "count": 1,
+          "previous": [
+            "import { FileWarning, X } from 'lucide-react'"
+          ]
+        },
+        {
+          "start": 223,
+          "count": 6,
+          "previous": [
+            "        <div"
+          ]
+        },
+        {
+          "start": 232,
+          "count": 1,
+          "previous": [
+            "          className=\"fixed bottom-4 left-4 z-[90] max-w-sm rounded-lg border border-amber-300/30 bg-[var(--surface-1)] p-3 shadow-xl forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]\""
+          ]
+        },
+        {
+          "start": 234,
+          "count": 22,
+          "previous": [
+            "          <div className=\"flex items-start gap-3\">",
+            "            <div className=\"rounded-md bg-amber-300/15 p-1.5 shrink-0\">",
+            "              <FileWarning className=\"h-4 w-4 text-amber-300\" aria-hidden />",
+            "            </div>",
+            "            <div className=\"min-w-0 flex-1\">",
+            "              <div className=\"text-sm font-semibold text-[var(--text-primary)]\">",
+            "                {t('draft.recovery.promptTitle', 'Unsaved drafts restored')}",
+            "              </div>",
+            "              <p className=\"mt-0.5 text-xs text-[var(--text-secondary)]\">",
+            "                {t('draft.recovery.promptBody', {",
+            "                  count,",
+            "                  defaultValue_one: 'You have {{count}} unsaved draft from a previous session.',",
+            "                  defaultValue_other: 'You have {{count}} unsaved drafts from a previous session.',",
+            "                  defaultValue: 'You have {{count}} unsaved drafts from a previous session.',",
+            "                })}",
+            "              </p>",
+            "              <div className=\"mt-2 flex flex-wrap items-center gap-2\">",
+            "                <Button",
+            "                  variant=\"primary\"",
+            "                  size=\"sm\"",
+            "                  onClick={handleReview}",
+            "                  data-testid=\"draft-restore-prompt-review\"",
+            "                >",
+            "                  {t('draft.recovery.review', 'Review')}",
+            "                </Button>",
+            "                <Button",
+            "                  variant=\"ghost\"",
+            "                  size=\"sm\"",
+            "                  onClick={handleDismiss}",
+            "                  data-testid=\"draft-restore-prompt-dismiss\"",
+            "                >",
+            "                  {t('draft.recovery.dismiss', 'Dismiss')}",
+            "                </Button>",
+            "              </div>",
+            "            </div>",
+            "            <button",
+            "              type=\"button\""
+          ]
+        },
+        {
+          "start": 257,
+          "count": 1,
+          "previous": [
+            "              aria-label={t('draft.recovery.close', 'Close')}",
+            "              className=\"shrink-0 rounded p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]\""
+          ]
+        },
+        {
+          "start": 259,
+          "count": 2,
+          "previous": [
+            "              <X className=\"h-3.5 w-3.5\" aria-hidden />",
+            "            </button>"
+          ]
+        },
+        {
+          "start": 262,
+          "count": 1,
+          "previous": [
+            "        </div>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/OnboardingWizard.tsx",
+      "before": "fec1cddff004f67739ffd89e874fa910df05d64359095f97aad196d58a4fe29e",
+      "after": "b8c11b8da11257dba0a60d3d3fa650cf2db041149d58336a2a732dac56ff2382",
+      "beforeProjection": "8818bbc91668fdfeaaed85ca3fd8924b49c2c65379af4a9c167ef15f6fd63e0d",
+      "afterProjection": "8818bbc91668fdfeaaed85ca3fd8924b49c2c65379af4a9c167ef15f6fd63e0d",
+      "hunks": [
+        {
+          "start": 153,
+          "count": 1,
+          "previous": [
+            "        className=\"relative min-w-0 w-full max-w-md rounded-shape-lg border border-[var(--border-default)] p-6 bg-[var(--surface-1)] shadow-e3 outline-none forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]\""
+          ]
+        },
+        {
+          "start": 209,
+          "count": 1,
+          "previous": [
+            "        <div data-app-part=\"dialog-footer\" className=\"flex flex-wrap items-center justify-between gap-3\">"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/RuntimeHealthBanner.tsx",
+      "before": "4b7eea25548cc606580e8781e946204f533d11697f7a094bb859b5bb97ad62ff",
+      "after": "a4c6d483e6d3335d07d394aadff9334b6b872e2e444f12877baa9de2039dae00",
+      "beforeProjection": "d538776dea0a5b43e08222341cb6d2d29afef380fb1af3c92c23035b78c53aa4",
+      "afterProjection": "d538776dea0a5b43e08222341cb6d2d29afef380fb1af3c92c23035b78c53aa4",
+      "hunks": [
+        {
+          "start": 69,
+          "count": 1,
+          "previous": [
+            "      <div className=\"flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between\">"
+          ]
+        },
+        {
+          "start": 89,
+          "count": 1,
+          "previous": [
+            "        <div className=\"flex shrink-0 flex-col gap-2 sm:flex-row\">"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before": "fa5f2b1d0a35f38afbb151f1352a7f2f204ce1bf26ca7b22f7a5808a2947ce60",
+      "after": "376947c1a8e747025c400db0c4b6bd4b254f0c35efde1ad0d730f9c00002db27",
+      "beforeProjection": "bfe1545542741dee1672d3b0b643c6e412c9140af8941a90ae81d19740b70e21",
+      "afterProjection": "bfe1545542741dee1672d3b0b643c6e412c9140af8941a90ae81d19740b70e21",
+      "hunks": [
+        {
+          "start": 95,
+          "count": 18,
+          "previous": [
+            "          <Button",
+            "            data-app-part=\"feedback-retry\"",
+            "            type=\"button\"",
+            "            variant=\"ghost\"",
+            "            size=\"sm\"",
+            "            wrapLabel",
+            "            className=\"min-h-11 md:min-h-9\"",
+            "            onClick={state.retry}",
+            "            disabled={state.isRefreshing}",
+            "            aria-busy={state.isRefreshing || undefined}",
+            "            icon={<RefreshCw className=\"h-3.5 w-3.5 shrink-0\" aria-hidden=\"true\" />}",
+            "          >",
+            "            {state.isRefreshing",
+            "              ? t('freshness.updating', 'Updating…')",
+            "              : t('common.refresh', 'Refresh')}",
+            "          </Button>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/forms/SearchInput.tsx",
+      "before": "d64334feb97625892653b74846479a897417e241d71e9d02f3238360d422a406",
+      "after": "daf4c5792d8b82cecd64e90b4bec7b2ed3226f578443fe514b1c981d8d0c2755",
+      "beforeProjection": "2e02af5d80e51333af8082fa47f4dd30abefd0ff1e3a2ec7a56e43c0ab149ead",
+      "afterProjection": "b42a3c942fa999bc1affdb920fac2b45e621e448a013f440bd2ad4ad47592495",
+      "hunks": [
+        {
+          "start": 39,
+          "count": 2,
+          "previous": []
+        },
+        {
+          "start": 88,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 243,
+          "count": 0,
+          "previous": [
+            "  // A11Y: a search field must never be named by its placeholder alone —",
+            "  // placeholder text disappears the moment the user types, so the",
+            "  // control becomes anonymous to voice-control and screen-reader users",
+            "  // exactly when they need to refer to it. Fall back to the placeholder",
+            "  // as a *label* (which persists), then to a generic translated name,",
+            "  // so no call site can ship an unnamed search box."
+          ]
+        },
+        {
+          "start": 244,
+          "count": 1,
+          "previous": [
+            "    ariaLabel ?? placeholder ?? t('search.input.label', 'Search query');"
+          ]
+        },
+        {
+          "start": 259,
+          "count": 3,
+          "previous": [
+            "        aria-label={accessibleName}",
+            "        placeholder={placeholder}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/forms/TableToolbar.tsx",
+      "before": "f8d1d20448a71c47ceb9cc14185a0d4b5bb77649d65229e5c05bebf39a48f82e",
+      "after": "85a454ea273a0d6831a22eb4932b9381af4c0802bf0d3ca4fbffb9c535bdace7",
+      "beforeProjection": "73dee461f5ca2af21fc7874a6930bed26b3f71ae3e8d46fdc76eca05c70e9f3e",
+      "afterProjection": "73dee461f5ca2af21fc7874a6930bed26b3f71ae3e8d46fdc76eca05c70e9f3e",
+      "hunks": [
+        {
+          "start": 53,
+          "count": 1,
+          "previous": [
+            "    <div className=\"flex min-w-0 flex-1 basis-56 items-center gap-1.5\" aria-busy={search.pending || undefined}>"
+          ]
+        },
+        {
+          "start": 58,
+          "count": 2,
+          "previous": [
+            "          <SearchInput {...search} clearLabel={search.clearLabel ?? t('common.clearSearch', 'Clear search')} className={cn('w-full', search.className)} />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "before": "99b95d250d17a91b910e4f1a90ffde6d4b493688dad1b5d5def7489071766feb",
+      "after": "3f198e8a6514dc86ab1081520b915bcfd5906d7da1bc3dafd4b97e31c95081d4",
+      "beforeProjection": "f897a143dd1d91b8a71420bc721d179aa4de97f6c10264b75beaa86f3a53b47a",
+      "afterProjection": "f897a143dd1d91b8a71420bc721d179aa4de97f6c10264b75beaa86f3a53b47a",
+      "hunks": [
+        {
+          "start": 24,
+          "count": 0,
+          "previous": [
+            "  TOURS,"
+          ]
+        },
+        {
+          "start": 28,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 30,
+          "count": 1,
+          "previous": [
+            "} from '@/lib/tourRegistry'"
+          ]
+        },
+        {
+          "start": 32,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 347,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 690,
+          "count": 1,
+          "previous": [
+            "  // Only one tour can be active at a time. The launcher (or a CustomEvent",
+            "  // dispatched from anywhere) sets `activeTourId`; we wire the matching",
+            "  // definition into useTour so completion is persisted under the per-tour",
+            "  // storage key. Auto-start is intentionally limited to the dashboard tour.",
+            "  const [activeTourId, setActiveTourId] = useState<string | null>(null)",
+            "  const activeTourDef = activeTourId ? TOURS[activeTourId] ?? null : null"
+          ]
+        },
+        {
+          "start": 734,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 736,
+          "count": 8,
+          "previous": [
+            "      const detail = (event as CustomEvent<TourStartEventDetail>).detail",
+            "      if (!detail?.id || !TOURS[detail.id]) return",
+            "      setActiveTourId(detail.id)"
+          ]
+        },
+        {
+          "start": 746,
+          "count": 4,
+          "previous": [
+            "    return () => window.removeEventListener(TOUR_START_EVENT, handler)"
+          ]
+        },
+        {
+          "start": 767,
+          "count": 1,
+          "previous": [
+            "      if (msg.type !== 'tour.replay-requested') return",
+            "      if (!msg.tourId || !TOURS[msg.tourId]) return",
+            "      dispatchTourStart(msg.tourId)"
+          ]
+        },
+        {
+          "start": 771,
+          "count": 1,
+          "previous": [
+            "  // When activeTourId changes (event-triggered) start the tour."
+          ]
+        },
+        {
+          "start": 775,
+          "count": 1,
+          "previous": [
+            "    if (!activeTourId) return"
+          ]
+        },
+        {
+          "start": 778,
+          "count": 1,
+          "previous": [
+            "  }, [activeTourId])"
+          ]
+        },
+        {
+          "start": 780,
+          "count": 1,
+          "previous": [
+            "  // When the tour finishes / is skipped, clear activeTourId so a future",
+            "  // launch can re-trigger the same tour."
+          ]
+        },
+        {
+          "start": 789,
+          "count": 1,
+          "previous": [
+            "      setActiveTourId(null)"
+          ]
+        },
+        {
+          "start": 843,
+          "count": 0,
+          "previous": [
+            "  //",
+            "  // `TOURS` is still imported: the TOUR_START_EVENT listener above resolves",
+            "  // explicitly-requested tour ids against it."
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/sidebar/collections.ts",
+      "before": "a942574308b1ef74d7b9f7ba7031cb28e392ef21c82704571ccab2fc08faad5c",
+      "after": "8b3bbd946ae455546a0bc4e092f05cae0378bd52c292b39d32c4c07c068ab1bb",
+      "beforeProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "afterProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "hunks": [
+        {
+          "start": 116,
+          "count": 1,
+          "previous": [
+            "  [\"Smart notifications\", '/settings/smart-commute', '/settings/smart-charging'],"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before": "4e627675d587e6a75c8e487eecb4622c4b5b3fb7536203bc2ae454d1f56869c5",
+      "after": "eb5cc04e9ad0e8220fca5ead887da430d81860f252136dffd92171b3d2cb24aa",
+      "beforeProjection": "277a496b6b4ac00de01e84fb043d5ae03107389cc01cd9eab396af5e9a7c6594",
+      "afterProjection": "277a496b6b4ac00de01e84fb043d5ae03107389cc01cd9eab396af5e9a7c6594",
+      "hunks": [
+        {
+          "start": 1974,
+          "count": 1,
+          "previous": [
+            "                      hasInlineFilter && 'align-top',"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/MQTTStatusWidget.tsx",
+      "before": "1bb5d7b967330603bbaeb4b5500c53ed93734e7fe812b49deb84883fe0ab17e8",
+      "after": "38dddfb4f7cf2125c0a3ec630dad119fa685c833027ee5664f511cd1d4427e52",
+      "beforeProjection": "3ad79e02fc931ea4b2eefa855b612ec52624274d1a0077f51a464dd3909010ff",
+      "afterProjection": "d62f262efd7f0a279fd8c988d80c17fa61de15e2b0b4633097890a20e1f85837",
+      "hunks": [
+        {
+          "start": 102,
+          "count": 2,
+          "previous": [
+            "              samples={data.sessionSamples} width={360} height={80}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTrend.tsx",
+      "before": "f31a08f4f61f244bc910de3faf992c7f6cfdd6f22fa1ad834304f56f9761bf65",
+      "after": "f33043d01e8993d95eabe0bc34fc1337f3f3f59c1f8306982f41bbc86d3b87e4",
+      "beforeProjection": "e31b819610358ee0ce49560f393e396c70506fa63ae0b9dedd756f98f76ba0f0",
+      "afterProjection": "05d9877474c9274c3eed58de814709ba0f2c2cfd1c251d9e23c9dc0290cd11a0",
+      "hunks": [
+        {
+          "start": 0,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 3,
+          "count": 2,
+          "previous": [
+            "  ChartTooltip, renderAnnotationLines, AREA_DEFAULTS, areaGradient,",
+            "  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,"
+          ]
+        },
+        {
+          "start": 6,
+          "count": 1,
+          "previous": []
+        },
+        {
+          "start": 13,
+          "count": 3,
+          "previous": []
+        },
+        {
+          "start": 20,
+          "count": 3,
+          "previous": []
+        },
+        {
+          "start": 46,
+          "count": 16,
+          "previous": [
+            "    empty={dailyTrend.length < 3}"
+          ]
+        },
+        {
+          "start": 67,
+          "count": 1,
+          "previous": [
+            "          <CartesianGrid strokeDasharray=\"3 3\" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />"
+          ]
+        },
+        {
+          "start": 72,
+          "count": 6,
+          "previous": [
+            "          <Area {...AREA_DEFAULTS} dataKey=\"efficiency\" stroke={chartTokens.series[0]} fill=\"url(#effGrad)\" name={efficiencyUnit} />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/routeMeta.ts",
+      "before": "06a10c26186e4f79482f1d38fbc91c1888bf6a473f65613b0534b09f7651c7c3",
+      "after": "aa94b3d902a78f5a89ba5949d0827b43d59c909244cbd9a074e6a38f303cd3a4",
+      "beforeProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "afterProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "hunks": [
+        {
+          "start": 141,
+          "count": 1,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "before": "8f6e7ca1fd9a93464c8cc55cf2543c03649fe2ef48a72d58ef61c1696e7caecf",
+      "after": "287200a6e2282add2230c11e788ad86768398657f8976757a8401f4a2aad6e19",
+      "beforeProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "afterProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "hunks": [
+        {
+          "start": 223,
+          "count": 1,
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/tourRegistry.ts",
+      "before": "e46967c1b03260ae7ca2cd92028383911a82b19837ae94e8357ddc83971e35bb",
+      "after": "819313a9d224569c33408ac2d016993b1f355305c89e87e7567ae497b3e00e91",
+      "beforeProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "afterProjection": "8ad3fd623b756be7addb36bbeaa750fc7308174e83937cd9b77ddb9859389101",
+      "hunks": [
+        {
+          "start": 0,
+          "count": 0,
+          "previous": [
+            "import type { TourStep } from '@/hooks/useTour'",
+            "",
+            "/**",
+            " * Tour registry.",
+            " *",
+            " * Per-feature onboarding tours. Each definition declares its identity, the",
+            " * route it is most relevant on (used by the launcher to highlight",
+            " * \"recommended for this page\"), a version (bump to silently invalidate any",
+            " * previously stored completion flag — same trick as form drafts),",
+            " * and the ordered list of {@link TourStep} entries the user is walked",
+            " * through.",
+            " *",
+            " * Storage model:",
+            " *   - Per-tour completion flag: `teslasync:tour:v{version}:{id}` →",
+            " *     `'completed' | 'skipped'`. When the version stored on disk does not",
+            " *     match the registry version, the tour is treated as \"not yet seen\"",
+            " *     so users get re-prompted after a meaningful update.",
+            " *   - Launcher-seen flag: `teslasync:tour:list-seen` → `'true'` once the",
+            " *     launcher has been opened at least once. Used to surface the",
+            " *     \"More tours available\" hint to brand-new users.",
+            " */",
+            "",
+            "export type TourCompletionStatus = 'completed' | 'skipped'",
+            "",
+            "export interface TourDefinition {",
+            "  /** Stable identifier — used for storage key, registry lookup, telemetry */",
+            "  id: string",
+            "  /**",
+            "   * Routes where the launcher should highlight this tour as",
+            "   * \"recommended for this page\". Provide a string for an exact prefix or a",
+            "   * RegExp for more nuanced matching (e.g. drive detail pages).",
+            "   */",
+            "  routeMatch: string | RegExp",
+            "  /** i18n key for the tour's display name in the launcher */",
+            "  titleKey: string",
+            "  /** English fallback for {@link titleKey} */",
+            "  titleFallback: string",
+            "  /** i18n key for the one-line description */",
+            "  descriptionKey: string",
+            "  /** English fallback for {@link descriptionKey} */",
+            "  descriptionFallback: string",
+            "  /**",
+            "   * Bump this when the tour content materially changes. Any user whose",
+            "   * stored completion was at an older version gets the tour re-offered the",
+            "   * next time the auto-start predicate matches.",
+            "   */",
+            "  version: number",
+            "  steps: TourStep[]",
+            "  /**",
+            "   * Optional predicate evaluated on route changes. When it returns true and",
+            "   * the tour has not been completed at the current version, the tour starts",
+            "   * automatically. Per the prompt, only the `main` tour opts in by default;",
+            "   * every other tour stays explicit (launcher-only) so we don't interrupt",
+            "   * users who already know the app.",
+            "   */",
+            "  autoStart?: (ctx: TourAutoStartContext) => boolean",
+            "}",
+            "",
+            "/** Context passed to {@link TourDefinition.autoStart} predicates. */",
+            "export interface TourAutoStartContext {",
+            "  pathname: string",
+            "  vehicleCount: number",
+            "}",
+            "",
+            "const STORAGE_PREFIX = 'teslasync:tour'",
+            "const LIST_SEEN_KEY = `${STORAGE_PREFIX}:list-seen`",
+            "",
+            "function storageKey(id: string, version: number): string {",
+            "  return `${STORAGE_PREFIX}:v${version}:${id}`",
+            "}",
+            "",
+            "/** Returns the stored completion status for a tour at a given version, or null. */",
+            "export function getTourStatus(id: string, version: number): TourCompletionStatus | null {",
+            "  if (typeof window === 'undefined') return null",
+            "  try {",
+            "    const raw = window.localStorage.getItem(storageKey(id, version))",
+            "    if (raw === 'completed' || raw === 'skipped') return raw",
+            "    return null",
+            "  } catch {",
+            "    return null",
+            "  }",
+            "}",
+            "",
+            "/** True when the user has finished or skipped the tour at the current version. */",
+            "export function isTourCompleted(id: string, version: number): boolean {",
+            "  return getTourStatus(id, version) !== null",
+            "}",
+            "",
+            "/** Marks a tour as completed (user finished all steps). */",
+            "export function markTourCompleted(id: string, version: number): void {",
+            "  if (typeof window === 'undefined') return",
+            "  try {",
+            "    window.localStorage.setItem(storageKey(id, version), 'completed')",
+            "  } catch {",
+            "    /* localStorage quota / disabled — non-fatal */",
+            "  }",
+            "}",
+            "",
+            "/** Marks a tour as skipped (user closed mid-way). */",
+            "export function markTourSkipped(id: string, version: number): void {",
+            "  if (typeof window === 'undefined') return",
+            "  try {",
+            "    window.localStorage.setItem(storageKey(id, version), 'skipped')",
+            "  } catch {",
+            "    /* non-fatal */",
+            "  }",
+            "}",
+            "",
+            "/** Canonical server token for a completed/skipped tour: `\"{id}:{version}\"`. */",
+            "export function completedTourToken(id: string, version: number): string {",
+            "  return `${id}:${version}`",
+            "}",
+            "",
+            "/**",
+            " * Seed the local per-tour completion flags from the server-persisted list",
+            " * (`AppSettings.completed_tours`). Lets a browser that cleared localStorage —",
+            " * but is still the same signed-in install — avoid re-triggering a tour the",
+            " * user already finished. Idempotent; never downgrades an existing local flag.",
+            " */",
+            "export function seedCompletedFromServer(tokens: readonly string[]): void {",
+            "  if (typeof window === 'undefined' || !Array.isArray(tokens)) return",
+            "  for (const token of tokens) {",
+            "    const sep = token.lastIndexOf(':')",
+            "    if (sep <= 0) continue",
+            "    const id = token.slice(0, sep)",
+            "    const version = Number(token.slice(sep + 1))",
+            "    if (!id || !Number.isFinite(version)) continue",
+            "    if (getTourStatus(id, version) === null) markTourCompleted(id, version)",
+            "  }",
+            "}",
+            "",
+            "/** Clears the completion flag for a single tour (any version). */",
+            "export function resetTour(id: string): void {",
+            "  if (typeof window === 'undefined') return",
+            "  try {",
+            "    const prefix = `${STORAGE_PREFIX}:`",
+            "    const suffix = `:${id}`",
+            "    const toRemove: string[] = []",
+            "    for (let i = 0; i < window.localStorage.length; i++) {",
+            "      const key = window.localStorage.key(i)",
+            "      if (key && key.startsWith(prefix) && key.endsWith(suffix)) {",
+            "        toRemove.push(key)",
+            "      }",
+            "    }",
+            "    toRemove.forEach((k) => window.localStorage.removeItem(k))",
+            "  } catch {",
+            "    /* non-fatal */",
+            "  }",
+            "}",
+            "",
+            "/** Clears every per-tour completion flag and the list-seen marker. */",
+            "export function resetAllTours(): void {",
+            "  if (typeof window === 'undefined') return",
+            "  try {",
+            "    const prefix = `${STORAGE_PREFIX}:`",
+            "    const toRemove: string[] = []",
+            "    for (let i = 0; i < window.localStorage.length; i++) {",
+            "      const key = window.localStorage.key(i)",
+            "      if (key && key.startsWith(prefix)) toRemove.push(key)",
+            "    }",
+            "    toRemove.forEach((k) => window.localStorage.removeItem(k))",
+            "    // Legacy single-flag from the pre-Prompt-65 implementation. Removing it",
+            "    // ensures \"Reset all tours\" actually re-enables the dashboard auto-start",
+            "    // for users who completed the tour before the migration.",
+            "    window.localStorage.removeItem('teslasync-tour-completed')",
+            "  } catch {",
+            "    /* non-fatal */",
+            "  }",
+            "}",
+            "",
+            "/** Has the launcher been opened at least once? */",
+            "export function hasSeenTourList(): boolean {",
+            "  if (typeof window === 'undefined') return false",
+            "  try {",
+            "    return window.localStorage.getItem(LIST_SEEN_KEY) === 'true'",
+            "  } catch {",
+            "    return false",
+            "  }",
+            "}",
+            "",
+            "/** Records that the launcher has been opened. */",
+            "export function markTourListSeen(): void {",
+            "  if (typeof window === 'undefined') return",
+            "  try {",
+            "    window.localStorage.setItem(LIST_SEEN_KEY, 'true')",
+            "  } catch {",
+            "    /* non-fatal */",
+            "  }",
+            "}",
+            "",
+            "/** True when the path matches the tour's route hint. */",
+            "export function isRecommendedForRoute(def: TourDefinition, pathname: string): boolean {",
+            "  if (typeof def.routeMatch === 'string') {",
+            "    if (def.routeMatch === '/') return pathname === '/'",
+            "    return pathname === def.routeMatch || pathname.startsWith(`${def.routeMatch}/`)",
+            "  }",
+            "  return def.routeMatch.test(pathname)",
+            "}",
+            "",
+            "/**",
+            " * Custom event name used to start a tour from anywhere in the app",
+            " * (TourLauncher, command palette, status-bar menus, etc). The Layout listens",
+            " * for this event and resolves the id against {@link TOURS}.",
+            " */",
+            "export const TOUR_START_EVENT = 'teslasync:tour:start'",
+            "",
+            "/**",
+            " * Custom event name used to open the launcher (the modal that lists every",
+            " * available tour). Mirrors the existing `toggle-keyboard-shortcuts` pattern",
+            " * so the launcher does not need to be threaded through React context.",
+            " */",
+            "export const TOUR_OPEN_LAUNCHER_EVENT = 'teslasync:tour:openLauncher'",
+            "",
+            "export interface TourStartEventDetail {",
+            "  id: string",
+            "}",
+            "",
+            "/** Convenience helper to dispatch the start event. */",
+            "export function dispatchTourStart(id: string): void {",
+            "  if (typeof window === 'undefined') return",
+            "  window.dispatchEvent(",
+            "    new CustomEvent<TourStartEventDetail>(TOUR_START_EVENT, { detail: { id } }),",
+            "  )",
+            "}",
+            "",
+            "/** Convenience helper to dispatch the launcher-open event. */",
+            "export function dispatchTourLauncherOpen(): void {",
+            "  if (typeof window === 'undefined') return",
+            "  window.dispatchEvent(new CustomEvent(TOUR_OPEN_LAUNCHER_EVENT))",
+            "}",
+            "",
+            "// ─── Registry ───────────────────────────────────────────────────────────────",
+            ""
+          ]
+        },
+        {
+          "start": 8,
+          "count": 3,
+          "previous": []
+        },
+        {
+          "start": 35,
+          "count": 0,
+          "previous": [
+            "/** Lookup helper that returns the definition or null. */"
+          ]
+        },
+        {
+          "start": 36,
+          "count": 1,
+          "previous": [
+            "  return TOURS[id] ?? null"
+          ]
+        },
+        {
+          "start": 39,
+          "count": 0,
+          "previous": [
+            "/** Returns every tour in display order. */"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/DrivesEvidenceTable.tsx",
+      "before": "2a924c1663769a8f61ab07ad1e0d31473b78021e8a67aa9ab7cfbdf0bd315f4a",
+      "after": "c1096d8e4966daecebcdfcc0bb39a01acf3080cdafd1dab85826daeeff84144f",
+      "beforeProjection": "39cb9b463a3cdda3353d005c83a8b6a27c7d432a6f1df8976520c2039471cb18",
+      "afterProjection": "d0466c156ae18f2236d5c32e2dae5144465a513103ce79bf015aa05596da416c",
+      "hunks": [
+        {
+          "start": 52,
+          "count": 0,
+          "previous": [
+            "  vehicleName?: string;"
+          ]
+        },
+        {
+          "start": 81,
+          "count": 1,
+          "previous": [
+            "  driveStatus, onDriveStatusChange, vehicleName, vehicleId,"
+          ]
+        },
+        {
+          "start": 147,
+          "count": 0,
+          "previous": [
+            "            {drive.vehicleId === vehicleId && vehicleName && <Text size=\"xs\" color=\"muted\" className=\"block truncate\">{vehicleName}</Text>}"
+          ]
+        },
+        {
+          "start": 492,
+          "count": 1,
+          "previous": [
+            "  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt, vehicleId, vehicleName, reviewLabels, driveStatus, onDriveStatusChange, anomalyDriveIds]);"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/hooks/useDrivesListPageData.ts",
+      "before": "898b77535483f082cb116c23539f891cb3b1ee5984f214427c39b26ef6be8273",
+      "after": "dcb52af904b3ca4e94f2aba6c1cc5dc69f1c2c39dd73cab6982c7494d3f3ee2d",
+      "beforeProjection": "f9422b79acebf54619f619ac956c1ca2a90296a680023771fedfba49b1e06257",
+      "afterProjection": "f9422b79acebf54619f619ac956c1ca2a90296a680023771fedfba49b1e06257",
+      "hunks": [
+        {
+          "start": 33,
+          "count": 1,
+          "previous": [
+            "  const { vehicleId, vehicle } = useSelectedVehicle();"
+          ]
+        },
+        {
+          "start": 148,
+          "count": 1,
+          "previous": [
+            "    vehicleId, vehicleName: vehicle?.displayName, startDate, endDate, priorRange, isAllTime, drivesQuery,"
+          ]
+        }
+      ]
+    }
+  ]
+}

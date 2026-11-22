@@ -3,6 +3,7 @@ import { producerProjection } from './producer-projection'
 import patches from './__fixtures__/verified-fleet-source-patches.json'
 import { readFleetCurrentSource, restoreVerifiedFleetSource } from './verified-fleet-source-contract'
 import { restoreNavOrientationSource } from './verified-horizontal-navigation-contract'
+import { restoreSmartNotificationsSource } from './verified-smart-notifications-contract'
 
 describe('reviewed Fleet API and shared-control changes', () => {
   it.each(patches)('preserves the guarded predecessor and rejects unreviewed changes: $file', patch => {
@@ -17,7 +18,7 @@ describe('reviewed Fleet API and shared-control changes', () => {
     'web/src/components/layout/sidebar/CommandDeck.tsx',
   ])('preserves translation calls and their controls in %s', file => {
     const source = readFleetCurrentSource(file)
-    const projection = producerProjection(file, restoreNavOrientationSource(file, source))
+    const projection = producerProjection(file, restoreNavOrientationSource(file, restoreSmartNotificationsSource(file, source)))
     const previous = producerProjection(file, restoreVerifiedFleetSource(file, source))
     if (file === 'web/src/components/layout/Layout.tsx') {
       // The three legacy chrome translations are still present, now gated to

@@ -241,6 +241,29 @@ describe('useUrlBatch', () => {
     expect(getByTestId('to').textContent).toBe('B');
   });
 
+  it('preserves a filter when sorting before the router renders the filter update', () => {
+    function Probe() {
+      const location = useLocation();
+      const setBatch = useUrlBatch();
+      return (
+        <>
+          <button onClick={() => {
+            setBatch({ grid_route: 'Office', page: null });
+            setBatch({ sort: 'distance', sortdir: 'desc', page: null });
+          }}>filter and sort</button>
+          <span data-testid="url">{location.search}{location.hash}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/?from=2026-08-01&page=3#history']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    fireEvent.click(getByText('filter and sort'));
+    expect(getByTestId('url').textContent).toBe('?from=2026-08-01&grid_route=Office&sort=distance&sortdir=desc#history');
+  });
+
   it('null deletes the key', () => {
     function Probe() {
       const [from] = useUrlString('from', '');

@@ -52,6 +52,21 @@ type cronSnapshot struct {
 	CronExpr string `json:"cron_expr"`
 }
 
+type scheduleFireKey struct{}
+
+// ScheduleFire identifies a scheduler invocation, independently of its display snapshot.
+type ScheduleFire struct {
+	AutomationID int64
+	Revision     time.Time
+	Trigger      models.AutomationStepTriggerSchedule
+	FiredAt      time.Time
+}
+
+func ScheduleFireFromContext(ctx context.Context) (ScheduleFire, bool) {
+	value, ok := ctx.Value(scheduleFireKey{}).(ScheduleFire)
+	return value, ok
+}
+
 // CronTrigger manages cron-based automation scheduling using robfig/cron.
 type CronTrigger struct {
 	mu        sync.RWMutex
@@ -137,11 +152,10 @@ func (t *CronTrigger) Register(ca CronAutomation) error {
 	spec := fmt.Sprintf("CRON_TZ=%s %s", loc.String(), ca.Trigger.CronExpr)
 
 	automationID := ca.Automation.ID
-	automationName := ca.Automation.Name
 	cronExpr := ca.Trigger.CronExpr
 
 	entryID, err := t.scheduler.AddFunc(spec, func() {
-		t.fire(automationID, automationName, cronExpr)
+		t.fire(ca)
 	})
 	if err != nil {
 		return fmt.Errorf("register cron schedule %q: %w", spec, err)
@@ -157,7 +171,7 @@ func (t *CronTrigger) Register(ca CronAutomation) error {
 
 	t.logger.Info().
 		Int64("automation_id", automationID).
-		Str("automation", automationName).
+		Str("automation", ca.Automation.Name).
 		Str("cron_expr", cronExpr).
 		Str("timezone", loc.String()).
 		Msg("registered cron automation")
@@ -230,7 +244,8 @@ func (t *CronTrigger) IsRegistered(automationID int64) bool {
 }
 
 // fire is the callback invoked by the cron scheduler when a job triggers.
-func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string) {
+func (t *CronTrigger) fire(ca CronAutomation) {
+	automationID, automationName, cronExpr := ca.Automation.ID, ca.Automation.Name, ca.Trigger.CronExpr
 	firedAt := time.Now().UTC()
 
 	snapshot, err := json.Marshal(cronSnapshot{
@@ -250,7 +265,10 @@ func (t *CronTrigger) fire(automationID int64, automationName, cronExpr string) 
 		Str("cron_expr", cronExpr).
 		Msg("cron trigger fired")
 
-	if evalErr := t.engine.Evaluate(t.ctx, automationID, snapshot); evalErr != nil {
+	ctx := context.WithValue(t.ctx, scheduleFireKey{}, ScheduleFire{
+		AutomationID: automationID, Revision: ca.Automation.UpdatedAt, Trigger: ca.Trigger, FiredAt: firedAt,
+	})
+	if evalErr := t.engine.Evaluate(ctx, automationID, snapshot); evalErr != nil {
 		t.logger.Error().Err(evalErr).
 			Int64("automation_id", automationID).
 			Str("automation", automationName).

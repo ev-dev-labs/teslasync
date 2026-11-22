@@ -1449,6 +1449,10 @@
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
+    },
+    "markers": {
+      "start": "Start",
+      "stop": "End"
     }
   },
   "requiresAuth": {
@@ -1537,6 +1541,11 @@
       "promptLabel": "Filter request",
       "promptPlaceholder": "e.g. show me battery level for yesterday",
       "title": "Helix natural-language filter"
+    }
+  },
+  "smartCharging": {
+    "stopComparison": {
+      "title": "Compare reviewed charging stops"
     }
   },
   "softwareUpdates": {

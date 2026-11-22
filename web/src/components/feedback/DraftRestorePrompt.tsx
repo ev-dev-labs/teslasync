@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { FileWarning, X } from 'lucide-react'
+import { FileWarning } from 'lucide-react'
 import { Button, Modal } from '@/components/ui/runtime'
 import { Text } from '@/components/ui/Typography'
 import { captureAppDesignOrigin, type AppDesignOriginSnapshot } from '@/components/ui/appDesignOrigin'
@@ -221,57 +221,46 @@ export function DraftRestorePrompt({
   return (
     <>
       {showPrompt && !reviewOpen && (
-        <div
+        <AlertBanner
+          variant="warning"
+          icon={<FileWarning className="h-4 w-4" aria-hidden />}
+          title={t('draft.recovery.promptTitle', 'Unsaved drafts restored')}
+          closeLabel={t('draft.recovery.close', 'Close')}
+          onClose={handleDismiss}
           role="status"
           aria-live="polite"
           data-testid="draft-restore-prompt"
-          className="fixed bottom-4 left-4 z-[90] max-w-sm rounded-lg border border-amber-300/30 bg-[var(--surface-1)] p-3 shadow-xl forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
+          className="fixed inset-x-4 bottom-4 z-[90] max-w-sm shadow-e2"
         >
-          <div className="flex items-start gap-3">
-            <div className="rounded-md bg-amber-300/15 p-1.5 shrink-0">
-              <FileWarning className="h-4 w-4 text-amber-300" aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('draft.recovery.promptTitle', 'Unsaved drafts restored')}
-              </div>
-              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                {t('draft.recovery.promptBody', {
-                  count,
-                  defaultValue_one: 'You have {{count}} unsaved draft from a previous session.',
-                  defaultValue_other: 'You have {{count}} unsaved drafts from a previous session.',
-                  defaultValue: 'You have {{count}} unsaved drafts from a previous session.',
-                })}
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleReview}
-                  data-testid="draft-restore-prompt-review"
-                >
-                  {t('draft.recovery.review', 'Review')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDismiss}
-                  data-testid="draft-restore-prompt-dismiss"
-                >
-                  {t('draft.recovery.dismiss', 'Dismiss')}
-                </Button>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleDismiss}
-              aria-label={t('draft.recovery.close', 'Close')}
-              className="shrink-0 rounded p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+          <Text as="p" variant="bodySm">
+            {t('draft.recovery.promptBody', {
+              count,
+              defaultValue_one: 'You have {{count}} unsaved draft from a previous session.',
+              defaultValue_other: 'You have {{count}} unsaved drafts from a previous session.',
+              defaultValue: 'You have {{count}} unsaved drafts from a previous session.',
+            })}
+          </Text>
+          <div data-app-part="feedback-actions" className="mt-2 flex flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-2">
+            <Button
+              variant="primary"
+              size="sm"
+              wrapLabel
+              onClick={handleReview}
+              data-testid="draft-restore-prompt-review"
             >
-              <X className="h-3.5 w-3.5" aria-hidden />
-            </button>
+              {t('draft.recovery.review', 'Review')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              wrapLabel
+              onClick={handleDismiss}
+              data-testid="draft-restore-prompt-dismiss"
+            >
+              {t('draft.recovery.dismiss', 'Dismiss')}
+            </Button>
           </div>
-        </div>
+        </AlertBanner>
       )}
 
       <Modal

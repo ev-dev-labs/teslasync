@@ -240,7 +240,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
   /* Async options: re-fetch on inputValue change with debounced
    * abort-on-keystroke. Static-array branch never runs this effect. */
   useEffect(() => {
-    if (!isAsync) {
+    if (typeof options !== 'function') {
       setAsyncOptions(null);
       setAsyncLoading(false);
       return;
@@ -250,31 +250,23 @@ export function Combobox<T>(props: ComboboxProps<T>) {
       return;
     }
     const controller = new AbortController();
-    const debounceId = setTimeout(() => {
+    const debounceId = setTimeout(async () => {
       setAsyncLoading(true);
-      Promise.resolve(
-        (options as (q: string, signal: AbortSignal) => Promise<readonly T[]>)(
-          inputValue,
-          controller.signal,
-        ),
-      )
-        .then((next) => {
-          if (controller.signal.aborted) return;
-          setAsyncOptions(next ?? []);
-          setAsyncLoading(false);
-        })
-        .catch((err) => {
-          if (controller.signal.aborted) return;
-          if (err && (err as { name?: string }).name === 'AbortError') return;
-          setAsyncOptions([]);
-          setAsyncLoading(false);
-        });
+      try {
+        const next = await options(inputValue, controller.signal);
+        if (!controller.signal.aborted) setAsyncOptions(next ?? []);
+      } catch (err) {
+        if (controller.signal.aborted || (err && (err as { name?: string }).name === 'AbortError')) return;
+        setAsyncOptions([]);
+      } finally {
+        if (!controller.signal.aborted) setAsyncLoading(false);
+      }
     }, asyncDebounceMs);
     return () => {
       clearTimeout(debounceId);
       controller.abort();
     };
-  }, [isAsync, options, inputValue, open, asyncDebounceMs]);
+  }, [options, inputValue, open, asyncDebounceMs]);
 
   const loading = loadingProp || asyncLoading;
 

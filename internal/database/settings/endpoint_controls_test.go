@@ -16,6 +16,7 @@ func TestEndpointControlsPersistOnlyFleetSwitches(t *testing.T) {
 	pc.AutoPollingEnabled = true
 	pc.FleetEndpoints = map[string]bool{"command.door_lock": false}
 	pc.AutoEndpoints = map[string]bool{"vehicle_data.charge_state": false}
+	pc.SmartEndpoints = map[string]bool{"energy.live_status": true}
 	pc.TelemetryCapture = true // projection must exclude even old capture fields
 	pc.TelemetryCaptureRetentionDays = 30
 	raw, err := json.Marshal(endpointControlsFrom(pc))
@@ -26,8 +27,8 @@ func TestEndpointControlsPersistOnlyFleetSwitches(t *testing.T) {
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		t.Fatal(err)
 	}
-	if len(fields) != 23 {
-		t.Fatalf("persisted %d settings, want 23: %s", len(fields), raw)
+	if len(fields) != 24 {
+		t.Fatalf("persisted %d settings, want 24: %s", len(fields), raw)
 	}
 	if _, present := fields["telemetry_capture"]; present {
 		t.Fatal("unsupported telemetry capture was persisted")

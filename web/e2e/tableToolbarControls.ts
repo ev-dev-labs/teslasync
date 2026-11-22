@@ -15,3 +15,19 @@ export async function closeTableToolbarControls(controls: Locator): Promise<void
   await controls.press('Escape');
   await expect(controls).toHaveCount(0);
 }
+
+export async function openTableColumnLayout(controls: Locator): Promise<Locator> {
+  await controls.getByRole('button', { name: 'Reorder or hide columns', exact: true }).click();
+  const layout = controls.page().getByRole('dialog', { name: 'Reorder or hide columns', exact: true });
+  await expect(layout).toBeVisible();
+  return layout;
+}
+
+export async function expectTableDensityControls(layout: Locator): Promise<void> {
+  const compact = layout.getByRole('radio', { name: 'Compact', exact: true });
+  const comfortable = layout.getByRole('radio', { name: 'Comfortable', exact: true });
+  await compact.click();
+  await expect(compact).toBeChecked();
+  await comfortable.click();
+  await expect(comfortable).toBeChecked();
+}

@@ -75,6 +75,14 @@ describe('featureCatalog', () => {
       expect(out.some((e) => e.to === '/charging')).toBe(true);
     });
 
+    it('can find Smart Commute by its localized description', () => {
+      const localized = buildFeatureCatalog((key, fallback) =>
+        key === 'smartCommute.pageSubtitle' ? 'Trajets habituels' : fallback,
+      );
+      expect(filterFeatureCatalog(localized, 'trajets habituels').map((entry) => entry.to))
+        .toEqual(['/settings/smart-commute']);
+    });
+
     it('describes the Action Center as a decision surface with evidence', () => {
       const out = filterFeatureCatalog(catalog, 'evidence confidence');
       expect(out.some((entry) => entry.to === '/action-center')).toBe(true);

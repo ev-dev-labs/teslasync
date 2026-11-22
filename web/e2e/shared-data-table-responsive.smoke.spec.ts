@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
+import { assertMockApiComplete, fulfillApiFixture, installApiMocks, mockDrive, seedBrowserState, waitForHarnessReady } from './mockApi';
+import { installCardLayoutFixtures } from './cardLayoutFixtures';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 import { closeTableToolbarControls, openTableToolbarControls } from './tableToolbarControls';
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic loaded-table evidence');
@@ -20,6 +21,69 @@ async function downloadAuditCsv(page: Page): Promise<string> {
 }
 
 for (const theme of ['light', 'dark'] as const) {
+  test(`paired recent activity grids align on vehicle detail in ${theme}`, async ({ page }) => {
+    const path = '/vehicles/7';
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await seedBrowserState(page, theme, path);
+    const { mockApi, networkEscapes } = await installCardLayoutFixtures(page, theme);
+    const dates = Array.from({ length: 5 }, (_, index) => `2026-08-${25 - index}T08:00:00.000Z`);
+    await page.route(url => url.pathname === '/api/v1/drives' && url.searchParams.get('limit') === '5', route =>
+      fulfillApiFixture(route, mockApi, {
+        json: dates.map((start_ts, index) => ({ ...mockDrive, start_ts, id: index + 1, distance_m: (index + 1) * 1000 })),
+      }));
+    await page.route(url => url.pathname === '/api/v1/charging' && url.searchParams.get('limit') === '5', route =>
+      fulfillApiFixture(route, mockApi, {
+        json: dates.map((started_at, index) => ({
+          id: index + 1, vehicle_id: 7, started_at, duration_s: 7200,
+          total_energy_added_wh: 20_000 + index * 1000, cost_decimal: 4, start_soc_pct: 45, end_soc_pct: 80,
+        })),
+      }));
+    await page.goto(path);
+    await waitForHarnessReady(page, mockApi);
+
+    const recent = page.getByRole('region', { name: 'Recent activity', exact: true });
+    const drives = recent.locator('[data-vehicle-source="Recent drives"]');
+    const charges = recent.locator('[data-vehicle-source="Recent charges"]');
+    await expect(drives.getByRole('table', { name: 'Recent drives' })).toBeVisible();
+    await expect(charges.getByRole('table')).toBeVisible();
+    await expect(drives.locator('tbody tr')).toHaveCount(5);
+    await expect(charges.locator('tbody tr')).toHaveCount(5);
+    for (const [width, scale] of [[1920, 1], [2560, 1.35]]) {
+      await page.setViewportSize({ width, height: 1080 });
+      await page.evaluate(value => document.documentElement.style.setProperty('--font-scale', String(value)), scale);
+      if (width === 2560) await expect(drives.getByRole('combobox', { name: 'Sort by' })).toBeVisible();
+      await recent.getByRole('heading', { name: 'Recent drives' }).scrollIntoViewIfNeeded();
+      for (const [label, selector] of [
+        ['search', 'input[type="search"]'],
+        ['header', 'thead tr'],
+        ['rows', 'tbody tr'],
+        ['pagination', 'nav[data-app-part="pagination"]'],
+      ]) {
+        const bounds = await Promise.all([drives, charges].map(grid => grid.locator(selector).evaluateAll(
+          nodes => nodes.map(node => {
+            const { top, height } = node.getBoundingClientRect();
+            return { top, height };
+          }),
+        )));
+        const [left, right] = bounds;
+        const context = `${width}px scale ${scale} ${label}`;
+        expect(left.length, context).toBeGreaterThan(0);
+        expect(left, context).toHaveLength(right.length);
+        for (let index = 0; index < left.length; index += 1) {
+          expect(Math.abs(left[index].top - right[index].top), `${context} ${index} top: ${JSON.stringify(bounds)}`).toBeLessThanOrEqual(1);
+          expect(Math.abs(left[index].height - right[index].height), `${context} ${index} height: ${JSON.stringify(bounds)}`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+
+    await drives.getByRole('button', { name: 'Distance', exact: true }).click();
+    await expect(drives.getByRole('columnheader', { name: 'Distance' })).toHaveAttribute('aria-sort', 'descending');
+    await expect(drives.locator('tbody td[data-column-key="distance"]').first()).toHaveText('5.00 km');
+    await expect(charges.getByRole('button', { name: 'Saved views' })).toBeVisible();
+    expect(networkEscapes).toEqual([]);
+    await assertMockApiComplete(page, mockApi);
+  });
+
   for (const width of [320, 390, 550, 1440]) {
     for (const total of [13, 263]) {
       test(`pagination controls align at ${width}px with ${total} rows in ${theme}`, async ({ page }) => {

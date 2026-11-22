@@ -1,0 +1,3 @@
+DROP TABLE smart_media_playlist_candidates;
+DROP TABLE smart_media_playlist_drafts;
+DROP TABLE smart_spotify_connections;

@@ -93,22 +93,24 @@ export function StaleRefreshWarning({
       <div className="min-w-0 space-y-2 break-words">
         <Text as="p" variant="bodySm" color="secondary">{message ?? defaultMessage}</Text>
         {!hideRetry && state.retry != null ? (
-          <Button
-            data-app-part="feedback-retry"
-            type="button"
-            variant="ghost"
-            size="sm"
-            wrapLabel
-            className="min-h-11 md:min-h-9"
-            onClick={state.retry}
-            disabled={state.isRefreshing}
-            aria-busy={state.isRefreshing || undefined}
-            icon={<RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-          >
-            {state.isRefreshing
-              ? t('freshness.updating', 'Updating…')
-              : t('common.refresh', 'Refresh')}
-          </Button>
+          <div data-app-part="feedback-actions" className="border-t border-[var(--border-subtle)] pt-2">
+            <Button
+              data-app-part="feedback-retry"
+              type="button"
+              variant="ghost"
+              size="sm"
+              wrapLabel
+              className="min-h-11 md:min-h-9"
+              onClick={state.retry}
+              disabled={state.isRefreshing}
+              aria-busy={state.isRefreshing || undefined}
+              icon={<RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+            >
+              {state.isRefreshing
+                ? t('freshness.updating', 'Updating…')
+                : t('common.refresh', 'Refresh')}
+            </Button>
+          </div>
         ) : null}
       </div>
     </DataStateNotice>

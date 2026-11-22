@@ -150,8 +150,7 @@ describe('<Drawer>', () => {
     expect(getPanel()).toHaveAttribute('data-app-part', 'dialog');
     expect(getPanel()).toHaveAttribute('data-app-dialog-kind', 'drawer');
     expect(footer).toHaveAttribute('data-app-part', 'dialog-footer');
-    expect(footer).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
-    expect(footer).not.toHaveClass('bg-[var(--surface-overlay)]');
+    expect(footer).toContainElement(screen.getByTestId('drawer-footer'));
 
     // Dropping the footer prop installs the standard read-only Close action.
     rerender(
@@ -357,7 +356,7 @@ describe('<Drawer>', () => {
     expect(getPanel()).toHaveClass('sm:max-w-2xl');
   });
 
-  it('renders header metadata and tabs in stable slots', () => {
+  it('keeps the message and tabs above scrolling details and the action footer below', () => {
     render(
       <Drawer
         open
@@ -368,17 +367,19 @@ describe('<Drawer>', () => {
         headerMeta={<span>Complete</span>}
         tabs={<div role="tablist">Tabs</div>}
       >
-        <p>Body</p>
+        <h3>Related context</h3>
       </Drawer>,
     );
     const dialog = screen.getByRole('dialog', { name: 'Drive 42' });
-    expect(dialog).toHaveAttribute('aria-describedby');
-    expect(dialog.querySelector('[data-drawer-header]')).toHaveTextContent(
-      'EvidenceDrive 42CompleteCompleted 10 minutes ago',
-    );
-    expect(dialog.querySelector('[data-drawer-tabs]')).toContainElement(
-      screen.getByRole('tablist'),
-    );
+    const [header, tabs, body, footer] = Array.from(getPanel().children);
+    expect(dialog).toHaveAccessibleDescription('Completed 10 minutes ago');
+    expect(header).toHaveTextContent('EvidenceDrive 42CompleteCompleted 10 minutes ago');
+    expect(header).toContainElement(screen.getByRole('heading', { name: 'Drive 42' }));
+    expect(tabs).toContainElement(screen.getByRole('tablist'));
+    expect(body).toHaveAttribute('data-drawer-body');
+    expect(body).toContainElement(screen.getByRole('heading', { name: 'Related context' }));
+    expect(footer).toHaveAttribute('data-drawer-footer');
+    expect(footer).toContainElement(screen.getAllByRole('button', { name: 'Close' })[1]);
     const eyebrow = screen.getByText('Evidence');
     expect(eyebrow.tagName).toBe('DIV');
     expect(eyebrow).toHaveClass(
@@ -418,9 +419,12 @@ describe('<Drawer>', () => {
     expect(getPanel()).toHaveClass('border-[var(--border-default)]', 'shadow-e3');
     expect(getBackdrop()).toHaveClass('bg-[var(--surface-overlay)]');
     expect(getBackdrop()).not.toHaveClass('backdrop-blur-sm');
-    for (const slot of ['header', 'tabs', 'footer']) {
+    for (const slot of ['header', 'tabs']) {
       expect(dialog.querySelector(`[data-drawer-${slot}]`)).toHaveClass('border-[var(--border-default)]');
     }
+    expect(dialog.querySelector('[data-drawer-footer]')).toHaveClass(
+      'border-[var(--border-strong)]', 'bg-[var(--surface-2)]',
+    );
     expect(dialog.innerHTML).not.toContain('border-white');
     expect(dialog.querySelector('[data-drawer-body]')).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
     expect(screen.getAllByRole('button', { name: 'Close' })[0]).toHaveClass('h-11', 'w-11');

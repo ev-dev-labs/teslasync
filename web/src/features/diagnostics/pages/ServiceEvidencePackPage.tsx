@@ -9,8 +9,10 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
 import { combineDataStates } from '@/api/dataState';
+import { downloadBlob } from '@/lib/export';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
+import { PrivateServiceCasePanel } from '../components/service-case/PrivateServiceCasePanel';
 import { ServiceEvidencePackSources } from '../components/service-evidence-pack/ServiceEvidencePackSources';
 import { ServiceEvidencePackSummary } from '../components/service-evidence-pack/ServiceEvidencePackSummary';
 import {
@@ -29,15 +31,7 @@ import {
 } from '../lib/serviceEvidencePack';
 
 function downloadPack(doc: ServiceEvidencePackDocument): void {
-  const blob = new Blob([toPrettyJson(doc)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = buildServiceEvidencePackFilename(doc);
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(toPrettyJson(doc), buildServiceEvidencePackFilename(doc), 'application/json');
 }
 
 /**
@@ -172,6 +166,8 @@ export default function ServiceEvidencePackPage() {
       )}
       query={[workspace.signalsQuery, updatesQuery]}
     >
+      <PrivateServiceCasePanel vehicleId={vehicleId} />
+
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}
       <ServiceEvidencePackSources
         workspace={workspace}

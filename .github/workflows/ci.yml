@@ -168,6 +168,7 @@ jobs:
           DATABASE_USER: test
           DATABASE_PASS: test
           DATABASE_NAME: teslasync_test
+          TESLASYNC_SMART_COMMUTE_TEST_DSN: postgres://test:test@localhost:5432/teslasync_test?sslmode=disable
         run: |
           set -euo pipefail
           mapfile -t packages < shard/packages.txt

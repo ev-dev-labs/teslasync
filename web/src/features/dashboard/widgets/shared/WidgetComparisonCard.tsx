@@ -49,23 +49,22 @@ function MetricRow({ metric, previousLabel }: { metric: ComparisonMetric; previo
       : 'neutral';
 
   return (
-    <div data-app-part="metric" data-app-metric="comparison" className="flex min-w-0 items-center gap-3 border-b border-[var(--border-subtle)] py-2 last:border-b-0">
+    <div data-app-part="metric" data-app-metric="comparison" className="flex min-w-0 items-center gap-3 border-b border-[var(--border-subtle)] py-2 [overflow-wrap:anywhere] last:border-b-0">
       <div data-app-part="metric-heading" className="min-w-0 flex-1">
         <div
           data-app-part="metric-label"
-          className="truncate text-sm font-medium text-[var(--text-primary)]"
-          title={metric.label}
+          className="text-sm font-medium text-[var(--text-primary)]"
         >
           {metric.label}
         </div>
         {metric.formattedPrevious != null && metric.formattedPrevious !== '' ? (
-          <div data-app-part="metric-context" className="truncate text-xs text-[var(--text-muted)]">
+          <div data-app-part="metric-context" className="mt-1 text-xs text-[var(--text-muted)]">
             {previousLabel} {metric.formattedPrevious}
           </div>
         ) : null}
       </div>
-      <div className="shrink-0 text-end tabular-nums">
-        <div data-app-part="metric-reading" className="whitespace-nowrap text-sm font-semibold text-[var(--text-primary)]">
+      <div className="min-w-0 max-w-[50%] text-end tabular-nums">
+        <div data-app-part="metric-reading" className="text-sm font-semibold text-[var(--text-primary)]">
           <span data-app-part="metric-value">{metric.formattedCurrent ?? '—'}</span>
           {metric.unit && (
             <span data-app-part="metric-unit" className="ms-1 text-xs font-normal text-[var(--text-muted)]">
@@ -73,7 +72,7 @@ function MetricRow({ metric, previousLabel }: { metric: ComparisonMetric; previo
             </span>
           )}
         </div>
-        <div className="flex justify-end">
+        <div className="mt-1 flex justify-end">
           <Delta
             metric={{ direction }}
             current={metric.current}

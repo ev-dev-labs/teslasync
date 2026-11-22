@@ -22,6 +22,8 @@ import { Skeleton, EmptyState, SectionErrorBoundary } from '@/components/feedbac
 import { FadeIn } from '@/components/motion';
 
 import { VampireSplitPanel, VampireCulpritPanel, SourceRecovery, sessionPresentation } from '../components/vampire-drain-modernization';
+import { ParkReserveReview } from '../components/vampire-drain-modernization/ParkReserveReview';
+import { OvernightDrainPanel } from '../components/vampire-drain-modernization/OvernightDrainPanel';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -241,6 +243,13 @@ export default function VampireDrainPage() {
         />
         </SectionErrorBoundary>
       </FadeIn>
+
+      <SectionErrorBoundary name="ParkReserveReview">
+        <ParkReserveReview vehicleId={vehicleId} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="OvernightDrainPanel">
+        <OvernightDrainPanel vehicleId={vehicleId} />
+      </SectionErrorBoundary>
 
       {/* 1 — KPI band */}
       <FadeIn>
@@ -467,6 +476,7 @@ export default function VampireDrainPage() {
 
       {/* 4 — Detail band: drain sessions */}
       <FadeIn delay={0.3}>
+        <div id="vampire-drain-sessions" tabIndex={-1} className="scroll-mt-4">
         <LayoutCard title={t('vampireDrain.sessions.title', 'Drain sessions')} actions={
             <Badge variant="neutral">
               {eventsState.hasData
@@ -511,6 +521,7 @@ export default function VampireDrainPage() {
           )}
           </SectionErrorBoundary>
         </LayoutCard>
+        </div>
       </FadeIn>
     </PageLayout>
   );

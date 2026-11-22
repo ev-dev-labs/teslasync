@@ -70,6 +70,8 @@ const H = vi.hoisted(() => {
     },
     realtime: vi.fn(),
     notificationListener: vi.fn(),
+    tourStart: vi.fn(),
+    subscribe: vi.fn<typeof import('@/lib/broadcast').subscribe>(() => () => {}),
   }
 })
 
@@ -178,13 +180,13 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
   useKeyboardShortcuts: () => ({ mode: 'idle', showCheatSheet: false, toggleCheatSheet: vi.fn() }),
 }))
 vi.mock('@/hooks/useTour', () => ({
-  useTour: () => ({
+  useTour: (_steps: unknown, persistence: unknown) => ({
     isActive: false,
     currentStep: 0,
     totalSteps: 0,
     step: null,
     targetRect: null,
-    start: vi.fn(),
+    start: () => H.tourStart(persistence),
     next: vi.fn(),
     prev: vi.fn(),
     skip: vi.fn(),
@@ -254,22 +256,12 @@ vi.mock('@/api/hooks/useAuthMode', () => ({
 }))
 vi.mock('@/api/hooks/useSettings', () => ({
   useSettings: () => ({ data: { completed_tours: [] }, isFetched: true }),
+  useVersionInfo: () => ({ data: { require_cookie_consent: false } }),
   settingsKeys: { settings: ['settings'] },
 }))
 
-// ── tour registry / broadcast (pure-ish, mocked for determinism) ──────
-vi.mock('@/lib/tourRegistry', () => ({
-  TOUR_START_EVENT: 'teslasync:tour:start',
-  TOUR_OPEN_LAUNCHER_EVENT: 'teslasync:tour:openLauncher',
-  TOURS: {},
-  dispatchTourStart: vi.fn(),
-  isTourCompleted: () => false,
-  completedTourToken: (id: string, v: number) => `${id}@${v}`,
-  seedCompletedFromServer: vi.fn(),
-  markTourCompleted: vi.fn(),
-}))
 vi.mock('@/lib/broadcast', () => ({
-  subscribe: vi.fn(() => () => {}),
+  subscribe: H.subscribe,
   broadcast: vi.fn(),
 }))
 
@@ -431,6 +423,7 @@ vi.mock('@/components/ui/ThemePicker', () => ({
 import Layout, { navSections, reconcileNavPaths } from './Layout'
 import { navSearchKeywords } from './navSearchKeywords'
 import { DIAGNOSTIC_GROUPS } from './diagnosticGroups'
+import { dispatchTourStart } from '@/lib/tourState'
 import { flattenSidebarItems } from './sidebar/collections'
 import { prioritizeCanonicalNavSections } from './sidebar/compactNav'
 import type { SectionGroup } from './sectionGroups'
@@ -508,6 +501,8 @@ beforeEach(() => {
   H.request.mockImplementation(H.defaultReq)
   H.realtime.mockReset()
   H.notificationListener.mockReset()
+  H.tourStart.mockClear()
+  H.subscribe.mockClear()
   Object.values(H.toast).forEach((fn) => fn.mockReset())
 
   // jsdom gaps used by Layout's active-link scroll effect.
@@ -554,6 +549,12 @@ describe('navSections (data export)', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
     expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
+  })
+
+  it('exposes Smart Commute and Charging readiness in Notifications', () => {
+    const notifications = navSections.find((section) => section.title === 'Notifications')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-commute')?.label).toBe('Smart Commute')
+    expect(notifications?.items.find((item) => item.to === '/settings/smart-charging')?.label).toBe('Charging readiness')
   })
 
   it('places Vehicle Management in the Vehicles group', () => {
@@ -618,6 +619,23 @@ describe('navSearchKeywords (data export)', () => {
     expect(navSearchKeywords['/battery']).toContain('soh')
     expect(navSearchKeywords['/action-center']).toContain('recommendations')
     expect(navSearchKeywords['/vehicle-management']).toContain('pricing')
+  })
+})
+
+describe('Layout — explicit tours', () => {
+  it.each(['local request', 'peer replay'])('starts the requested tour after a %s', async origin => {
+    renderLayout('/')
+    expect(H.tourStart).not.toHaveBeenCalled()
+    await act(async () => {
+      if (origin === 'local request') dispatchTourStart('drives')
+      else for (const [listener] of H.subscribe.mock.calls) {
+        listener({ type: 'tour.replay-requested', tourId: 'drives' })
+      }
+      await vi.dynamicImportSettled()
+    })
+    await waitFor(() => expect(H.tourStart).toHaveBeenCalledExactlyOnceWith({
+      id: 'drives', version: expect.any(Number),
+    }))
   })
 })
 

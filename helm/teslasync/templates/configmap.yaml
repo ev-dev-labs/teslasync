@@ -48,6 +48,8 @@ data:
   WORKER_SLEEP_POLL_MULT: {{ .Values.config.sleepPollMultiplier | default 4 | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   FORWARD_AUTH_HEADER: {{ .Values.config.forwardAuthHeader | quote }}
+  TESLASYNC_SMART_OPERATOR_SUBJECTS: {{ .Values.config.smartOperatorSubjects | default "" | quote }}
+  TESLASYNC_SMART_INCIDENT_SUBJECT: {{ .Values.config.smartIncidentSubject | default "" | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
   HELM_CHART_VERSION: {{ .Chart.Version | quote }}
   {{- $publicOrigins := .Values.config.webEndpoint | default "" }}
@@ -191,6 +193,9 @@ data:
   {{- if and .Values.webPush .Values.webPush.publicKey }}
   TESLASYNC_VAPID_PUBLIC_KEY: {{ .Values.webPush.publicKey | quote }}
   {{- end }}
+  SMART_COMMUTE_HERE_LICENSE_CONFIRMED: {{ default false (and .Values.smartCommute .Values.smartCommute.hereLicenseConfirmed) | quote }}
+  SMART_MEDIA_SPOTIFY_CLIENT_ID: {{ dig "spotifyPlaylists" "clientId" "" .Values.AsMap | quote }}
+  SMART_MEDIA_SPOTIFY_REDIRECT_URI: {{ dig "spotifyPlaylists" "redirectUri" "" .Values.AsMap | quote }}
   # Service-mode banner override (Phase 46 / Prompt 04). Always rendered
   # so the API picks up the env knob deterministically; empty values
   # mean "fall through to the system_state DB row + admin POST API".

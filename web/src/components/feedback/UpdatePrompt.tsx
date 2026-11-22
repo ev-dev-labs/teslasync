@@ -1,7 +1,7 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
-import { GlassPanel } from '../ui/GlassPanel'
+import { AlertBanner } from './AlertBanner'
 import { type PwaUpdateState } from '@/hooks/usePwaUpdate'
 
 /**
@@ -63,90 +63,68 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
       data-update-required={required ? 'true' : 'false'}
       className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9999] mx-auto max-w-md xl:inset-x-auto xl:right-4 xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] xl:w-[28rem]"
     >
-      <GlassPanel
-        data-app-part="feedback"
-        data-app-feedback-kind="notice"
-        data-app-tone={required ? 'warning' : 'info'}
-        className={`!p-4 flex items-start gap-3 shadow-lg max-w-full ${
-          required
-            ? 'border border-amber-400/40 shadow-amber-400/10'
-            : 'border border-theme-accent/30 shadow-theme-accent/10'
-        }`}
+      <AlertBanner
+        variant={required ? 'warning' : 'info'}
+        title={required
+          ? t('pwa.update.requiredTitle', 'Update required')
+          : t('pwa.update.availableTitle', 'New version available')}
+        icon={required ? <AlertTriangle className="h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
+        className="max-w-full shadow-e2"
       >
-        <div
-          data-app-part="feedback-icon"
-          className={`rounded-lg p-2 shrink-0 ${
-            required ? 'bg-amber-400/10' : 'bg-theme-accent/10'
-          }`}
-        >
-          {required ? (
-            <AlertTriangle className="h-5 w-5 text-amber-300" aria-hidden="true" />
-          ) : (
-            <RefreshCw className="h-5 w-5 text-theme-accent" aria-hidden="true" />
-          )}
-        </div>
-
-        <div data-app-part="feedback-content" className="flex-1 min-w-0">
-          <p data-app-part="feedback-title" className="text-sm font-semibold text-[var(--text-primary)]">
-            {required
-              ? t('pwa.update.requiredTitle', 'Update required')
-              : t('pwa.update.availableTitle', 'New version available')}
-          </p>
-          <p data-app-part="feedback-message" className="text-xs text-[var(--text-secondary)] mt-0.5">
-            {required
-              ? t(
-                  'pwa.update.requiredBody',
-                  'This tab is running an older app version than the server. Reload to stay in sync.',
-                )
-              : t(
-                  'pwa.update.availableBody',
-                  'A newer build has been downloaded and is ready to apply.',
-                )}
-          </p>
-
-          {/* Release context — what is running now, and what the server says. */}
-          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-tight text-[var(--text-muted)]">
-            <dt>{t('pwa.update.runningLabel', 'Running')}</dt>
-            <dd
-              data-testid="update-prompt-running-build"
-              className="truncate font-mono"
-            >
-              {update.release.runningBuildId}
-            </dd>
-            {serverVersion != null && (
-              <>
-                <dt>{t('pwa.update.serverLabel', 'Server')}</dt>
-                <dd
-                  data-testid="update-prompt-server-version"
-                  className="truncate font-mono"
-                >
-                  {serverVersion}
-                </dd>
-              </>
-            )}
-          </dl>
-
-          {update.blockedByUnsavedWork && (
-            <p
-              data-testid="update-prompt-unsaved"
-              className="mt-2 text-xs text-amber-300"
-            >
-              {t(
-                'pwa.update.unsavedBlocked',
-                'Reload cancelled — finish or discard your unsaved changes first.',
+        <p className="text-sm text-[var(--text-secondary)]">
+          {required
+            ? t(
+                'pwa.update.requiredBody',
+                'This tab is running an older app version than the server. Reload to stay in sync.',
+              )
+            : t(
+                'pwa.update.availableBody',
+                'A newer build has been downloaded and is ready to apply.',
               )}
-            </p>
-          )}
-        </div>
+        </p>
 
-        <div data-app-part="feedback-actions" className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Release context — what is running now, and what the server says. */}
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs leading-tight text-[var(--text-muted)]">
+          <dt>{t('pwa.update.runningLabel', 'Running')}</dt>
+          <dd
+            data-testid="update-prompt-running-build"
+            className="min-w-0 font-mono [overflow-wrap:anywhere]"
+          >
+            {update.release.runningBuildId}
+          </dd>
+          {serverVersion != null && (
+            <>
+              <dt>{t('pwa.update.serverLabel', 'Server')}</dt>
+              <dd
+                data-testid="update-prompt-server-version"
+                className="min-w-0 font-mono [overflow-wrap:anywhere]"
+              >
+                {serverVersion}
+              </dd>
+            </>
+          )}
+        </dl>
+
+        {update.blockedByUnsavedWork && (
+          <p
+            data-testid="update-prompt-unsaved"
+            className="mt-2 text-xs text-[var(--semantic-warning)]"
+          >
+            {t(
+              'pwa.update.unsavedBlocked',
+              'Reload cancelled — finish or discard your unsaved changes first.',
+            )}
+          </p>
+        )}
+        <div data-app-part="feedback-actions" className="mt-3 flex min-w-0 flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
           {!required && (
             <Button
               variant="ghost"
               size="sm"
+              wrapLabel
               onClick={update.deferUpdate}
               data-testid="update-prompt-later"
-              className="text-[var(--text-secondary)]"
+              className="min-h-11 text-[var(--text-secondary)]"
             >
               {t('pwa.later', 'Later')}
             </Button>
@@ -154,6 +132,8 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
           <Button
             variant="primary"
             size="sm"
+            wrapLabel
+            className="min-h-11"
             onClick={() => {
               void update.applyUpdate()
             }}
@@ -165,7 +145,7 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
               : t('pwa.reloadNow', 'Reload Now')}
           </Button>
         </div>
-      </GlassPanel>
+      </AlertBanner>
     </div>
   )
 }

@@ -2,20 +2,10 @@ import { createInstance } from 'i18next';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { Drive } from '@/types/driving';
 import { DrivesEvidenceHeading } from './DrivesEvidenceHeading';
 
 const english = createInstance();
 type Props = Parameters<typeof DrivesEvidenceHeading>[0];
-const drive: Drive = {
-  id: 1, vehicleId: 7, startTs: '2026-10-11T10:00:00Z', endTs: null,
-  durationS: 0, distanceM: 0, startAddress: null, endAddress: null,
-  startLat: null, startLon: null, endLat: null, endLon: null,
-  startBatteryPct: null, endBatteryPct: null, energyUsedWh: null,
-  regenEnergyWh: null, avgSpeedMps: null, maxSpeedMps: null, avgPowerW: null,
-  outsideTempAvgC: null, insideTempAvgC: null, score: null, endedStatus: null,
-  createdAt: '', updatedAt: '',
-};
 
 beforeAll(async () => { await english.init({ lng: 'en', resources: {} }); });
 afterEach(cleanup);
@@ -23,8 +13,8 @@ afterEach(cleanup);
 function mount(overrides: Partial<Props> = {}) {
   const setUrlBatch = vi.fn();
   const props: Props = {
-    t: english.getFixedT('en'), hasDrivePayload: true, fmtCompact: value => String(value),
-    sortedDrives: [drive], desktopEvidence: false, fsdDataAvailable: true,
+    t: english.getFixedT('en'), fmtCompact: value => String(value),
+    matchingTotal: 1, desktopEvidence: false, fsdDataAvailable: true,
     sortBy: 'date', setUrlBatch, ...overrides,
   };
   return { setUrlBatch, ...render(<DrivesEvidenceHeading {...props} />) };
@@ -77,7 +67,7 @@ describe('DrivesEvidenceHeading pilot presentation and sort preservation', () =>
   });
 
   it.each([true, false])('distinguishes measured empty count from unknown payload=%s', hasDrivePayload => {
-    mount({ sortedDrives: [], hasDrivePayload });
+    mount({ matchingTotal: hasDrivePayload ? 0 : undefined });
     expect(screen.getByRole('heading')).toHaveTextContent(hasDrivePayload ? '(0)' : '(—)');
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });

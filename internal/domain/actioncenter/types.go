@@ -1,31 +1,57 @@
 // Package actioncenter defines the provider-neutral decision-inbox contract.
 package actioncenter
 
-import "time"
+import (
+	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/domain/ownershipintel"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartcommute"
+	"github.com/ev-dev-labs/teslasync/internal/domain/smartreadiness"
+)
 
 type SourceFeature string
 
 const (
-	SourceActiveAlerts         SourceFeature = "active_alerts"
-	SourceAdvancedIntelligence SourceFeature = "advanced_intelligence"
-	SourceBatteryHealth        SourceFeature = "battery_health"
-	SourceChargingReliability  SourceFeature = "charging_reliability"
-	SourceDriveEfficiency      SourceFeature = "drive_efficiency"
-	SourceFleetMaintenance     SourceFeature = "fleet_maintenance"
-	SourceSignalHealth         SourceFeature = "signal_health"
-	SourceSystemHealth         SourceFeature = "system_health"
-	SourceVehicleReadiness     SourceFeature = "vehicle_readiness"
+	SourceActiveAlerts            SourceFeature = "active_alerts"
+	SourceAdvancedIntelligence    SourceFeature = "advanced_intelligence"
+	SourceBatteryHealth           SourceFeature = "battery_health"
+	SourceChargingReliability     SourceFeature = "charging_reliability"
+	SourceDriveEfficiency         SourceFeature = "drive_efficiency"
+	SourceFleetMaintenance        SourceFeature = "fleet_maintenance"
+	SourceSignalHealth            SourceFeature = "signal_health"
+	SourceSmartCharging           SourceFeature = "smart_charging"
+	SourceChargingSitePerformance SourceFeature = "charging_site_performance"
+	SourceSmartCommute            SourceFeature = "smart_commute"
+	SourceSystemHealth            SourceFeature = "system_health"
+	SourceVehicleReadiness        SourceFeature = "vehicle_readiness"
+	SourceWarrantyDistance        SourceFeature = "warranty_distance"
+	SourceTripMaintenance         SourceFeature = "trip_maintenance"
+	SourceColdTireDrift           SourceFeature = "cold_tire_drift"
+	SourceRecallWatch             SourceFeature = "recall_watch"
+	SourceServiceCase             SourceFeature = "service_case"
+	SourceClimateSchedule         SourceFeature = "climate_schedule"
+	SourceSubscriptionRenewal     SourceFeature = "subscription_renewal"
+	SourceAutomationFailure       SourceFeature = "automation_failure"
 )
 
 func (v SourceFeature) Valid() bool {
 	switch v {
 	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceBatteryHealth,
 		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
-		SourceSignalHealth, SourceSystemHealth, SourceVehicleReadiness:
+		SourceSignalHealth, SourceSmartCharging, SourceChargingSitePerformance, SourceSmartCommute, SourceSystemHealth, SourceVehicleReadiness,
+		SourceWarrantyDistance, SourceTripMaintenance, SourceColdTireDrift, SourceRecallWatch, SourceServiceCase, SourceClimateSchedule,
+		SourceSubscriptionRenewal, SourceAutomationFailure:
 		return true
 	default:
 		return false
 	}
+}
+
+func (v SourceFeature) Private() bool {
+	return v == SourceSmartCharging || v == SourceChargingSitePerformance || v == SourceSmartCommute ||
+		v == SourceWarrantyDistance || v == SourceTripMaintenance || v == SourceColdTireDrift || v == SourceRecallWatch ||
+		v == SourceServiceCase || v == SourceClimateSchedule || v == SourceSubscriptionRenewal ||
+		v == SourceAutomationFailure
 }
 
 type Priority string
@@ -83,11 +109,16 @@ const (
 type ActionType string
 
 const (
-	ActionAcknowledge ActionType = "acknowledge"
-	ActionSnooze      ActionType = "snooze"
-	ActionDismiss     ActionType = "dismiss"
-	ActionRestore     ActionType = "restore"
-	ActionNavigate    ActionType = "navigate"
+	ActionAcknowledge         ActionType = "acknowledge"
+	ActionSnooze              ActionType = "snooze"
+	ActionDismiss             ActionType = "dismiss"
+	ActionRestore             ActionType = "restore"
+	ActionNavigate            ActionType = "navigate"
+	ActionSmartChargingSnooze ActionType = "smart_charging_snooze"
+	ActionSmartCommuteUse     ActionType = "smart_commute_use"
+	ActionSmartCommuteEdit    ActionType = "smart_commute_edit"
+	ActionSmartCommuteDecline ActionType = "smart_commute_decline"
+	ActionSmartCommuteSnooze  ActionType = "smart_commute_snooze"
 )
 
 func (v ActionType) ValidStateAction() bool {
@@ -147,12 +178,75 @@ type EvidenceProvenance struct {
 	SourceURL *string `json:"source_url"`
 }
 
+type RecurringDriveEvidence struct {
+	RoutineID            int64   `json:"routine_id"`
+	Weekday              int     `json:"weekday"`
+	MatchingDays         int     `json:"matching_days"`
+	WindowStartS         int     `json:"window_start_s"`
+	WindowEndS           int     `json:"window_end_s"`
+	TimeZone             string  `json:"time_zone"`
+	DestinationLatitude  float64 `json:"destination_latitude"`
+	DestinationLongitude float64 `json:"destination_longitude"`
+}
+
+type ChargingReadinessEvidence struct {
+	PlanID                 int64                                `json:"plan_id"`
+	Kind                   string                               `json:"kind"`
+	PlaceName              string                               `json:"place_name"`
+	BatteryPct             float64                              `json:"battery_pct"`
+	ArrivalLowPct          float64                              `json:"arrival_low_pct"`
+	ArrivalHighPct         float64                              `json:"arrival_high_pct"`
+	ReservePct             float64                              `json:"reserve_pct"`
+	ChargingPowerW         *float64                             `json:"charging_power_w,omitempty"`
+	CurrentLimit           *smartreadiness.ChargingCurrentLimit `json:"current_limit,omitempty"`
+	TripProjection         *smartreadiness.TripProjection       `json:"trip_projection,omitempty"`
+	DepartureAt            time.Time                            `json:"departure_at"`
+	ScheduledStartAt       *time.Time                           `json:"scheduled_start_at,omitempty"`
+	ScheduledPowerCeilingW *float64                             `json:"scheduled_power_ceiling_w,omitempty"`
+	InterruptedAt          *time.Time                           `json:"interrupted_at,omitempty"`
+}
+
+type DepartureOverlapEvidence struct {
+	PlanID      int64     `json:"plan_id"`
+	DepartureAt time.Time `json:"departure_at"`
+	smartreadiness.DepartureOverlap
+}
+
+type CommuteTrafficEvidence struct {
+	UsualS            int64                               `json:"usual_s"`
+	AlternativeS      int64                               `json:"alternative_s"`
+	ArrivalDeadlineAt *time.Time                          `json:"arrival_deadline_at,omitempty"`
+	LatestDepartureAt *time.Time                          `json:"latest_departure_at,omitempty"`
+	TimeZone          string                              `json:"time_zone,omitempty"`
+	RouteEnergy       *smartcommute.TrafficEnergyEvidence `json:"route_energy,omitempty"`
+	RouteEnergyOnly   bool                                `json:"route_energy_only,omitempty"`
+}
+
+type UpstreamIncidentEvidence struct {
+	Feed       string `json:"feed"`
+	Transition string `json:"transition"`
+}
+
 type EvidenceItem struct {
-	ID         string             `json:"id"`
-	Kind       string             `json:"kind"`
-	Summary    string             `json:"summary"`
-	Provenance EvidenceProvenance `json:"provenance"`
-	ObservedAt *time.Time         `json:"observed_at"`
+	ID                string                                    `json:"id"`
+	Kind              string                                    `json:"kind"`
+	Summary           string                                    `json:"summary"`
+	Provenance        EvidenceProvenance                        `json:"provenance"`
+	ObservedAt        *time.Time                                `json:"observed_at"`
+	RecurringDrive    *RecurringDriveEvidence                   `json:"recurring_drive,omitempty"`
+	ChargingReadiness *ChargingReadinessEvidence                `json:"charging_readiness,omitempty"`
+	DepartureOverlap  *DepartureOverlapEvidence                 `json:"departure_overlap,omitempty"`
+	CommuteTraffic    *CommuteTrafficEvidence                   `json:"commute_traffic,omitempty"`
+	SitePerformance   *smartreadiness.SitePerformanceReview     `json:"site_performance,omitempty"`
+	SolarSurplus      *smartreadiness.SolarSurplusDecision      `json:"solar_surplus,omitempty"`
+	BackupCharging    *smartreadiness.BackupChargingSample      `json:"backup_charging,omitempty"`
+	WarrantyDistance  *ownershipintel.WarrantyDistanceReminder  `json:"warranty_distance,omitempty"`
+	TripMaintenance   *smartreadiness.TripMaintenanceProjection `json:"trip_maintenance,omitempty"`
+	ColdTireDrift     *smartreadiness.ColdTireDrift             `json:"cold_tire_drift,omitempty"`
+	RecallWatchMatch  *smartreadiness.RecallCampaignMatch       `json:"recall_watch_match,omitempty"`
+	ClimateSchedule   *smartreadiness.ClimateScheduleEvidence   `json:"climate_schedule,omitempty"`
+	AutomationFailure *AutomationFailureEvidence                `json:"automation_failure,omitempty"`
+	UpstreamIncident  *UpstreamIncidentEvidence                 `json:"upstream_incident,omitempty"`
 }
 
 type ImpactRiskLevel string

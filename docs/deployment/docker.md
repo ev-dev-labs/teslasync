@@ -241,6 +241,13 @@ Compose automatically merges the override. Recreate affected services after
 configuration changes; a plain restart does not apply new environment values.
 Do not paste `.env`, private keys, or full resolved Compose output into issues.
 
+## Access control
+
+ForwardAuth is optional, including in production. With `FORWARD_AUTH_HEADER`
+unset, anyone who can reach the app has access to the open installation. The
+self-hoster chooses who can reach it and whether to use an external auth
+provider. TeslaSync does not run its own browser login.
+
 ## Before public exposure
 
 - Authenticate through a trusted proxy and set `FORWARD_AUTH_HEADER` to the

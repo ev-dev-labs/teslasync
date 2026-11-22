@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page, type Request } from '@playwright/test'
 import { join } from 'node:path'
 import { assertMockApiComplete, closeMockApiFixtures, closeMockedPage, retireMockedDocument, waitForHarnessReady } from './mockApi'
+import { assertNavigationTextContained } from './widget-design-packs.acceptance'
 import { createReviewPreference, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock'
 import { APPLICATION_DESIGNS } from '../src/components/ui/app-designs/designs'
 import { COLLECTION_DEFINITIONS } from '../src/components/layout/sidebar/collections'
@@ -8,13 +9,13 @@ import type { PackId } from '../src/features/dashboard/widgets/designPacks/types
 
 test.afterAll(async () => { await closeMockApiFixtures() })
 
-async function openNavigation(page: Page, baseURL: string, width: number, pack: PackId = 'v6', theme: 'dark' | 'light' = 'dark') {
+async function openNavigation(page: Page, baseURL: string, width: number, pack: PackId = 'v6', theme: 'dark' | 'light' = 'dark', path = '/explore') {
   const origin = new URL(baseURL).origin
   await page.setViewportSize({ width, height: 900 })
   const preference = { ...createReviewPreference(), pack_id: pack, app_wide: true }
   const mocks = await installPackReview(page, theme, width, false, [], true, preference, origin)
   await page.addInitScript(() => localStorage.setItem('teslasync-deck-panel-open', '0'))
-  await page.goto('/explore', { waitUntil: 'domcontentloaded' })
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(page, mocks)
   return mocks
 }
@@ -67,14 +68,18 @@ async function reviewAppearance(page: Page, screenshotPath: string) {
   await page.getByRole('button', { name: 'Close preview', exact: true }).click()
 }
 
-test('all packs keep the Driving secondary aligned and contained at laptop and desktop sizes', async ({ page, baseURL }, testInfo) => {
-  testInfo.setTimeout(180_000)
-  const mocks = await openNavigation(page, baseURL!, 1440, 'classic')
+const drivingDesigns = Object.entries(APPLICATION_DESIGNS)
+const drivingPacksPerCase = 7
+
+async function assertDrivingSecondary(page: Page, baseURL: string, first: number) {
+  const previous = (drivingDesigns[first - 1]?.[0] ?? 'classic') as PackId
+  const mocks = await openNavigation(page, baseURL, first % 2 === 0 ? 1440 : 1024, previous)
   const nav = page.getByRole('navigation', { name: 'Primary', exact: true })
   const flyout = page.locator('[data-role="section-flyout"]')
   const rail = page.getByTestId('command-deck-rail')
   const side = page.getByTestId('atlas-panel-secondary')
-  for (const [index, [id, design]] of Object.entries(APPLICATION_DESIGNS).entries()) {
+  for (const [offset, [id, design]] of drivingDesigns.slice(first, first + drivingPacksPerCase).entries()) {
+    const index = first + offset
     const pack = id as PackId
     if (pack !== 'classic') await selectReviewPack(page, pack)
     await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', pack)
@@ -137,36 +142,70 @@ test('all packs keep the Driving secondary aligned and contained at laptop and d
     }
   }
   await closeMockedPage(page, mocks)
-})
+}
 
-test('horizontal sections scroll with edge fades and the flyout switches groups by keyboard and pointer', async ({ page, baseURL }) => {
+for (let first = 0; first < drivingDesigns.length; first += drivingPacksPerCase) {
+  const last = Math.min(first + drivingPacksPerCase, drivingDesigns.length)
+  test(`all packs keep the Driving secondary aligned and contained at laptop and desktop sizes (${first + 1}-${last})`, async ({ page, baseURL }, testInfo) => {
+    testInfo.setTimeout(180_000)
+    await assertDrivingSecondary(page, baseURL!, first)
+  })
+}
+
+test('horizontal sections page through whole tiles and the flyout switches groups by keyboard and pointer', async ({ page, baseURL }) => {
   const mocks = await openNavigation(page, baseURL!, 1440)
-  const nav = page.getByRole('navigation', { name: 'Primary', exact: true })
+  const header = page.locator('[data-role="horizontal-header"]')
+  const nav = header.getByRole('navigation', { name: 'Primary', exact: true })
   const driving = nav.getByRole('button', { name: 'Driving', exact: true })
   const sectionButtons = nav.locator('[data-horizontal-nav-trigger]')
+  const lane = nav.locator('[data-horizontal-rail]')
+  const previous = nav.getByRole('button', { name: 'Previous', exact: true })
+  const next = nav.getByRole('button', { name: 'Next', exact: true })
+  const expectWholeTiles = async () => {
+    await expect.poll(() => lane.evaluate(element => {
+      const { left, right } = element.getBoundingClientRect()
+      return [...element.children].filter(tile => {
+        const bounds = tile.getBoundingClientRect()
+        return bounds.right > left + 1 && bounds.left < right - 1 &&
+          (bounds.left < left - 1 || bounds.right > right + 1)
+      }).length
+    })).toBe(0)
+  }
+  const command = header.locator('.horizontal-nav-command')
+  await expect(command.getByText('TeslaSync', { exact: true })).toBeVisible()
+  await expect(command.getByRole('navigation', { name: 'Breadcrumb' })).toBeVisible()
+  await expect(command.getByRole('button', { name: 'Account', exact: true })).toBeVisible()
+  expect((await nav.boundingBox())!.y).toBeGreaterThanOrEqual((await command.boundingBox())!.y + (await command.boundingBox())!.height - 1)
+  const commandsBounds = await command.boundingBox()
+  await expect(nav.getByRole('button', { name: 'Home', exact: true }).locator('.horizontal-nav-section-icon'))
+    .not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(driving).toBeVisible()
   const wideCount = await sectionButtons.count()
-  const leftFade = page.getByTestId('horizontal-rail-fade-left')
-  const rightFade = page.getByTestId('horizontal-rail-fade-right')
-  await expect(leftFade).toHaveAttribute('data-visible', 'false')
-  await expect(rightFade).toHaveAttribute('data-visible', 'true')
+  await expect(previous).toBeDisabled()
+  await expect(next).toBeEnabled()
+  await expectWholeTiles()
+  await next.click()
+  await expect(previous).toBeEnabled()
+  await expectWholeTiles()
+  expect(await command.boundingBox()).toEqual(commandsBounds)
+  await previous.click()
+  await expect(previous).toBeDisabled()
   await page.setViewportSize({ width: 1024, height: 540 })
+  await expectWholeTiles()
   await expect(nav.getByRole('button', { name: 'More', exact: true })).toHaveCount(0)
   await expect(sectionButtons).toHaveCount(wideCount)
   await driving.press('End')
   await expect(sectionButtons.last()).toBeFocused()
-  await expect(leftFade).toHaveAttribute('data-visible', 'true')
-  await expect(rightFade).toHaveAttribute('data-visible', 'false')
-  await expect(leftFade).toHaveCSS('pointer-events', 'none')
-  await expect(rightFade).toHaveCSS('pointer-events', 'none')
-  const railBounds = (await nav.locator('[data-horizontal-rail]').boundingBox())!
+  await expect(previous).toBeEnabled()
+  await expect(next).toBeDisabled()
+  const railBounds = (await lane.boundingBox())!
   const lastBounds = (await sectionButtons.last().boundingBox())!
   expect(lastBounds.x).toBeGreaterThanOrEqual(railBounds.x)
   expect(lastBounds.x + lastBounds.width).toBeLessThanOrEqual(railBounds.x + railBounds.width)
   await page.keyboard.press('Home')
   await expect(sectionButtons.first()).toBeFocused()
-  await expect(leftFade).toHaveAttribute('data-visible', 'false')
-  await expect(rightFade).toHaveAttribute('data-visible', 'true')
+  await expect(previous).toBeDisabled()
+  await expect(next).toBeEnabled()
   await page.keyboard.press('ArrowRight')
   await expect(sectionButtons.nth(1)).toBeFocused()
 
@@ -198,13 +237,41 @@ test('horizontal sections scroll with edge fades and the flyout switches groups 
   await expect(driving).toBeFocused()
   await expect(driving).toHaveAttribute('aria-expanded', 'false')
 
+  const railControlRadius = await next.evaluate(button => getComputedStyle(button).borderStartStartRadius)
   await selectReviewPack(page, 'deco')
   await expect(page.locator('html')).toHaveAttribute('data-app-design-pack', 'deco')
+  await expect(next).not.toHaveCSS('border-start-start-radius', railControlRadius)
   await driving.press('ArrowDown')
   await expect(flyout).toHaveCSS('border-top-style', 'double')
   await flyout.getByRole('button', { name: 'Hide panel', exact: true }).click()
   await expect(flyout).toHaveCount(0)
   await expect(driving).toBeFocused()
+  await closeMockedPage(page, mocks)
+})
+
+test('Swiss preview contains long RTL section labels at 200% text size', async ({ page, baseURL }, testInfo) => {
+  testInfo.setTimeout(120_000)
+  const mocks = await openNavigation(page, baseURL!, 1440, 'v6', 'dark', '/settings#appearance')
+  await page.getByRole('button', { name: `Preview ${packNames.swiss}`, exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: `Preview ${packNames.swiss}`, exact: true })
+  const preview = dialog.locator('[data-preview-synthetic="true"]')
+  const sections = preview.locator('[data-horizontal-nav-trigger] > span:last-child')
+  await expect(sections.first()).toBeVisible()
+  await sections.evaluateAll(labels => {
+    for (const label of labels) label.textContent = 'مساحة عمل تجريبية — Extended local workspace review and source quality'
+  })
+  await preview.evaluate(element => element.setAttribute('dir', 'rtl'))
+  await page.locator('html').evaluate(element => {
+    element.setAttribute('dir', 'rtl')
+    element.style.setProperty('--font-scale', '2')
+  })
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const density of ['compact', 'spacious']) {
+      await page.locator('body').evaluate((element, value) => element.setAttribute('data-density', value), density)
+      await assertNavigationTextContained(preview, `Swiss ${width}px RTL 200% ${density}`)
+    }
+  }
   await closeMockedPage(page, mocks)
 })
 
@@ -243,10 +310,13 @@ test('anchored geometry, dismissal, RTL and the isolated Appearance preview', as
   await commands.click()
   const beforeScroll = (await panel.boundingBox())!.x
   const toolsBeforeScroll = await header.locator('.horizontal-nav-tools').boundingBox()
-  await lane.evaluate(element => { element.scrollLeft += 80 })
+  await lane.evaluate(element => {
+    const tile = element.firstElementChild
+    if (tile) element.scrollLeft += tile.getBoundingClientRect().width * 3
+  })
   await expectAnchored(page, commands, panel)
-  await expect(page.getByTestId('horizontal-rail-fade-left')).toHaveAttribute('data-visible', 'true')
-  await expect(page.getByTestId('horizontal-rail-fade-right')).toHaveAttribute('data-visible', 'true')
+  await expect(nav.getByRole('button', { name: 'Previous', exact: true })).toBeEnabled()
+  await expect(nav.getByRole('button', { name: 'Next', exact: true })).toBeEnabled()
   expect(await header.locator('.horizontal-nav-tools').boundingBox()).toEqual(toolsBeforeScroll)
   expect((await panel.boundingBox())!.x).toBeLessThan(beforeScroll - 60)
   await home.click()
@@ -286,8 +356,14 @@ test('anchored geometry, dismissal, RTL and the isolated Appearance preview', as
   await page.keyboard.press('Escape')
   await expect(commands).toBeFocused()
   await commands.press('End')
-  await expect(page.getByTestId('horizontal-rail-fade-right')).toHaveAttribute('data-visible', 'true')
-  await expect(page.getByTestId('horizontal-rail-fade-left')).toHaveAttribute('data-visible', 'false')
+  const previous = nav.getByRole('button', { name: 'Previous', exact: true })
+  const next = nav.getByRole('button', { name: 'Next', exact: true })
+  await expect(previous).toBeEnabled()
+  await expect(next).toBeDisabled()
+  const rtlEnd = await lane.evaluate(element => element.scrollLeft)
+  await previous.click()
+  await expect(next).toBeEnabled()
+  expect(await lane.evaluate(element => element.scrollLeft)).toBeGreaterThan(rtlEnd)
   await page.evaluate(() => { document.documentElement.dir = 'ltr' })
   await reviewAppearance(page, testInfo.outputPath('appearance-dark-open.png'))
   await retireMockedDocument(page, mocks)

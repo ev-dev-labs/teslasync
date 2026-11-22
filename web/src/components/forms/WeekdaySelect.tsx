@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
@@ -56,6 +57,7 @@ export function WeekdaySelect({
             )}
           >
             <span className="min-w-0 [overflow-wrap:anywhere]">{option.label}</span>
+            <Check aria-hidden="true" className={cn('h-4 w-4 shrink-0', !selected && 'invisible')} />
           </Button>
         );
       })}

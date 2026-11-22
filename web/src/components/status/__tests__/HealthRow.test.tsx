@@ -20,6 +20,24 @@ describe('HealthRow', () => {
     expect(link).toHaveAttribute('href', '/db-health')
   })
 
+  it('shows the measured service proportion without replacing the readable summary', () => {
+    const { container } = withRouter(
+      <HealthRow status="degraded" label="Services" summary="8 / 12 healthy"
+        counts={{ healthy: 8, total: 12 }} to="/services" />,
+    )
+    expect(screen.getByRole('link', { name: 'Services — 8 / 12 healthy' })).toBeInTheDocument()
+    expect(container.querySelector('meter')).toHaveAttribute('value', '8')
+    expect(container.querySelector('meter')).toHaveAttribute('max', '12')
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument()
+  })
+
+  it('does not infer a proportion from missing measurements', () => {
+    const { container } = withRouter(<HealthRow status="unknown" label="Services" summary="No data"
+      counts={{ healthy: 0, total: 0 }} />)
+    expect(screen.getByText('No data')).toBeInTheDocument()
+    expect(container.querySelector('meter')).toBeNull()
+  })
+
   it('opens external links in a new tab', () => {
     withRouter(
       <HealthRow status="healthy" label="Status" summary="ok" to="https://example.com" external />,

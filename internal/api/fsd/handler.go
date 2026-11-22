@@ -343,29 +343,7 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		input.FocusDriveID = focusDriveID
-
-		resp = Aggregate(AggregateParams{
-			VehicleID: req.vehicleID,
-			Days:      req.days,
-			Loc:       req.loc,
-			Start:     start,
-			End:       now,
-			Samples:   input.CounterSamples,
-		})
-		previousDays := inclusiveCivilDayCount(
-			previousStart,
-			previousEnd.Add(-time.Nanosecond),
-			req.loc,
-		)
-		previous := Aggregate(AggregateParams{
-			VehicleID: req.vehicleID,
-			Days:      previousDays,
-			Loc:       req.loc,
-			Start:     previousStart,
-			End:       previousEnd,
-			Samples:   input.PreviousCounterSamples,
-		})
-		resp.Analytics = BuildDriveAnalytics(resp, previous, input, req.loc, req.includeEvidence)
+		resp = aggregateDriveRange(req, start, now, previousStart, previousEnd, input)
 	} else if req.driveID != 0 {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
 		return
@@ -422,6 +400,37 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 	)
 
 	httpx.WriteJSON(w, http.StatusOK, resp)
+}
+
+// ReadDriveRange uses the same attribution as Insights for grid filters and sorting.
+func ReadDriveRange(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time, loc *time.Location) ([]DriveFSDInsight, error) {
+	days := inclusiveCivilDayCount(start, end.Add(-time.Nanosecond), loc)
+	if days > maxDays {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, insightsQueryBudget)
+	defer cancel()
+	previousStart := start.Add(-end.Sub(start))
+	input, err := NewRepo(db).LoadAnalyticsInput(ctx, vehicleID, previousStart, start, end)
+	if err != nil {
+		return nil, err
+	}
+	resp := aggregateDriveRange(request{vehicleID: vehicleID, days: days, loc: loc}, start, end, previousStart, start, input)
+	return resp.Analytics.ContributingDrives, nil
+}
+
+func aggregateDriveRange(req request, start, end, previousStart, previousEnd time.Time, input AnalyticsInput) Response {
+	resp := Aggregate(AggregateParams{
+		VehicleID: req.vehicleID, Days: req.days, Loc: req.loc,
+		Start: start, End: end, Samples: input.CounterSamples,
+	})
+	previous := Aggregate(AggregateParams{
+		VehicleID: req.vehicleID, Loc: req.loc,
+		Days:  inclusiveCivilDayCount(previousStart, previousEnd.Add(-time.Nanosecond), req.loc),
+		Start: previousStart, End: previousEnd, Samples: input.PreviousCounterSamples,
+	})
+	resp.Analytics = BuildDriveAnalytics(resp, previous, input, req.loc, req.includeEvidence)
+	return resp
 }
 
 func inclusiveCivilDayCount(start, end time.Time, loc *time.Location) int {

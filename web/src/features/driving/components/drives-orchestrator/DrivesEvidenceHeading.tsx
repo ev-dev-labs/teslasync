@@ -3,11 +3,11 @@ import { SectionTitle, Text, Button, Icon } from '@/components/ui';
 import type { DrivesListPageController } from '../../hooks/useDrivesListPage';
 
 type Props = Pick<DrivesListPageController,
-  't' | 'hasDrivePayload' | 'fmtCompact' | 'sortedDrives' | 'desktopEvidence'
+  't' | 'matchingTotal' | 'fmtCompact' | 'desktopEvidence'
   | 'fsdDataAvailable' | 'sortBy' | 'setUrlBatch'>;
 
 export function DrivesEvidenceHeading({
-  t, hasDrivePayload, fmtCompact, sortedDrives, desktopEvidence,
+  t, matchingTotal, fmtCompact, desktopEvidence,
   fsdDataAvailable, sortBy, setUrlBatch,
 }: Props) {
   return (
@@ -16,10 +16,10 @@ export function DrivesEvidenceHeading({
         <Icon icon={Route} className="text-[var(--text-secondary)]" />
         {t('drives.driveEvidence', 'Drive evidence')}
         <Text as="span" size="xs" weight="regular" color="muted">
-          ({hasDrivePayload ? fmtCompact(sortedDrives.length) : '—'})
+          ({matchingTotal != null ? fmtCompact(matchingTotal) : '—'})
         </Text>
       </SectionTitle>
-      {sortedDrives.length > 0 && (
+      {(matchingTotal ?? 0) > 0 && (
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {!desktopEvidence && (
             <>

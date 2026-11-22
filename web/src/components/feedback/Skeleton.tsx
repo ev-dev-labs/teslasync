@@ -6,9 +6,26 @@ interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
   height?: number | string;
   rounded?: boolean;
   lines?: number;
+  shape?: 'fact';
 }
 
-export function Skeleton({ width, height, rounded, lines = 1, className, style, ...props }: SkeletonProps) {
+export function Skeleton({ width, height, rounded, lines = 1, shape, className, style, ...props }: SkeletonProps) {
+  if (shape === 'fact') {
+    return (
+      <div
+        data-app-part="skeleton"
+        data-app-skeleton="fact"
+        {...props}
+        aria-hidden="true"
+        className={cn('flex min-w-0 flex-col gap-2', className)}
+        style={{ ...style, ...(width !== undefined && { width }), ...(height !== undefined && { height }) }}
+      >
+        <Skeleton className="h-3 w-2/3 max-w-[4rem]" />
+        <Skeleton className="h-7 w-4/5 max-w-[6rem]" />
+      </div>
+    );
+  }
+
   // Normalise `lines` to a safe positive integer. Guards against callers
   // passing a fractional value (which would leave the "last line is 60% wide"
   // branch below unreachable) or a non-finite value like Infinity (which would

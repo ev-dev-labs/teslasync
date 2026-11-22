@@ -35,6 +35,7 @@ type AuthModeResponse struct {
 	Mode                string               `json:"mode"`
 	SubjectHeader       string               `json:"subject_header,omitempty"`
 	Subject             *string              `json:"subject,omitempty"`
+	Impersonating       bool                 `json:"impersonating"`
 	ProviderHint        string               `json:"provider_hint,omitempty"`
 	AuthenticationOwner string               `json:"authentication_owner"`
 	AccessPolicy        string               `json:"access_policy"`
@@ -86,6 +87,7 @@ func NewHandler(headerName, providerHint string) *Handler {
 // SPA's source of truth for "what mode am I in" and a non-200 here
 // would force every consumer to invent its own fallback.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	resp := AuthModeResponse{
 		ProviderHint:        h.providerHint,
 		AuthenticationOwner: "external_provider",
@@ -108,6 +110,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resp.Mode = AuthModeForward
 	resp.SubjectHeader = h.headerName
+	resp.Impersonating = tsauth.IsImpersonating(r.Context())
 
 	// Subject is best-effort — the proxy may have stripped the header
 	// on this specific request. The SPA tolerates a null subject (the

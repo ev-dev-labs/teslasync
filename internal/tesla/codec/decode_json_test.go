@@ -8,6 +8,17 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
+func TestDecodeJSONField_LocationDoesNotInventMissingCoordinates(t *testing.T) {
+	for _, invalid := range []string{`{"longitude":-122.1}`, `{"latitude":47.1}`, `{"latitude":null,"longitude":-122.1}`} {
+		if got, err := DecodeJSONField("Location", []byte(invalid), jsonFixedVIN, jsonFixedTs); err == nil || len(got) != 0 {
+			t.Errorf("incomplete location became a coordinate: got %v, error %v", got, err)
+		}
+	}
+	if got, err := DecodeJSONField("Location", []byte(`{"latitude":0,"longitude":-122.1}`), jsonFixedVIN, jsonFixedTs); err != nil || len(got) != 2 {
+		t.Errorf("explicit zero latitude is a valid observation: got %v, error %v", got, err)
+	}
+}
+
 var (
 	jsonFixedVIN = "5YJ3E1EA0NF000001"
 	jsonFixedTs  = time.Date(2026, 5, 9, 8, 0, 0, 0, time.UTC)

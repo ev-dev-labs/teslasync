@@ -1,0 +1,786 @@
+{
+  "sources": [
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "before": "9b56689e14551cee59d2fff684100eb09cc19178d019d576cc0bbe5e118054ea",
+      "after": "99b95d250d17a91b910e4f1a90ffde6d4b493688dad1b5d5def7489071766feb",
+      "hunks": [
+        {
+          "start": 21,
+          "current": [
+            "import { CookieConsentBannerHost } from '../feedback/CookieConsentBannerHost'"
+          ],
+          "previous": [
+            "import { CookieConsentBanner } from '../feedback/CookieConsentBanner'"
+          ]
+        },
+        {
+          "start": 344,
+          "current": [
+            "      { to: '/settings/smart-commute', icon: Icons.navigationAlt, label: 'Smart Commute', labelKey: 'nav.items.settings_smart-commute', color: 'text-theme-accent' },",
+            "      { to: '/settings/smart-charging', icon: Icons.batteryCharging, label: 'Charging readiness', labelKey: 'nav.items.settings_smart-charging', color: 'text-emerald-400' },"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1335,
+          "current": [
+            "      <CookieConsentBannerHost />"
+          ],
+          "previous": [
+            "      <CookieConsentBanner />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/sectionGroups.ts",
+      "before": "6e38b9205b19e7eb8e90519f0dccf934997afd838176a35ce32cd27503653cdb",
+      "after": "ff3cc0f9220a2cf0be15b8ff21746d033025fd56361f8697b688b8b951d7a7ab",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "  expandInSheet?: boolean"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+      "before": "5d265210c0a65ecc0e2ff8c0f7cb2fdab3ef5a006b4c6203ad2cd583105737b0",
+      "after": "0a3f4dc2024f612917bf76c3378bae2948ea85f81b819c100606c0917e77a4fe",
+      "hunks": [
+        {
+          "start": 30,
+          "current": [],
+          "previous": [
+            "    Notifications: t('nav.sidenav.shortInbox', 'Inbox'),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/sidebar/collections.ts",
+      "before": "c8deacc4123d4e1c83988a048a0c6b48812c73dd61778953745a842cb699efcf",
+      "after": "a942574308b1ef74d7b9f7ba7031cb28e392ef21c82704571ccab2fc08faad5c",
+      "hunks": [
+        {
+          "start": 31,
+          "current": [
+            "  expandInSheet?: boolean"
+          ],
+          "previous": []
+        },
+        {
+          "start": 47,
+          "current": [
+            "      ...(group?.expandInSheet && { expandInSheet: true }),"
+          ],
+          "previous": []
+        },
+        {
+          "start": 116,
+          "current": [
+            "  [\"Smart notifications\", '/settings/smart-commute', '/settings/smart-charging'],"
+          ],
+          "previous": []
+        },
+        {
+          "start": 132,
+          "current": [
+            "  expandInSheet: primary === '/settings/smart-commute',"
+          ],
+          "previous": []
+        },
+        {
+          "start": 137,
+          "current": [
+            "  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths, expandInSheet }) => ({"
+          ],
+          "previous": [
+            "  const custom = COLLECTION_DEFINITIONS.map(({ label, labelKey, primary, paths }) => ({"
+          ]
+        },
+        {
+          "start": 141,
+          "current": [
+            "    ...(expandInSheet && { expandInSheet }),"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
+      "before": "d80353a6f69ef004dd02f98f19961eee8c59675ff4d91861b934ed9b2a7ff706",
+      "after": "6ed95578744df5b2e113bdc269c2e3ce92a434165dd0bebfccb8b9b409759349",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "import { CapacityDigestPanel } from '../components/battery-degradation-modernization/CapacityDigestPanel';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 944,
+          "current": [
+            "      <CapacityDigestPanel vehicleId={activeId} />",
+            ""
+          ],
+          "previous": []
+        },
+        {
+          "start": 948,
+          "current": [
+            "        <LayoutCard title={t('battery.degradation.history', 'Degradation history')} titleId=\"battery-degradation-history\">"
+          ],
+          "previous": [
+            "        <LayoutCard title={t('battery.degradation.history', 'Degradation history')}>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drive-detail/RouteMapSection.tsx",
+      "before": "9609d0e7f539efab544461e8b3f8cb92ee130d221681ebfb3bcf18aef2027eb8",
+      "after": "2a6eb91b3e753a282b9133c18d4a3d12e4ff6171d174ef0787be4bca4b96e437",
+      "hunks": [
+        {
+          "start": 68,
+          "current": [
+            "  localEvidence?: boolean;"
+          ],
+          "previous": []
+        },
+        {
+          "start": 82,
+          "current": [
+            "  localEvidence = false,"
+          ],
+          "previous": []
+        },
+        {
+          "start": 159,
+          "current": [
+            "        {!localEvidence && <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />}"
+          ],
+          "previous": [
+            "        <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />"
+          ]
+        },
+        {
+          "start": 161,
+          "current": [
+            "          {!localEvidence && <MapTileLayer style={mapStyle} />}"
+          ],
+          "previous": [
+            "          <MapTileLayer style={mapStyle} />"
+          ]
+        },
+        {
+          "start": 239,
+          "current": [
+            "      {!localEvidence && <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />}"
+          ],
+          "previous": [
+            "      <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />"
+          ]
+        },
+        {
+          "start": 241,
+          "current": [
+            "        {!localEvidence && <MapTileLayer style={mapStyle} />}"
+          ],
+          "previous": [
+            "        <MapTileLayer style={mapStyle} />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/pages/DriveDetailPage.tsx",
+      "before": "fca3091b60f2476aef011bc8ba85ea274cb9fed4f064374a4287f9ae146b09ce",
+      "after": "a12bd940b3dbbf0dfb78ce5c70cdaa54fe85f5b2e8df8e53af0ecbdb4d70e800",
+      "hunks": [
+        {
+          "start": 1,
+          "current": [
+            "import { Link, useParams, useSearchParams } from 'react-router-dom';"
+          ],
+          "previous": [
+            "import { Link, useParams } from 'react-router-dom';"
+          ]
+        },
+        {
+          "start": 17,
+          "current": [
+            "import { DriveTrackPanel } from '../components/drive-detail/DriveTrackPanel';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 37,
+          "current": [
+            "  const [search] = useSearchParams();",
+            "  const localEvidence = search.get('local_evidence') === '1';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 147,
+          "current": [
+            "      {localEvidence && <AlertBanner variant=\"info\">",
+            "        {t('driveDetail.localEvidence', 'Local evidence view. External map tiles are not loaded.')}",
+            "      </AlertBanner>}"
+          ],
+          "previous": []
+        },
+        {
+          "start": 153,
+          "current": [
+            "        localEvidence={localEvidence}"
+          ],
+          "previous": []
+        },
+        {
+          "start": 164,
+          "current": [
+            "      {drive?.endTs && <div data-print-hide>",
+            "        <DriveTrackPanel key={drive.id} driveId={drive.id} vehicleId={drive.vehicleId} />",
+            "      </div>}"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/system/components/command-center/CommandWorkspace.tsx",
+      "before": "4b93b3a4bbff370b768eccb20cb528e28ce0d4e5738241965d0611896ae3e0df",
+      "after": "a49aa0d960d01de0e769d5809d46215144df1870183ec2c983534bae3bd90649",
+      "hunks": [
+        {
+          "start": 239,
+          "current": [
+            "                    id={group.id === 'climate' ? 'climate-controls' : undefined}",
+            "                    tabIndex={group.id === 'climate' ? -1 : undefined}"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/routeMeta.ts",
+      "before": "85dab02020da219bbb2aa6c21f3c39b434f847b9ec9f306b195c074ba7357128",
+      "after": "06a10c26186e4f79482f1d38fbc91c1888bf6a473f65613b0534b09f7651c7c3",
+      "hunks": [
+        {
+          "start": 139,
+          "current": [
+            "  '/settings/smart-charging': '/settings',",
+            "  '/settings/smart-commute': '/settings',"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "before": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "after": "8f6e7ca1fd9a93464c8cc55cf2543c03649fe2ef48a72d58ef61c1696e7caecf",
+      "hunks": [
+        {
+          "start": 221,
+          "current": [
+            "  { path: \"/settings/smart-charging\", name: \"SmartChargingPage\", label: \"Charging readiness\", i18nKey: \"routes.smartChargingPage\" },",
+            "  { path: \"/settings/smart-commute\", name: \"SmartCommutePage\", label: \"Smart Commute\", i18nKey: \"routes.smartCommutePage\" },"
+          ],
+          "previous": []
+        }
+      ]
+    }
+  ],
+  "copy": [
+    {
+      "path": [
+        "mileageBudget",
+        "review"
+      ],
+      "sha256": "199a47c5446bc90fa14c725d53e84f0595618ab7639b863c6e6b558d9a8415d6"
+    },
+    {
+      "path": [
+        "logbook",
+        "packet"
+      ],
+      "sha256": "6f95c34b2a8be4f99256f9cc20cf11c101e4f33c5a04437ce4ea50fdd1362f87"
+    },
+    {
+      "path": [
+        "nav",
+        "collections",
+        "settings_smart_commute"
+      ],
+      "sha256": "55df475c77beab7dff873ef9f715eba3925839f0aff137f68f41cd8bff4990c1"
+    },
+    {
+      "path": [
+        "nav",
+        "items",
+        "settings_smart-commute"
+      ],
+      "sha256": "5ed08acd47574acc32ae26f471c1c51bea84064175b5d4bf3c233cde69c09e54"
+    },
+    {
+      "path": [
+        "nav",
+        "items",
+        "settings_smart-charging"
+      ],
+      "sha256": "b2487e410ef5701c2ddfaa0b1bdd8f6757946e30a03d95d1b7fe005cbc62592a"
+    },
+    {
+      "path": [
+        "routes",
+        "smartCommutePage"
+      ],
+      "sha256": "5ed08acd47574acc32ae26f471c1c51bea84064175b5d4bf3c233cde69c09e54"
+    },
+    {
+      "path": [
+        "routes",
+        "smartChargingPage"
+      ],
+      "sha256": "b2487e410ef5701c2ddfaa0b1bdd8f6757946e30a03d95d1b7fe005cbc62592a"
+    },
+    {
+      "path": [
+        "consent",
+        "banner",
+        "loading"
+      ],
+      "sha256": "ba8825eae5a88cbe028a34a38734ec157b39a5bb4a2f79a8a4d82c50d4a506c4"
+    },
+    {
+      "path": [
+        "admin",
+        "security",
+        "parkedUnlock"
+      ],
+      "sha256": "deb8305bced98959eb76feb59cdd3951ad0fb31fb2b2939f762f0e750da833c3"
+    },
+    {
+      "path": [
+        "admin",
+        "security",
+        "parkedClosure"
+      ],
+      "sha256": "4c5555a845864f2ff8800a76bf0b3fb8f00eed168de2b9eb5165a7ad63b07b9f"
+    },
+    {
+      "path": [
+        "admin",
+        "security",
+        "windowRain"
+      ],
+      "sha256": "800de40cc651db0fb6c061615d2560883e78639d6b2957e5fab44c25828c23d6"
+    },
+    {
+      "path": [
+        "tco",
+        "costDigest"
+      ],
+      "sha256": "9ce2f222b85d0bebc9899beb28ff5a53986cd40dc4db227516c046d0c10dff35"
+    },
+    {
+      "path": [
+        "battery",
+        "degradation",
+        "capacityDigest"
+      ],
+      "sha256": "bb6f001a8cb410ccc919a0f246ee7870af8f09a67c41758c9c7845a029c98b32"
+    },
+    {
+      "path": [
+        "vampireDrain",
+        "overnight"
+      ],
+      "sha256": "e06a6d43c9b28d546a16746bddcd1af858b53d46684c86ba6d50cd41cbfc621f"
+    },
+    {
+      "path": [
+        "vampireDrain",
+        "parkReserve"
+      ],
+      "sha256": "81b70c60bee7e24120489d32e09fb705235a37c08fa5a029dcca0936a859fb54"
+    },
+    {
+      "path": [
+        "driveDetail",
+        "trackReview"
+      ],
+      "sha256": "38166e775554fa42626924dd49b74da58497109c9f88efde3ce3ecadb2c0e7cd"
+    },
+    {
+      "path": [
+        "driveDetail",
+        "localEvidence"
+      ],
+      "sha256": "5502894566dfa48e251bce929a5e2ea031e709c6cc139df58f789fce86418fe5"
+    },
+    {
+      "path": [
+        "routeEfficiency",
+        "weekly"
+      ],
+      "sha256": "c00925c330a333e754790cc6b9e15f2d16352dc37a7d6bf5659f533245495769"
+    },
+    {
+      "path": [
+        "settings",
+        "organization",
+        "smartCommute"
+      ],
+      "sha256": "5ed08acd47574acc32ae26f471c1c51bea84064175b5d4bf3c233cde69c09e54"
+    },
+    {
+      "path": [
+        "settings",
+        "organization",
+        "smartCommuteDescription"
+      ],
+      "sha256": "302cd7635b6aba839983bc29836c8e0051e4458b5ba2dfc970f1861aaf431b03"
+    },
+    {
+      "path": [
+        "settings",
+        "organization",
+        "smartCharging"
+      ],
+      "sha256": "b2487e410ef5701c2ddfaa0b1bdd8f6757946e30a03d95d1b7fe005cbc62592a"
+    },
+    {
+      "path": [
+        "settings",
+        "organization",
+        "smartChargingDescription"
+      ],
+      "sha256": "397b49c350db8b72644b956beb4fdf73bad5bda4588e06f456a3f82fee5729cb"
+    },
+    {
+      "path": [
+        "maintenance",
+        "recallWatch"
+      ],
+      "sha256": "7a3432a00edca05ab8bbc342db515e1363ee86fb0b066e85db8c826d42f5013e"
+    },
+    {
+      "path": [
+        "softwareUpdates",
+        "window"
+      ],
+      "sha256": "b298e52b628a378abe2087d9443fe5a1eb879c962710ff307192e51f0af18747"
+    },
+    {
+      "path": [
+        "preconditioningEffectiveness",
+        "scheduledClimate"
+      ],
+      "sha256": "2bd2ae0dfcc3b7ac42e12f62c088c66a08b2c2e47ec50510a7ff38b9e3bdf0ee"
+    },
+    {
+      "path": [
+        "preconditioningEffectiveness",
+        "cabinPrep"
+      ],
+      "sha256": "d249b5b342c8e3a5eeadce4f7381867979b80376cd8d8c0a40e7eb97020c3a20"
+    },
+    {
+      "path": [
+        "tireDifferentialDrift",
+        "coldReview"
+      ],
+      "sha256": "e2adf3e3bab79b58db00b0252223cf09d0b1e68e904df7368babb143f7872503"
+    },
+    {
+      "path": [
+        "dashcam",
+        "retention"
+      ],
+      "sha256": "ea7e9c3d28499c25bd3cfcffad7a6b84c19c19b7aa7061be797bf8029e12c88a"
+    },
+    {
+      "path": [
+        "serviceEvidencePack",
+        "privateCase"
+      ],
+      "sha256": "fe2e1885c1d2b8212e23718dc37d9e697df77635e290d7c0b56d6a2147381dd1"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "smart_charging"
+      ],
+      "sha256": "b2487e410ef5701c2ddfaa0b1bdd8f6757946e30a03d95d1b7fe005cbc62592a"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "charging_site_performance"
+      ],
+      "sha256": "d4810d596c5c4b5e7601eca7b3517f3a95f3c839d65388ba1fd76f5735effc26"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "smart_commute"
+      ],
+      "sha256": "5ed08acd47574acc32ae26f471c1c51bea84064175b5d4bf3c233cde69c09e54"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "warranty_distance"
+      ],
+      "sha256": "a3f72fdcb80a64b577027e84755da278d39ecea7bbea8c4b1cf0a0a74b700938"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "trip_maintenance"
+      ],
+      "sha256": "e6d3787d842e6f431a3f3421f04ff6c69821f93601205ea3fd1a2d53d64eac3e"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "cold_tire_drift"
+      ],
+      "sha256": "5eb6e8e4ddced599d86f142698ebb0efa2d2853820fb227e4c2273a60ea521db"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "recall_watch"
+      ],
+      "sha256": "fd14234f1e10c1e1b4a03d37386952def78f9f4fc2a9b90c31a73cffb3403bd6"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "service_case"
+      ],
+      "sha256": "960dca6c0bb3b82ad530ecd9591201085d3380c5ebc24355bdb18ee25f4e4b98"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "climate_schedule"
+      ],
+      "sha256": "d3e2779e6be2d52b493acb3305f55d0bb525b01fa0ff2c6193449a8ebdae7ef1"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "subscription_renewal"
+      ],
+      "sha256": "6f615d47e86ce770933c5e0e15b8bbced09c15d41596325a2e9f93bb5ea542ce"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "source",
+        "automation_failure"
+      ],
+      "sha256": "71b9665078994e7b73f9b223205a35dcc9eb914fc7eacd8b5b51208a0f219a38"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "provenance",
+        "local_drive_analysis"
+      ],
+      "sha256": "984dae0a3190602bad5305bd755de9a87fac8f34c0ef82f27f362f2a99bd77da"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "provenance",
+        "user_recorded"
+      ],
+      "sha256": "930c1bdf0eac93b629ce9df04c4c243c03caa32a39529d13d4df505331c7d1ed"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "identityUnavailable"
+      ],
+      "sha256": "a2ff2de80cb429dd3a3b4fcb76df95d918238c1e6001c8d750f8aadf58e3b19b"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "automationFailure"
+      ],
+      "sha256": "fe284e0d0d131902f51910b13aa06b5b6eaee1149e5413d11b607a589cf161d8"
+    },
+    {
+      "path": [
+        "actionCenter",
+        "estimateIncident"
+      ],
+      "sha256": "cd45f85a2d9f36c8dec7cf8d2e9be5aa8ca82cd2f982d5f29880a9f14af88714"
+    },
+    {
+      "path": [
+        "ownership",
+        "reconcile",
+        "form",
+        "periodEndExclusive"
+      ],
+      "sha256": "7a85eebc4ce9d0fc9151fd8b7bc3410991a48ddba74ea8a9dac9acf8593c4e66"
+    },
+    {
+      "path": [
+        "ownership",
+        "reconcile",
+        "review"
+      ],
+      "sha256": "79bb8a23e463ccd286e1b69375486a0865d2d861d78314ade743d52182e3c284"
+    },
+    {
+      "path": [
+        "ownership",
+        "subscription",
+        "renewal"
+      ],
+      "sha256": "4c034502c5a4a997d016804e49946ecdf620b2e83cdc761c00cd02adc3d44e1d"
+    },
+    {
+      "path": [
+        "ownership",
+        "tariff",
+        "monthly"
+      ],
+      "sha256": "d0d3ddf8220f96cd4fb950a4b2aeaed9d16125ec380e88af5634d19b6818acaa"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "card",
+        "calendarEnd"
+      ],
+      "sha256": "4b19ef91f9ed15addb4b06b163c0688073a13f8ded8a6aa3061983b433796f1a"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "card",
+        "unknownCurrentOdometer"
+      ],
+      "sha256": "3edcd38fb40893c56e0426a034a7f1b9a134dd46f9f1ce2cce4040fb897fbdae"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "form",
+        "startOdoHint"
+      ],
+      "sha256": "5fc96248abe3409f45f673a2d717cb750db643e6640020d050366ef32ec75327"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "row",
+        "unknownOdometer"
+      ],
+      "sha256": "79b69a3b05f36683937eed7b2e568d0fea510cde89b929de04ad6fc24ea254c0"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "status",
+        "undetermined"
+      ],
+      "sha256": "8fe04c851687e7fc1e936bec90fa3236eb87946fcf877d556f92767777c63902"
+    },
+    {
+      "path": [
+        "ownership",
+        "warranty",
+        "mileage"
+      ],
+      "sha256": "1f1ed39c453c2724df5faaf560c767cae67d2434c960bb64612a8d5a25533032"
+    },
+    {
+      "path": [
+        "media",
+        "episode"
+      ],
+      "sha256": "763b80aa50598ea85e70e51ebe955a28489a4c5c3bab6b6f9d4271b712f17370"
+    },
+    {
+      "path": [
+        "media",
+        "favorites"
+      ],
+      "sha256": "61642eafa4ec9ea3af0200598c40b884756f6a3fa1141717fd1e3b2483f00967"
+    },
+    {
+      "path": [
+        "media",
+        "privateReview"
+      ],
+      "sha256": "c2049943e8773789594b0a2a16044af05635bdcea00507153f2f9d3b9c7cdd95"
+    },
+    {
+      "path": [
+        "media",
+        "playlist"
+      ],
+      "sha256": "9685c2b22a1f5f790ede5c82cbdbb361ea17cdedee779019a8ae6441d9b0e9bc"
+    },
+    {
+      "path": [
+        "journey",
+        "soundtrack"
+      ],
+      "sha256": "3797b4ce58924c757b09557ebc56aabbaa22421372b692d5083f13badbfaca44"
+    },
+    {
+      "path": [
+        "personalScope"
+      ],
+      "sha256": "f11c614de1d61a7973e16e77c079cbcbafd3bb3f1a2524906e321d4edf608333"
+    },
+    {
+      "path": [
+        "smartCharging"
+      ],
+      "sha256": "37c8752b63b6d674ef0dc86280bb92e45cacede94b0ff1d2857bebb615d7a5c4"
+    },
+    {
+      "path": [
+        "smartCommute"
+      ],
+      "sha256": "043fe628c10bde0fea178552a5a78531a1e5f0e27d2669400daab4a24461b462"
+    }
+  ]
+}

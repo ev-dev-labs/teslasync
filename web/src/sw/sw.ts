@@ -129,7 +129,7 @@ registerRoute(
         new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 7 }),
       ],
     }),
-    { denylist: [/^\/api(?:\/|$)/] },
+    { denylist: [/^\/api(?:\/|$)/, /^\/spotify-episode-bridge\.html(?:\?|$)/] },
   ),
 )
 

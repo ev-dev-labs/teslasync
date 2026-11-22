@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/cn';
 import { useFsdInsightsForDrive } from '@/api/hooks/useAnalytics';
 import { DriveReportContent } from '../components/layout-modernization';
 import { useDriveDetailData, DriveDetailSkeleton } from '../components/drive-detail';
+import { DriveTrackPanel } from '../components/drive-detail/DriveTrackPanel';
 
 const actionTargetClassName = 'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9 md:py-1.5';
 
@@ -34,6 +35,8 @@ const actionTargetClassName = 'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9
  */
 export default function DriveDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [search] = useSearchParams();
+  const localEvidence = search.get('local_evidence') === '1';
   const { t } = useTranslation();
   usePageTitle(t('driveDetail.title', "Drive details"));
   const {
@@ -142,9 +145,13 @@ export default function DriveDetailPage() {
           {t('driveDetail.noTelemetryBody', 'Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.')}
         </AlertBanner>
       ) : null}
+      {localEvidence && <AlertBanner variant="info">
+        {t('driveDetail.localEvidence', 'Local evidence view. External map tiles are not loaded.')}
+      </AlertBanner>}
 
       <DriveReportContent
         id={id}
+        localEvidence={localEvidence}
         data={{ drive, stats, chartData, routeSource, trail, startPos, endPos, centerPos, speedSegments, speedHistData }}
         meaningful={hasMeaningfulDriveStats}
         sections={reportSections}
@@ -155,6 +162,9 @@ export default function DriveDetailPage() {
         speedInsights={<AISpeedProfileInsights driveId={drive ? id : undefined} />}
         coaching={<AIDriveCoaching driveId={drive ? id : undefined} />}
       />
+      {drive?.endTs && <div data-print-hide>
+        <DriveTrackPanel key={drive.id} driveId={drive.id} vehicleId={drive.vehicleId} />
+      </div>}
       {/* Dialog state is scoped to the routed record, not the example /412. */}
       {id ? <ShareDriveDialog key={id} driveId={id} open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} /> : null}
     </PageLayout>

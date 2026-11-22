@@ -261,7 +261,7 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, readErr := io.ReadAll(resp.Body)
 
 	log.Debug().
 		Str("url", reqURL).
@@ -270,11 +270,14 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 		Msg("proxy command sent")
 
 	if c.logCallback != nil {
-		c.logCallback(http.MethodPost, reqURL, resp.StatusCode, reqBodyBytes, respBody, int(duration), nil)
+		c.logCallback(http.MethodPost, reqURL, resp.StatusCode, reqBodyBytes, respBody, int(duration), readErr)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("proxy command failed: HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+	if readErr != nil {
+		return fmt.Errorf("read proxy command response: %w", readErr)
 	}
 
 	var result struct {

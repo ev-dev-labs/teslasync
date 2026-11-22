@@ -106,8 +106,9 @@ describe('route-owned shared locale closures', () => {
   it('serves an independent driving analysis route without loading the drives list/detail closure', async () => {
     window.history.replaceState(null, '', '/drive-score')
     runtime.default.t('driveScore.title', { defaultValue: '__fallback__', saveMissing: true })
-    await new Promise(resolve => setTimeout(resolve, 100))
-    expect(runtime.default.t('driveScore.title', '__fallback__')).not.toBe('__fallback__')
+    await vi.waitFor(() => {
+      expect(runtime.default.t('driveScore.title', '__fallback__')).not.toBe('__fallback__')
+    }, { timeout: 5000, interval: 25 })
     expect(Object.values(loads).every(count => count === 0)).toBe(true)
   })
 

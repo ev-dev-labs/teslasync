@@ -31,7 +31,7 @@ function mount(overrides: Partial<Props> = {}) {
   const fmtCompact = vi.fn(value => String(value));
   const props: Props = {
     t: english.getFixedT('en'), periodLabel: 'Last 30 days', collectionLabel: 'All drives',
-    hasDrivePayload: true, fmtCompact, filteredDrives: [],
+    matchingTotal: 0, fmtCompact,
     avgGrade: { label: 'B', numeric: 3, color: 'var(--semantic-info)' }, ...overrides,
   };
   const result = render(<><div id="drives-overview" /><DrivesStickySummary {...props} /></>);
@@ -63,7 +63,7 @@ describe('DrivesStickySummary pilot typography and preservation', () => {
   });
 
   it('renders unknown count without invoking the numeric formatter and omits only an unknown grade', () => {
-    const { fmtCompact } = mount({ hasDrivePayload: false, avgGrade: { label: '—', color: '', numeric: null } });
+    const { fmtCompact } = mount({ matchingTotal: undefined, avgGrade: { label: '—', color: '', numeric: null } });
     expect(screen.getByRole('region')).toHaveTextContent('— results');
     expect(screen.queryByText('efficiency grade')).not.toBeInTheDocument();
     expect(fmtCompact).not.toHaveBeenCalled();

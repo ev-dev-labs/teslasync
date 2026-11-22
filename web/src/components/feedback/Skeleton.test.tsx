@@ -72,6 +72,19 @@ describe('Skeleton — single-bar mode', () => {
   });
 });
 
+describe('Skeleton — fact shape', () => {
+  it('reserves separate label and value footprints within one decorative group', () => {
+    const { container } = render(<Skeleton shape="fact" width="12rem" />);
+    const fact = container.querySelector<HTMLElement>('[data-app-skeleton="fact"]');
+    expect(fact).toHaveAttribute('aria-hidden', 'true');
+    expect(fact?.style.width).toBe('12rem');
+    expect(bars(container)).toHaveLength(2);
+    expect(bars(container)[0]).toHaveClass('h-3');
+    expect(bars(container)[1]).toHaveClass('h-7');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+  });
+});
+
 describe('Skeleton — multi-line mode', () => {
   it('renders one bar per line inside an aria-hidden stacking wrapper', () => {
     const { container } = render(<Skeleton lines={3} />);

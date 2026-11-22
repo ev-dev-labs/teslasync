@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { buildDrivesListNarrative } from '../components/drives-orchestrator/drivesListNarrative';
 import { buildDrivesListHighlights } from '../components/drives-orchestrator/drivesListHighlights';
@@ -6,11 +7,13 @@ import { useDrivesListPageFilters } from './useDrivesListPageFilters';
 import { useDrivesListPageSelection } from './useDrivesListPageSelection';
 import { useDrivesListPageSummary } from './useDrivesListPageSummary';
 import { useDrivesListPageCollections } from './useDrivesListPageCollections';
+import { useDrivesListRange } from './useDrivesListRange';
 
 export function useDrivesListPage() {
   const data = useDrivesListPageData();
   const filters = useDrivesListPageFilters(data);
-  const input = { ...data, ...filters };
+  const range = useDrivesListRange(data, filters.paginatedDrives);
+  const input = { ...data, ...filters, ...range };
   const selection = useDrivesListPageSelection(input);
   const summary = useDrivesListPageSummary(input);
   const collections = useDrivesListPageCollections(input);
@@ -18,10 +21,15 @@ export function useDrivesListPage() {
   const highlightRows = buildDrivesListHighlights(input);
   const previewFrom = localDayKey(data.previewDrive?.startTs, data.tz);
   const previewTo = localDayKey(data.previewDrive?.endTs ?? data.previewDrive?.startTs, data.tz) ?? previewFrom;
+  const { handlePullToRefresh: refreshOverview } = data;
+  const { refetchPage } = filters;
+  const handlePullToRefresh = useCallback(async () => {
+    await Promise.all([refreshOverview(), refetchPage()]);
+  }, [refreshOverview, refetchPage]);
 
   return {
     ...input, ...selection, ...summary, ...collections,
-    narrative, highlightRows, previewFrom, previewTo,
+    narrative, highlightRows, previewFrom, previewTo, handlePullToRefresh,
   };
 }
 

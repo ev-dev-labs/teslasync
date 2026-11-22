@@ -113,7 +113,9 @@ describe('DestinationDirectory number formatting', () => {
       const surface = width === 375
         ? screen.getByRole('dialog')
         : screen.getByRole('table', { name: 'Observed destination directory' });
-      expect(within(surface).getAllByText(expected)).toHaveLength(2);
+      const values = width === 375 ? within(surface).getAllByText(expected)
+        : within(surface).getAllByRole('cell', { name: expected });
+      expect(values).toHaveLength(2);
       expect(arrival.visits).toBe(value);
       expect(arrival.repeatVisits).toBe(value);
       const props = capturedTable.props!;
@@ -142,7 +144,7 @@ describe('DestinationDirectory number formatting', () => {
     ];
     show(1280, true, rows);
     const table = screen.getByRole('table', { name: 'Observed destination directory' });
-    expect(within(table).getAllByText('1,000')).toHaveLength(2);
+    expect(within(table).getAllByRole('cell', { name: '1,000' })).toHaveLength(2);
     const column = capturedTable.props!.columns.find((candidate) => candidate.key === 'visits')!;
     expect(column.sortable).toBe(true);
     expect(column.key).toBe('visits');
@@ -166,7 +168,9 @@ describe('DestinationDirectory responsive field preservation', () => {
     if (width === 375) {
       await user.click(screen.getByRole('button', { name: arrival.label! }));
     }
-    expect(screen.getByText('Oct 14, 2026')).toBeVisible();
+    const values = within(screen.getByRole(width === 375 ? 'dialog' : 'table'));
+    const date = (label: string) => width === 375 ? values.queryByText(label) : values.queryByRole('cell', { name: label });
+    expect(date('Oct 14, 2026')).toBeVisible();
 
     preferences.locale = 'de-DE';
     preferences.tz = 'America/Los_Angeles';
@@ -183,8 +187,8 @@ describe('DestinationDirectory responsive field preservation', () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText('13. Okt. 2026')).toBeVisible();
-    expect(screen.queryByText('Oct 14, 2026')).not.toBeInTheDocument();
+    expect(date('13. Okt. 2026')).toBeVisible();
+    expect(date('Oct 14, 2026')).not.toBeInTheDocument();
     expect(arrival.firstVisitedAt).toBe('2026-10-14T00:30:00Z');
     expect(summary.destinations[0].firstVisitedAt).toBe('2026-10-14T00:30:00Z');
 
@@ -233,7 +237,7 @@ describe('DestinationDirectory responsive field preservation', () => {
     const table = screen.getByRole('table', { name: 'Observed destination directory' });
     expect(Array.from(table.querySelectorAll('th[data-column-key]'), cell => cell.getAttribute('data-column-key')))
       .toEqual(['label', 'visits', 'repeatVisits', 'distanceFromBaseM', 'firstVisitedAt']);
-    expect(within(table).getByText('12345 m')).toBeVisible();
+    expect(within(table).getByRole('cell', { name: '12345 m' })).toBeVisible();
     expect(container.querySelector('[data-mobile-table]')).toBeNull();
     expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toBeVisible();
     expect(screen.getByRole('button', { name: /export/i })).toBeVisible();

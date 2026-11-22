@@ -125,5 +125,5 @@ export function RecentActivityFeed({ entries, className, emptyMessage }: RecentA
 
   // Timeline accepts ReactNode for title/subtitle so click-through links keep
   // type safety.
-  return <Timeline items={items} className={className} />;
+  return <Timeline items={items} className={className} indexed />;
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Filter } from 'lucide-react';
+import { ChevronDown, Filter } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -12,10 +12,11 @@ interface DataTableHeaderFilterProps {
   label: string;
   active?: boolean;
   onClear?: () => void;
+  presentation?: 'icon' | 'field';
   children: ReactNode;
 }
 
-export function DataTableHeaderFilter({ label, active = false, onClear, children }: DataTableHeaderFilterProps) {
+export function DataTableHeaderFilter({ label, active = false, onClear, presentation = 'icon', children }: DataTableHeaderFilterProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -27,13 +28,15 @@ export function DataTableHeaderFilter({ label, active = false, onClear, children
       <Button
         ref={anchorRef}
         type="button"
-        variant="ghost"
+        variant={presentation === 'field' ? 'secondary' : 'ghost'}
         size="sm"
         className={cn(
-          'h-11 w-11 shrink-0 rounded-shape-sm border p-0 md:h-8 md:w-8',
+          presentation === 'field'
+            ? 'min-h-9 w-full min-w-0 justify-between px-2 font-normal'
+            : 'h-11 w-11 shrink-0 rounded-shape-sm border p-0 md:h-8 md:w-8',
           active || open
-            ? 'border-[var(--border-default)] bg-[var(--control-bg)] text-[var(--text-primary)]'
-            : 'border-transparent text-[var(--text-muted)] hover:border-[var(--border-subtle)] hover:bg-[var(--control-bg)]',
+            ? 'border-[var(--border-default)] bg-[var(--theme-accent-soft)] text-[var(--text-primary)]'
+            : presentation === 'icon' && 'border-transparent text-[var(--text-muted)] hover:border-[var(--border-subtle)] hover:bg-[var(--control-bg)]',
         )}
         aria-label={filterLabel}
         aria-haspopup="dialog"
@@ -42,7 +45,10 @@ export function DataTableHeaderFilter({ label, active = false, onClear, children
         title={filterLabel}
         onClick={() => setOpen((value) => !value)}
       >
-        <Icon icon={Filter} size="sm" fill={active ? 'currentColor' : 'none'} />
+        {presentation === 'field' ? <>
+          <span className="truncate">{active ? t('table.filter.active', 'Active') : t('common.any', 'Any')}</span>
+          <Icon icon={ChevronDown} size="xs" />
+        </> : <Icon icon={Filter} size="sm" fill={active ? 'currentColor' : 'none'} />}
       </Button>
       <Popover
         open={open}

@@ -41,7 +41,7 @@ import {
   type FocusEvent,
   type KeyboardEvent,
 } from 'react'
-import { Input, type InputProps } from '@/components/ui/runtime'
+import { Input, type InputProps } from '@/components/ui/Input'
 import {
   formatCurrencyMicro,
   parseCurrencyTextToMicro,
@@ -74,12 +74,11 @@ export interface CurrencyInputProps
   /** Fractional digits to display. Storage keeps full micro precision. */
   precision?: number
   /**
-   * Required for accessibility — pulled into both `aria-label` AND the
-   * `<Input>`'s visible label when no `label` is supplied. Existing
-   * pages with a separate `<SettingField label>` wrapper should still
-   * pass `ariaLabel` so screen readers announce the field correctly.
+   * Accessible name and the default visible label.
    */
   ariaLabel: string
+  /** Set to false only when the surrounding form already labels this field. */
+  showLabel?: boolean
 }
 
 /**
@@ -101,6 +100,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       locale,
       precision,
       ariaLabel,
+      showLabel = true,
       onBlur,
       onKeyDown,
       onFocus,
@@ -201,7 +201,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     return (
       <Input
         ref={ref}
-        label={label}
+        label={showLabel ? label ?? ariaLabel : undefined}
         type="text"
         inputMode="decimal"
         autoComplete="off"

@@ -81,6 +81,10 @@ func TestAPICallLogStatsAgainstPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
+	start := now.Add(-48 * time.Hour)
+	end := now.Add(time.Hour)
+	early := now.Add(-96 * time.Hour)
+	message := "synthetic upstream failure"
 	for _, row := range []struct {
 		ts      time.Time
 		service string
@@ -89,9 +93,11 @@ func TestAPICallLogStatsAgainstPostgres(t *testing.T) {
 		message *string
 		ms      int
 	}{
-		{now.Add(-12 * time.Hour), "api", "GET", 200, nil, 100},
-		{now.Add(-13 * time.Hour), "api", "POST", 503, nil, 300},
-		{now.Add(-72 * time.Hour), "fleet", "GET", 200, nil, 200},
+		{start, "api", "GET", 200, nil, 101},
+		{now.Add(-12 * time.Hour), "api", "GET", 200, &message, 103},
+		{now.Add(-13 * time.Hour), "api", "POST", 503, &message, 303},
+		{now.Add(-72 * time.Hour), "fleet", "GET", 200, nil, 201},
+		{end, "fleet", "POST", 200, nil, 302},
 	} {
 		if _, err := pool.Exec(ctx, `INSERT INTO api_call_logs VALUES ($1, $2, $3, $4, $5, $6)`,
 			row.ts, row.service, row.method, row.status, row.message, row.ms); err != nil {
@@ -99,9 +105,6 @@ func TestAPICallLogStatsAgainstPostgres(t *testing.T) {
 		}
 	}
 	repo := NewAPICallLogRepo(&database.DB{Pool: pool})
-	start := now.Add(-48 * time.Hour)
-	end := now.Add(time.Hour)
-	early := now.Add(-96 * time.Hour)
 	for _, tc := range []struct {
 		name         string
 		start, end   *time.Time
@@ -110,10 +113,10 @@ func TestAPICallLogStatsAgainstPostgres(t *testing.T) {
 		recent       int
 		methods, svc map[string]int
 	}{
-		{"all", nil, nil, 3, 1, 200, 2, map[string]int{"GET": 2, "POST": 1}, map[string]int{"api": 2, "fleet": 1}},
-		{"bounded", &start, &end, 2, 1, 200, 2, map[string]int{"GET": 1, "POST": 1}, map[string]int{"api": 2}},
-		{"from only", &start, nil, 2, 1, 200, 2, map[string]int{"GET": 1, "POST": 1}, map[string]int{"api": 2}},
-		{"until only", nil, &end, 3, 1, 200, 2, map[string]int{"GET": 2, "POST": 1}, map[string]int{"api": 2, "fleet": 1}},
+		{"all", nil, nil, 5, 2, 202, 3, map[string]int{"GET": 3, "POST": 2}, map[string]int{"api": 3, "fleet": 2}},
+		{"bounded", &start, &end, 3, 2, 169, 2, map[string]int{"GET": 2, "POST": 1}, map[string]int{"api": 3}},
+		{"from only", &start, nil, 4, 2, 202.25, 3, map[string]int{"GET": 2, "POST": 2}, map[string]int{"api": 3, "fleet": 1}},
+		{"until only", nil, &end, 4, 2, 177, 2, map[string]int{"GET": 3, "POST": 1}, map[string]int{"api": 3, "fleet": 1}},
 		{"empty", nil, &early, 0, 0, 0, 0, map[string]int{}, map[string]int{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -166,6 +166,8 @@ function RequiresAuthPlaceholder({
     // <EmptyState> doesn't expose. Mirrors the pattern used by the
     <div
       role="status"
+      data-app-part="feedback empty"
+      data-app-feedback-kind="empty"
       data-testid={requiresAuthEmptyTestId(capability)}
       className={cn(
         'flex flex-col items-center justify-center gap-3 rounded-lg',
@@ -174,11 +176,11 @@ function RequiresAuthPlaceholder({
         className,
       )}
     >
-      <div className="text-[var(--text-muted)]">
+      <div data-app-part="feedback-icon" className="text-[var(--text-muted)]">
         <LockKeyhole aria-hidden className="h-8 w-8" />
       </div>
-      <Heading level="panel">{title}</Heading>
-      <Text variant="bodySm" as="p" className="max-w-md">
+      <Heading data-app-part="feedback-title" level="panel" className="[overflow-wrap:anywhere]">{title}</Heading>
+      <Text data-app-part="feedback-message" variant="bodySm" as="p" className="max-w-md [overflow-wrap:anywhere]">
         {body}
       </Text>
       {/* HELP-10. The copy above explains WHY the section is unavailable; this
@@ -188,7 +190,7 @@ function RequiresAuthPlaceholder({
           to go to. */}
       <PermissionGuidanceNotice
         kind="open_mode"
-        className="mt-1 w-full max-w-md text-left"
+        className="mt-1 w-full max-w-md"
       />
     </div>
   );

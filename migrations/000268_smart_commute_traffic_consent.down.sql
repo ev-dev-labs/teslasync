@@ -1,0 +1,3 @@
+DROP TABLE smart_commute_traffic_decisions;
+DROP TABLE smart_commute_traffic_occurrences;
+DROP TABLE smart_commute_traffic_consent;

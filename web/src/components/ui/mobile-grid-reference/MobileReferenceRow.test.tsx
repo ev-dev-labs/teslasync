@@ -142,7 +142,8 @@ describe('mobile baseline-plus-delta quantitative ownership', () => {
     let geometry: postcss.Rule | undefined;
     mobile.walkRules('.mgr-progress', rule => { geometry = rule; });
     expect(geometry?.nodes.some(node => node.type === 'decl' && node.prop === 'height' && node.value === '5px')).toBe(true);
-    expect(geometry?.parent).toMatchObject({ type: 'atrule', name: 'container', params: 'mobile-grid-reference (width < 640px)' });
+    expect(geometry?.parent?.type).toBe('root');
+    expect(track).toHaveClass('mgr-progress');
   });
 
   it('requires ownership on each final target and keeps incomplete nested previews neutral', () => {

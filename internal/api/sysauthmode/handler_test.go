@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
 func TestSystemAuthMode_OpenMode(t *testing.T) {
@@ -99,9 +101,13 @@ func TestSystemAuthMode_ForwardAuthHeaderPresent(t *testing.T) {
 	if body.Subject == nil || *body.Subject != "alice" {
 		t.Fatalf("subject: got %v, want pointer to %q", body.Subject, "alice")
 	}
+	if body.Impersonating {
+		t.Fatal("an ordinary verified subject must not be marked impersonating")
+	}
 	if body.ProviderHint != "authentik" {
 		t.Fatalf("provider_hint: got %q, want authentik", body.ProviderHint)
 	}
+
 	if body.Capabilities.TOTPEnrollment ||
 		body.Capabilities.SessionList ||
 		!body.Capabilities.Impersonation ||
@@ -110,6 +116,31 @@ func TestSystemAuthMode_ForwardAuthHeaderPresent(t *testing.T) {
 	}
 	if body.AuthenticationOwner != "external_provider" || body.AccessPolicy != "all_proxy_users_are_operators" {
 		t.Fatalf("unexpected authentication ownership: %+v", body)
+	}
+}
+
+func TestSystemAuthModeMarksEffectiveImpersonatedSubject(t *testing.T) {
+	const header = "X-Forwarded-User"
+	store, err := tsauth.NewImpersonationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := store.Mint("synthetic-admin", "synthetic-target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
+	req.Header.Set(header, "synthetic-admin")
+	req.AddCookie(&http.Cookie{Name: tsauth.ImpersonationCookieName, Value: token})
+	rec := httptest.NewRecorder()
+	tsauth.ImpersonationMiddleware(header, store)(NewHandler(header, "")).ServeHTTP(rec, req)
+	var body AuthModeResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if !body.Impersonating || body.Subject == nil || *body.Subject != "synthetic-target" ||
+		rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("expected uncached effective identity and impersonation status: %+v", body)
 	}
 }
 

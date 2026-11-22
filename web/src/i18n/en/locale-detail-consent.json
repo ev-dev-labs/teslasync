@@ -1,6 +1,7 @@
 {
   "consent": {
     "banner": {
+      "loading": "Loading privacy choices...",
       "title": "Cookies & analytics",
       "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
       "manage": "Manage preferences",

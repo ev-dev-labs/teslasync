@@ -1,0 +1,1 @@
+DROP TABLE smart_charging_site_performance;

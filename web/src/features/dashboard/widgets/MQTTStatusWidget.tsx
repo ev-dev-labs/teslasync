@@ -100,7 +100,8 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
         instrument={!isCompact && (
           <div className="min-w-0 space-y-2">
             {data?.sessionSamples?.some(point => point.value != null) && <Sparkline
-              samples={data.sessionSamples} width={360} height={80}
+              samples={data.sessionSamples} width={360} height={80} inspect
+              formatValue={value => `${fmtNumber(value)} ${t('widget.mqtt.msgSec', 'msg/s')}`}
               ariaLabel={t('dashboardWidgets.system.mqtt.sessionTrend', 'Message rates fetched in this browser session')} />}
             <HelperText>
               {t('dashboardWidgets.system.mqtt.historyUnavailable', 'This source provides the current message rate, not a throughput history.')}

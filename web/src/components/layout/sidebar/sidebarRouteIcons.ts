@@ -11,6 +11,8 @@ export const SIDEBAR_ROUTE_ICONS: Record<string, LucideIcon> = {
   '/vehicles': SidebarGlyphs.keySquare,
   '/drive-dna': SidebarGlyphs.scanFace,
   '/notifications/browser': SidebarGlyphs.bellElectric,
+  '/settings/smart-commute': Icons.vehicle,
+  '/settings/smart-features': SidebarGlyphs.toggleLeft,
   '/tesla-physics': SidebarGlyphs.telescope,
   '/charger-health': SidebarGlyphs.plug2,
   '/tesla-api-usage': Icons.satellite,

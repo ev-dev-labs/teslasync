@@ -50,7 +50,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
     const inputId = id ?? autoId
     const descriptionId = description != null ? `${inputId}-description` : undefined
     return (
-      <label data-app-part="field" data-app-field-kind="choice" htmlFor={inputId} className={cn('block min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
+      <label data-app-part="field" data-app-field-kind="choice" htmlFor={inputId} className={cn('flex h-full min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
         <input
           ref={ref}
           data-app-part="field-control"
@@ -69,7 +69,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
         <span
           data-app-choice-surface="radio"
           className={cn(
-            'flex min-h-11 min-w-0 items-start gap-3 rounded-panel border p-3 text-start transition-colors duration-fast motion-reduce:transition-none',
+            'flex h-full min-h-11 min-w-0 flex-1 items-start gap-3 rounded-panel border p-3 text-start transition-colors duration-fast motion-reduce:transition-none',
             checked
               ? 'border-[var(--control-border-hover)] bg-[var(--control-bg)]'
               : 'border-[var(--control-border)] bg-surface-1',

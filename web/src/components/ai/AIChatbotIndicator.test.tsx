@@ -17,7 +17,7 @@ import { appSettingsPayload } from '@/test/fixtures/appSettings'
 //     the Helix glyph is decorative (aria-hidden) and therefore not
 //     double-announced, the visible "Helix" label matches the
 //     accessible name (WCAG 2.5.3 Label-in-Name), and the long-form
-//     explanation is carried on the title attribute.
+//     explanation is visible and associated with the badge.
 //   • Metadata: the stable displayName the lazy loader / DevTools use.
 //
 // react-i18next's useTranslation returns the 2nd argument (English
@@ -152,13 +152,13 @@ describe('AIChatbotIndicator — badge anatomy + accessibility', () => {
     expect(glyph).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('carries the long-form explanation on the title attribute for a hover tooltip', () => {
+  it('shows the long-form explanation without hover and describes the badge', () => {
     render(<AIChatbotIndicator />)
 
     const badge = screen.getByRole('img', { name: 'Helix' })
-    const title = badge.getAttribute('title') ?? ''
-    expect(title).toContain('redacted TeslaSync data')
-    expect(title).toContain('explicit tool evidence')
+    const evidence = screen.getByText(/redacted TeslaSync data/)
+    expect(evidence).toHaveTextContent('explicit tool evidence')
+    expect(badge).toHaveAttribute('aria-describedby', evidence.id)
   })
 })
 

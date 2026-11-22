@@ -1,4 +1,6 @@
-import { type CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Text } from '../ui/Typography';
 import { Skeleton } from './Skeleton';
 import { cn } from '@/lib/cn';
 
@@ -12,7 +14,7 @@ import { cn } from '@/lib/cn';
  *
  * Each block is announced as `role="status" aria-busy="true"` so screen
  * readers can identify the loading region. Visual styling re-uses the
- * existing `<Skeleton>` primitive (animate-pulse + token-driven background).
+ * existing static, token-driven `<Skeleton>` primitive.
  */
 
 interface BlockProps {
@@ -21,17 +23,25 @@ interface BlockProps {
 
 /** Mirrors `<PageContainer>`'s title + subtitle row. */
 export function PageHeaderSkeleton({ className }: BlockProps) {
+  const { t } = useTranslation();
+  const labelId = useId();
+
   return (
     <div
-      className={cn('space-y-2', className)}
+      className={cn('min-w-0 space-y-2 rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-3 forced-colors:border-[CanvasText]', className)}
       role="status"
       aria-busy="true"
-      aria-label="Loading page header"
+      aria-labelledby={labelId}
       data-testid="page-header-skeleton"
       data-app-part="loading"
     >
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-4 w-96 max-w-full" />
+      <Text id={labelId} variant="caption" className="block break-words">
+        {t('common.loading', 'Loading…')}
+      </Text>
+      <div aria-hidden="true" className="space-y-2">
+        <Skeleton className="h-8 w-64 max-w-full" />
+        <Skeleton className="h-4 w-40 max-w-full" />
+      </div>
     </div>
   );
 }
@@ -57,7 +67,9 @@ export function StatGridSkeleton({ cards = 4, className }: StatGridSkeletonProps
       data-app-part="metric-grid loading"
     >
       {Array.from({ length: cards }).map((_, i) => (
-        <Skeleton key={i} className="h-24 rounded-xl" />
+        <div key={i} aria-hidden="true" className="flex h-24 min-w-0 flex-col justify-center gap-2 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
+          <Skeleton shape="fact" />
+        </div>
       ))}
     </div>
   );
