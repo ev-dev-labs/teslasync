@@ -51,14 +51,14 @@ export function RateLimitBanner() {
       data-app-feedback-kind="notice"
       data-app-tone="warning"
       data-kind={state.kind}
-      className="sticky top-0 z-50 flex shrink-0 items-center gap-3 border-b border-amber-300/30 bg-amber-300/[0.08] px-4 py-2.5 backdrop-blur-md"
+      className="sticky top-0 z-50 grid min-w-0 shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-b border-[var(--semantic-warning-border)] bg-[var(--surface-1)] md:grid-cols-[auto_minmax(0,1fr)_auto]"
     >
-      <div data-app-part="feedback-icon" className="rounded-lg bg-amber-300/15 p-1.5 shrink-0">
-        <Icon className="h-4 w-4 text-amber-300" aria-hidden />
+      <div data-app-part="feedback-icon" className="row-span-2 grid w-8 place-items-center border-e border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)] md:row-span-1 md:w-10">
+        <Icon className="h-4 w-4" aria-hidden />
       </div>
-      <div data-app-part="feedback-content" className="flex-1 min-w-0">
+      <div data-app-part="feedback-content" className="min-w-0 pe-3 pt-2 [overflow-wrap:anywhere] md:self-center md:py-2">
         <Text as="p" variant="subhead" data-app-part="feedback-title">{title}</Text>
-        <Text as="p" variant="bodySm">
+        <Text data-app-part="feedback-message" as="p" variant="bodySm">
           {writeOnly
             ? t('ratelimit.actionsPaused')
             : t('ratelimit.readsPaused')}
@@ -68,11 +68,13 @@ export function RateLimitBanner() {
             : t('ratelimit.ready')}
         </Text>
       </div>
-      <div data-app-part="feedback-actions" className="flex shrink-0 items-center gap-2">
+      <div data-app-part="feedback-actions" className="col-start-2 flex min-w-0 flex-wrap items-center gap-2 py-2 pe-3 md:col-start-3">
         {!writeOnly && <Button
           type="button"
           size="sm"
           variant="primary"
+          wrapLabel
+          className="max-w-full max-md:min-h-11"
           onClick={handleRetry}
           disabled={remaining > 0}
           data-testid="rate-limit-banner-retry"
@@ -86,7 +88,7 @@ export function RateLimitBanner() {
           onClick={dismiss}
           aria-label={t('common.dismiss')}
           data-testid="rate-limit-banner-dismiss"
-          className="p-1.5"
+          className="p-1.5 max-md:min-h-11 max-md:min-w-11"
         >
           <X className="h-4 w-4" aria-hidden />
         </Button>
