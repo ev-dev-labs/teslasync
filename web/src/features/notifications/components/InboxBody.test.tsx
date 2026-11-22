@@ -1444,8 +1444,10 @@ describe('InboxBody — controlled column-header filters', () => {
           expect(within(dialog).getByRole('combobox', { name: 'Rule' })).toHaveValue('10');
           expect(within(dialog).getByRole('combobox', { name: 'Source' })).toHaveValue('rule');
           for (const name of ['Vehicle', 'Rule', 'Source']) {
-            expect(within(dialog).getByRole('combobox', { name }).parentElement?.parentElement)
-              .toHaveClass('min-w-0', 'w-full', 'max-w-full');
+            const control = within(dialog).getByRole('combobox', { name });
+            expect(control).toHaveClass('min-w-0', 'w-full', 'max-w-full');
+            expect(control.closest('[data-app-part="field"]')?.parentElement)
+              .toHaveClass('min-w-0', 'w-full', 'max-w-full', 'sm:w-40');
           }
           expect(within(dialog).getByLabelText('Filter by read state')).toHaveValue('unread');
           expect(within(dialog).getByPlaceholderText('Search messages…')).toHaveValue('pressure');
