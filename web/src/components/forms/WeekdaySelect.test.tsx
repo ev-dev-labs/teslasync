@@ -33,6 +33,9 @@ describe('WeekdaySelect', () => {
       <WeekdaySelect options={options} selectedIds={[1]} onChange={vi.fn()} ariaLabel={ariaLabel} />,
     );
     expect(screen.getByRole('button', { name: 'Montag' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Montag' }).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('button', { name: 'Montag' }).querySelector('svg')).not.toHaveClass('invisible');
+    expect(screen.getByRole('button', { name: 'Freitag' }).querySelector('svg')).toHaveClass('invisible');
     expect(screen.getByRole('button', { name: 'Freitag' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Sonntag' })).toHaveAttribute('aria-pressed', 'false');
     rerender(<WeekdaySelect options={options} selectedIds={[0, 5, 1]} onChange={vi.fn()} ariaLabel={ariaLabel} />);
