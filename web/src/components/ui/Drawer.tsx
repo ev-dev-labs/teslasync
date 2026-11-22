@@ -153,7 +153,11 @@ export function Drawer({
               )}
               <div className="flex flex-wrap items-center gap-2">
                 {title && (
-                  <Heading id={titleId} level="panel" className="min-w-0 break-words">
+                  <Heading
+                    id={titleId}
+                    level="panel"
+                    className="min-w-0 break-words border-s-[3px] border-[var(--theme-primary)] ps-2.5 forced-colors:border-[CanvasText]"
+                  >
                     {title}
                   </Heading>
                 )}
@@ -194,7 +198,7 @@ export function Drawer({
         </div>
         {footer !== null && (
           <div
-            className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 sm:py-4"
+            className="shrink-0 border-t border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-3 sm:px-6 sm:py-4 forced-colors:border-[CanvasText]"
             data-app-part="dialog-footer"
             data-drawer-footer
           >
