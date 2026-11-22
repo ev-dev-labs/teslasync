@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { installDriveDetailMocks } from './driveDetailFixtures';
+import { driveGridResponse } from './driveGridFixture';
 import { fulfillApiFixture, type MockApiController } from './mockApi';
 import { catalogueAnalyticsSources } from './dashboardCatalogueRemainingSources';
 import { cardLayoutWorkspaceSources } from './cardLayoutWorkspaceSources';
@@ -85,11 +86,18 @@ export async function installSpecializedReviewSources(
       if (!driveList && currentPath !== (path === '/drives' ? '/' : '/charging-heatmap')) return route.fallback();
       const url = new URL(route.request().url());
       const params = url.searchParams;
+      const view = params.get('view');
+      const drivesInDefaultRange = driveList && params.get('timezone') === 'UTC'
+        && params.get('start') === '2026-11-04T00:00:00.000Z'
+        && params.get('end') === '2026-11-11T00:00:00.000Z'
+        && (view === 'overview'
+          ? [...params].length === 6 && params.get('prior_start') === '2026-10-28T00:00:00.000Z'
+          : view === 'page' && [...params].length === 8 && params.has('grid')
+            && params.get('limit') === '50' && params.get('offset') === '0');
       const validWindow = path === '/drives'
-        ? params.get('vehicle_id') === '7' && (driveList
+        ? params.get('vehicle_id') === '7' && (view !== null ? drivesInDefaultRange : driveList
           ? [...params].length === 4 && params.get('limit') === '1000'
-            && ((params.get('start') === '2026-10-27' && params.get('end') === '2026-11-11')
-              || (params.get('start') === '2026-11-10T00:00:00.000Z' && params.get('end') === '2026-11-11T00:00:00.000Z'))
+            && params.get('start') === '2026-11-10T00:00:00.000Z' && params.get('end') === '2026-11-11T00:00:00.000Z'
           : [...params].length === 1)
         : [...params].length === 5 && params.get('vehicle_id') === '7'
           && params.get('limit') === '2000' && params.get('offset') === '0'
@@ -99,7 +107,12 @@ export async function installSpecializedReviewSources(
         mocks.unmatched.add(`${route.request().method()} ${path}`);
         return fulfillApiFixture(route, mocks, { status: 599, json: { error: 'Unexpected plot window contract' } });
       }
-      return fulfillApiFixture(route, mocks, { json });
+      const body = driveList && view
+        ? driveGridResponse(specializedDrives.map(drive => ({
+          ...drive, distance_m: drive.distance_m ?? 0, duration_s: drive.duration_s ?? 0,
+        })), params)
+        : json;
+      return fulfillApiFixture(route, mocks, { json: body });
     });
   }
   // A deliberately blank local raster fixture prevents third-party requests.
