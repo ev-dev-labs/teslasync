@@ -15,5 +15,5 @@ interface PageErrorBoundaryProps {
  * Uses the full-page fallback UI from `ErrorBoundary` (icon + retry + go-home).
  */
 export function PageErrorBoundary({ children, pageName }: PageErrorBoundaryProps) {
-  return <ErrorBoundary name={`page:${pageName}`}>{children}</ErrorBoundary>;
+  return <ErrorBoundary name={`page:${pageName}`} fallbackStyle="page-recovery">{children}</ErrorBoundary>;
 }

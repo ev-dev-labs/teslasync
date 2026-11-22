@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import '@/i18n'
 import { PageErrorBoundary } from './PageErrorBoundary'
 
@@ -32,9 +32,34 @@ describe('PageErrorBoundary', () => {
     )
     expect(screen.queryByText('Page OK')).not.toBeInTheDocument()
     // Full-page fallback (not inline)
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /go home/i })).toBeInTheDocument()
+    const title = screen.getByRole('heading', { name: 'Something went wrong' })
+    const message = screen.getByText('Page explosion')
+    const retry = screen.getByRole('button', { name: 'Try Again' })
+    const actions = retry.closest('[data-app-part="feedback-actions"]')
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Go Home' }))
+    expect(actions).not.toContainElement(message)
+    expect(title.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(message.compareDocumentPosition(retry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('lets the page recover without replacing surrounding shell content', () => {
+    const page = (shouldThrow: boolean) => (
+      <>
+        <nav aria-label="Workspace">Workspace navigation</nav>
+        <PageErrorBoundary pageName="Battery Health">
+          <ThrowingComponent shouldThrow={shouldThrow} />
+        </PageErrorBoundary>
+      </>
+    )
+    const { rerender } = render(page(true))
+    const shell = screen.getByRole('navigation', { name: 'Workspace' })
+    expect(shell).toBeVisible()
+    rerender(page(false))
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+
+    expect(screen.getByRole('navigation', { name: 'Workspace' })).toBe(shell)
+    expect(screen.getByText('Page OK')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Something went wrong' })).not.toBeInTheDocument()
   })
 
   it('logs with the page name prefix', () => {

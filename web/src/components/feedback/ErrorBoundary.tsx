@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, Home, CloudOff } from 'lucide-react'
 import i18n from 'i18next'
 import { Button } from '../ui/Button'
 import { Heading, Text } from '../ui/Typography'
+import { cn } from '@/lib/cn'
 import { reportFrontendError } from '@/lib/errorReporter'
 
 /**
@@ -23,6 +24,7 @@ interface Props {
   fallback?: ReactNode
   /** If true, show a more compact inline error instead of full-page */
   inline?: boolean
+  fallbackStyle?: 'default' | 'page-recovery'
   /** Optional name for logging which boundary caught the error */
   name?: string
   /**
@@ -163,6 +165,7 @@ export class ErrorBoundary extends Component<Props, State> {
       const isChunkError = this.state.error ? this.isChunkLoadError(this.state.error) : false
 
       const tooManyRetries = this.state.retryCount >= 3
+      const pageRecovery = this.props.fallbackStyle === 'page-recovery'
 
       if (this.props.inline) {
         return (
@@ -193,7 +196,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               )}
             </div>
-            <Heading data-app-part="feedback-title" level="section" className="mb-2 break-words">
+            <Heading data-app-part="feedback-title" level="section" className={cn(
+              'mb-2 break-words',
+              pageRecovery && 'mx-auto w-fit max-w-full border-s-[3px] border-[var(--semantic-danger)] ps-2.5 forced-colors:border-[CanvasText]',
+            )}>
               {isChunkError
                 ? label('errorBoundary.chunkTitle', 'New Version Deployed')
                 : isNetworkError
@@ -212,7 +218,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 {label('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
               </Text>
             )}
-            <div data-app-part="feedback-actions" className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--border-subtle)] pt-4">
+            <div data-app-part="feedback-actions" className={cn(
+              'mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--border-subtle)] pt-4',
+              pageRecovery && 'border-[var(--border-strong)] forced-colors:border-[CanvasText]',
+            )}>
               <Button
                 onClick={this.handleRetry}
                 variant="primary"
