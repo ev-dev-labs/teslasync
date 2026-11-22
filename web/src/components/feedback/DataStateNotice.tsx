@@ -117,7 +117,7 @@ export function DataStateNotice({
   const explainedBody = explanation ? (
     <div className="space-y-1.5">
       <span className="block">{t(explanation.bodyKey, explanation.bodyFallback)}</span>
-      <span className="block text-[var(--text-muted)]">
+      <span data-app-part="feedback-detail" className="block border-s-2 border-[var(--border-default)] ps-2 text-[var(--text-secondary)]">
         <span className="font-medium">{t('dataUnavailable.whatToDo', 'What to do')}: </span>
         {t(explanation.whatToDoKey, explanation.whatToDoFallback)}
       </span>

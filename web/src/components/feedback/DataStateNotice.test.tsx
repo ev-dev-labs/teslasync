@@ -12,13 +12,8 @@ describe('DataStateNotice', () => {
 
     expect(screen.getByText(title)).toBeInTheDocument()
     expect(container.firstChild).toHaveAttribute('data-data-state', state)
-    expect(container.firstChild).toHaveClass(
-      tone === 'danger'
-        ? 'border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)]'
-        : tone === 'warning'
-          ? 'border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)]'
-          : 'border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)]',
-    )
+    expect(container.firstChild).toHaveAttribute('data-app-tone', tone)
+    expect(container.querySelector('[data-app-part="feedback-icon"]')).toHaveClass(`bg-[var(--semantic-${tone}-bg)]`)
   })
 
   it('accepts contextual title, body, and accessibility attributes', () => {
