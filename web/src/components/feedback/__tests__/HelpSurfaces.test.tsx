@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@/i18n'
 
@@ -79,10 +79,14 @@ describe('PermissionGuidanceNotice', () => {
     expect(list.querySelectorAll('li').length).toBeGreaterThan(1)
   })
 
-  it('drops the steps in compact mode but keeps the explanation', () => {
+  it('drops the steps in compact mode but keeps the warning, explanation and recovery link together', () => {
     renderIn(<PermissionGuidanceNotice kind="forbidden" compact />)
-    expect(screen.getByText(/not entitled to this/i)).toBeInTheDocument()
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    const notice = screen.getByRole('status', { name: 'Your account is not entitled to this' })
+    expect(within(notice).getByText('Warning')).toBeVisible()
+    expect(within(notice).getByText(/the data is not missing/i)).toBeVisible()
+    expect(within(notice).queryByRole('list')).not.toBeInTheDocument()
+    expect(within(notice).getByRole('link', { name: 'Request access' })).toHaveAttribute('href', '/help')
+    expect(notice).toHaveAttribute('data-app-tone', 'warning')
   })
 
   it('tags the block kind for auditing', () => {

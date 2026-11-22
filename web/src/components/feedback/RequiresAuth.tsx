@@ -190,7 +190,7 @@ function RequiresAuthPlaceholder({
           to go to. */}
       <PermissionGuidanceNotice
         kind="open_mode"
-        className="mt-1 w-full max-w-md border-t border-[var(--border-subtle)] pt-3 text-start"
+        className="mt-1 w-full max-w-md"
       />
     </div>
   );
