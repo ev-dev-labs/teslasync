@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ChartContainerProps } from '@/components/charts';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, type ChartCardProps } from '@/components/layout';
 import { useCardPlacement, containerPolicy } from '@/components/layout/layout-reference';
 import { cn } from '@/lib/cn';
 import type { SourcePresentation } from './types';
@@ -11,6 +11,7 @@ type EfficiencyChartProps = ChartContainerProps & {
   source: SourcePresentation;
   data: NonNullable<ChartContainerProps['data']>;
   dataColumns: NonNullable<ChartContainerProps['dataColumns']>;
+  footer?: ChartCardProps['footer'];
 };
 
 /** Source trust stays local; the shared frame owns all chart capabilities. */

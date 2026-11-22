@@ -2127,6 +2127,10 @@
       "noData": "No elevation data available",
       "title": "Elevation profile"
     },
+    "markers": {
+      "start": "Start",
+      "stop": "End"
+    },
     "stat": {
       "speed": "Speed"
     }

@@ -1936,6 +1936,10 @@
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
+    },
+    "markers": {
+      "start": "Start",
+      "stop": "End"
     }
   },
   "requiresAuth": {

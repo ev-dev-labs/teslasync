@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
 import { chartTokens } from '@/lib/tokens';
@@ -13,7 +13,6 @@ const chart = vi.hoisted(() => ({
   xAxis: vi.fn(),
   yAxis: vi.fn(),
   area: vi.fn(),
-  grid: vi.fn(),
   gradient: vi.fn(),
   annotations: vi.fn(),
 }));
@@ -21,8 +20,8 @@ const chart = vi.hoisted(() => ({
 vi.mock('./EfficiencyChart', () => ({
   EfficiencyChart: (props: ComponentProps<typeof import('./EfficiencyChart').EfficiencyChart>) => {
     chart.frame(props);
-    return <>{typeof props.children === 'function'
-      ? props.children({ annotations: [], hidden: false, hiddenSeries: null }) : props.children}</>;
+    return <>{!props.empty && (typeof props.children === 'function'
+      ? props.children({ annotations: [], hidden: false, hiddenSeries: null }) : props.children)}{props.footer}</>;
   },
 }));
 vi.mock('@/components/charts', () => ({
@@ -33,8 +32,11 @@ vi.mock('@/components/charts', () => ({
   },
   XAxis: (props: unknown) => { chart.xAxis(props); return null; },
   YAxis: (props: unknown) => { chart.yAxis(props); return null; },
-  Area: (props: unknown) => { chart.area(props); return null; },
-  CartesianGrid: (props: unknown) => { chart.grid(props); return null; },
+  Area: (props: { dot: (point: { index: number; cx: number; cy: number }) => ReactNode }) => {
+    chart.area(props);
+    return <g>{[20, 40, 60, Number.NaN].map((cx, index) => props.dot({ index, cx, cy: 12 }))}</g>;
+  },
+  chartGrid: <g data-testid="shared-grid" />,
   Tooltip: () => null,
   ChartTooltip: () => null,
   AREA_DEFAULTS: { type: 'monotone', connectNulls: false, strokeWidth: 2 },
@@ -133,10 +135,45 @@ describe('EfficiencyTrend display-boundary typography', () => {
       type: 'monotone', connectNulls: false, strokeWidth: 2,
       stroke: chartTokens.series[0], fill: 'url(#effGrad)',
     }));
-    expect(chart.grid).toHaveBeenCalledWith(expect.objectContaining({ stroke: chartTokens.gridStroke }));
+    expect(screen.getByTestId('shared-grid')).toBeInTheDocument();
     expect(chart.gradient).toHaveBeenCalledWith('effGrad', chartTokens.series[0], 0.08);
     expect(chart.annotations).toHaveBeenCalledWith([], expect.any(Function));
     expect(chart.annotations.mock.lastCall?.[1]('2026-10-01')).toBe('2026-10-01');
+  });
+
+  it('marks only the drawn endpoints and keys the hollow and filled samples below the plot', () => {
+    const { container } = render(<EfficiencyTrend {...presentation()} />);
+    const plot = container.querySelector('svg');
+    const dots = plot?.querySelectorAll('circle');
+    expect(dots).toHaveLength(2);
+    expect(dots?.[0]).toHaveAttribute('cx', '20');
+    expect(dots?.[1]).toHaveAttribute('cx', '60');
+    const first = screen.getByText('First sample');
+    const last = screen.getByText('Last sample');
+    expect(plot).not.toContainElement(first);
+    expect(first.closest('li')?.querySelector('circle')).toHaveAttribute('fill', dots?.[0].getAttribute('fill'));
+    expect(last.closest('li')?.querySelector('circle')).toHaveAttribute('fill', dots?.[1].getAttribute('fill'));
+    expect(dots?.[0]).not.toHaveAttribute('fill', dots?.[1].getAttribute('fill'));
+  });
+
+  it('draws the endpoint marks on the native Recharts trace', async () => {
+    const { Area, AreaChart, XAxis, YAxis } = await vi.importActual<typeof import('recharts')>('recharts');
+    const props = presentation();
+    const fixture = render(<EfficiencyTrend {...props} />);
+    const dot = chart.area.mock.lastCall?.[0].dot;
+    fixture.unmount();
+
+    const plot = render(
+      <AreaChart data={props.model.dailyTrend} width={280} height={180}>
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Area dataKey="efficiency" dot={dot} isAnimationActive={false} />
+      </AreaChart>,
+    );
+    expect(plot.container.querySelector('.recharts-area-curve')).toBeInTheDocument();
+    const dots = [...plot.container.querySelectorAll('.recharts-area-dots circle')];
+    expect(dots).toHaveLength(2);
+    expect(Number(dots[0].getAttribute('cx'))).toBeLessThan(Number(dots[1].getAttribute('cx')));
   });
 
   it.each([0, 2])('retains the insufficient-data threshold for %s observations', count => {
@@ -147,5 +184,6 @@ describe('EfficiencyTrend display-boundary typography', () => {
         sourceLabel: `Showing ${count} of ${count} eligible drives from ${count} range-filtered loaded drives.`,
       }),
     }));
+    expect(screen.queryByText('First sample')).not.toBeInTheDocument();
   });
 });
