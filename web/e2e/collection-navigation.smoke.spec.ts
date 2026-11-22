@@ -1,5 +1,7 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
-import { expectThemeApplied, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import type { FSMStats, FSMTransitionResponse } from '../src/types/fsm'
+import { assertMockApiComplete, expectThemeApplied, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
+import { createReviewPreference } from './widget-design-packs.mock'
 
 async function openPanelOnDesktop(page: Page) {
   if (await page.getByTestId('command-deck-secondary').count() === 0) {
@@ -13,6 +15,70 @@ async function captureDeck(page: Page, testInfo: TestInfo, name: string) {
   await testInfo.attach(name, { path, contentType: 'image/png' })
 }
 
+for (const { pack, theme, path } of [
+  { pack: 'classic', theme: 'dark', path: '/state-debugger' },
+  { pack: 'glass', theme: 'light', path: '/drives' },
+  { pack: 'v5', theme: 'dark', path: '/charging' },
+  { pack: 'motorsport', theme: 'light', path: '/state-debugger' },
+  { pack: 'quiet', theme: 'dark', path: '/drives' },
+] as const) {
+  test(`aligns desktop workspace controls with the docked sidebar in ${pack}`, async ({ page }) => {
+    test.skip(process.env.E2E_MOCKS === '0', 'Requires a synthetic design preference')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await seedBrowserState(page, theme, path)
+    const mocks = await installApiMocks(page)
+    await page.route('**/api/v1/settings/widget-design-pack', route =>
+      fulfillApiFixture(route, mocks, { json: { ...createReviewPreference(), pack_id: pack, app_wide: true } }))
+    if (path === '/state-debugger') {
+      await page.route(url => url.pathname === '/api/v1/fsm/stats', route =>
+        fulfillApiFixture(route, mocks, { json: { enabled: true, stats: {}, active_subs: [] } satisfies FSMStats }))
+      await page.route(url => url.pathname === '/api/v1/fsm/transitions', route =>
+        fulfillApiFixture(route, mocks, { json: { data: [], total: 0, page: 1, per_page: 50 } satisfies FSMTransitionResponse }))
+    }
+    await page.goto(path)
+    await waitForHarnessReady(page, mocks)
+    await expect(page.getByTestId('command-deck-secondary')).toBeVisible()
+    const header = page.getByRole('banner', { name: 'Workspace command bar' })
+    await expect(header).toHaveAttribute('data-app-design-owner', new RegExp(`\\bpack-${pack}\\b`))
+    await page.evaluate(() => document.documentElement.style.setProperty('--font-scale', '1.35'))
+    const search = header.getByRole('button', { name: 'Search pages, commands…' })
+    const controls = [
+      header.getByRole('button', { name: /^Analysis window:/ }),
+      header.getByRole('combobox', { name: 'Select vehicle' }),
+      header.locator('[data-role="notification-bell-popover"] > button'),
+      header.getByRole('button', { name: 'Open theme picker' }),
+      header.getByRole('link', { name: 'Account', exact: true }),
+    ]
+    async function expectHeaderGeometry(width: number, narrow = false) {
+      await expect(async () => {
+        const bounds = (await header.boundingBox())!
+        const boxes = await Promise.all([search, ...controls].map(target => target.boundingBox()))
+        expect(boxes.every(box => box != null), `${width}px: all workspace controls present`).toBe(true)
+        const visible = boxes.map(box => box!)
+        const centers = visible.map(({ y, height }) => y + height / 2)
+        const aligned = narrow ? centers.slice(1) : centers
+        expect(Math.max(...aligned) - Math.min(...aligned), `${width}px: aligned control centers`).toBeLessThanOrEqual(2)
+        if (narrow) expect(visible[1].y).toBeGreaterThanOrEqual(visible[0].y + visible[0].height)
+        for (const [index, box] of visible.entries()) {
+          const previousRight = index <= (narrow ? 1 : 0) ? bounds.x : visible[index - 1].x + visible[index - 1].width
+          expect(box.x, `${width}px: control ${index} does not overlap`).toBeGreaterThanOrEqual(previousRight - 1)
+          expect(box.x + box.width, `${width}px: control ${index} stays inside header`).toBeLessThanOrEqual(bounds.x + bounds.width + 1)
+        }
+      }).toPass({ timeout: 5_000 })
+    }
+    for (const width of [1440, 1280, 1857]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expectHeaderGeometry(width)
+    }
+    if (pack === 'classic') {
+      await page.getByRole('button', { name: 'Open Helix chat', exact: true }).click()
+      await expect(page.getByRole('complementary', { name: 'Helix chat' })).toBeVisible()
+      await page.setViewportSize({ width: 1280, height: 900 })
+      await expectHeaderGeometry(1280, true)
+    }
+    await assertMockApiComplete(page, mocks)
+  })
+}
 
 for (const width of [390, 1440]) {
   test(`drives the command deck at ${width}px`, async ({ page }, testInfo) => {

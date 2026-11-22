@@ -28,8 +28,8 @@ interface WorkspaceHeaderProps {
  * Persistent desktop command header.
  *
  * Global discovery and scope controls live here so the sidebar can remain a
- * focused navigation surface. Equal side tracks keep discovery geometrically
- * centered within the workspace regardless of breadcrumb or utility width.
+ * focused navigation surface. Discovery stays centered when both side tracks
+ * have room; the controls reserve space before the flexible tracks shrink.
  */
 export function WorkspaceHeader({
   unreadCount,
@@ -50,7 +50,7 @@ export function WorkspaceHeader({
       data-app-part="workspace-header"
       data-role="workspace-header"
       aria-label={t('nav.workspaceHeader', 'Workspace command bar')}
-      data-layout="balanced-three-track"
+      data-layout={compact ? undefined : 'balanced-three-track'}
       className={cn('relative z-20 shrink-0 items-center border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1',
         compact ? 'flex min-h-14 flex-wrap gap-1 pb-1 pt-[calc(0.25rem+env(safe-area-inset-top,0px))]' : 'grid h-workspace-header grid-cols-workspace-header gap-4 2xl:px-6')}
     >
