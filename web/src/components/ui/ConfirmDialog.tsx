@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { AlertOctagon, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
@@ -92,6 +92,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
+  const messageId = useId();
   const sev = variantToSeverity[variant];
   const tokens = severityTokens[sev];
   const Icon = iconComponents[tokens.icon as keyof typeof iconComponents];
@@ -104,15 +105,11 @@ export function ConfirmDialog({
     silenceKey && variant !== 'danger' && !requireTypedConfirmation,
   );
 
-  // Reset typed input AND the "don't ask again" checkbox each time the
-  // dialog reopens so a stale value from a previous invocation can't
-  // bypass the typed-confirmation gate or pre-tick the silence checkbox.
-  useEffect(() => {
-    if (open) {
-      setTyped('');
-      setDontAskAgain(false);
-    }
-  }, [open]);
+  // Clear the previous decision while closed so the next open never renders it.
+  if (!open && (typed !== '' || dontAskAgain)) {
+    setTyped('');
+    setDontAskAgain(false);
+  }
 
   // Auto-resolve when the user previously silenced this action: fire the
   // confirm callback as soon as `open` flips true. The early `return null`
@@ -172,6 +169,14 @@ export function ConfirmDialog({
       onClose={handleModalClose}
       title={title}
       size="sm"
+      aria-describedby={messageId}
+      className={cn(
+        '[&>[data-app-part=dialog-header]>[data-heading-level=panel]]:border-s-[3px]',
+        '[&>[data-app-part=dialog-header]>[data-heading-level=panel]]:border-[var(--theme-primary)]',
+        '[&>[data-app-part=dialog-header]>[data-heading-level=panel]]:ps-2.5',
+        '[&>:where([data-modal-footer])]:border-[var(--border-strong)] [&>:where([data-modal-footer])]:bg-[var(--surface-2)]',
+        'forced-colors:[&>:where([data-modal-footer])]:border-[CanvasText]',
+      )}
       aboveNotifications={aboveNotifications}
       originSnapshot={originSnapshot}
       getReturnFocusTarget={originSnapshot ? () => originSnapshot.origin : undefined}
@@ -202,7 +207,7 @@ export function ConfirmDialog({
           className={cn('flex items-start gap-3 rounded-lg border p-3', tokens.bg, tokens.border)}
         >
           {Icon && <Icon data-app-part="feedback-icon" className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
-          <Text data-app-part="feedback-content feedback-message" variant="bodySm" className="min-w-0 break-words">{message}</Text>
+          <Text id={messageId} data-app-part="feedback-content feedback-message" variant="bodySm" className="min-w-0 break-words">{message}</Text>
         </div>
         {details}
         {requireTypedConfirmation && (
