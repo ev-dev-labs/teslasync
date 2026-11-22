@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useId, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { Caption } from './Typography';
+import { Caption, Text } from './Typography';
 
 export interface SliderProps {
   /** Current numeric value. */
@@ -74,6 +74,10 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
     () => (formatValue ? formatValue(value) : String(value)),
     [formatValue, value],
   );
+  const endpoints = useMemo(
+    () => showLabel ? [formatValue?.(min) ?? String(min), formatValue?.(max) ?? String(max)] : null,
+    [formatValue, max, min, showLabel],
+  );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,9 +88,13 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   );
 
   return (
-    <div data-app-part="field" data-app-field-kind="range" className={cn('min-w-0 space-y-1', className)}>
+    <div data-app-part="field" data-app-field-kind="range" className={cn(
+      'min-w-0',
+      showLabel && 'rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] px-3 py-2',
+      className,
+    )}>
       {showLabel && (
-        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+        <div className="grid min-w-0 gap-1">
           <label
             htmlFor={inputId}
             data-app-part="field-label"
@@ -94,9 +102,9 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
           >
             {label}
           </label>
-          <Caption className="min-w-0 break-words tabular-nums">
+          <Text size="lg" weight="semibold" color="primary" className="min-w-0 break-words tabular-nums" aria-hidden="true">
             {display}
-          </Caption>
+          </Text>
         </div>
       )}
       <div className="flex h-11 items-center md:h-9">
@@ -121,6 +129,12 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
           )}
         />
       </div>
+      {endpoints && (
+        <div className="grid min-w-0 grid-cols-2 gap-2" aria-hidden="true">
+          <Caption className="break-words tabular-nums">{endpoints[0]}</Caption>
+          <Caption className="break-words text-end tabular-nums">{endpoints[1]}</Caption>
+        </div>
+      )}
     </div>
   );
 });
