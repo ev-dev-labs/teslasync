@@ -110,17 +110,17 @@ export function MetricCard({ label, value, kind, icon, color = 'cyan', change, d
             {displayValue}
           </Text>
           {subtitle && (
-            <Text as="p" variant="caption" data-role="metric-subtitle" data-app-part="metric-context" className={cn('mt-1.5', compact || wrapSubtitle ? 'whitespace-normal break-words' : 'truncate', compact && '@[26rem]/metric:col-span-3')}>
+            <Text as="p" variant="caption" data-role="metric-subtitle" data-app-part="metric-context" className={cn('mt-1.5', compact || wrapSubtitle ? 'whitespace-normal break-words' : 'truncate', compact ? '@[26rem]/metric:col-span-3' : 'mt-3 border-t border-[var(--border-subtle)] pt-2')}>
               {subtitle}
             </Text>
           )}
           {change && !delta && (
-            <Text data-app-part="metric-comparison" as="p" size="xs" weight="medium" className={cn('mt-1.5', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:text-right', change.positive ? neonColorMap.green.text : neonColorMap.red.text)}>
+            <Text data-app-part="metric-comparison" as="p" size="xs" weight="medium" className={cn('mt-1.5 break-words', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:text-right', !compact && !subtitle && 'mt-3 border-t border-[var(--border-subtle)] pt-2', change.positive ? neonColorMap.green.text : neonColorMap.red.text)}>
               {change.positive ? '↑' : '↓'} {change.value}
             </Text>
           )}
           {delta && (
-            <div data-role="metric-comparison" data-app-part="metric-comparison" className={cn('mt-1', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:justify-self-end')}>
+            <div data-role="metric-comparison" data-app-part="metric-comparison" className={cn('mt-1', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:justify-self-end', !compact && !subtitle && 'mt-3 border-t border-[var(--border-subtle)] pt-2')}>
               <Delta {...delta} current={deltaCurrent} />
             </div>
           )}
