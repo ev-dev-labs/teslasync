@@ -53,7 +53,7 @@
 //   - AiOutputPanel is rendered with the same `text/state/error`
 //     props, so `getByTestId('ai-output-panel')` keeps working.
 
-import type { JSX, ReactNode } from 'react'
+import { useId, type JSX, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
@@ -207,18 +207,21 @@ export interface AIFeatureCardProps {
  * but should generally not (consistency across all surfaces is the
  * goal of consolidating the badge in one place).
  */
-export function AIBadge({ label }: { label?: string }): JSX.Element {
+export function AIBadge({ label, showEvidence = false }: { label?: string; showEvidence?: boolean }): JSX.Element {
   const { t } = useTranslation()
+  const evidenceId = useId()
   const text = label ?? t('helix.badge', 'Helix')
-  return (
+  const evidence = t(
+    'helix.tooltip',
+    'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
+  )
+  const badge = (
     <Badge
       variant="neutral"
       className="gap-1.5"
-      title={t(
-        'helix.tooltip',
-        'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
-      )}
+      title={showEvidence ? undefined : evidence}
       aria-label={t('helix.ariaLabel', 'Helix')}
+      aria-describedby={showEvidence ? evidenceId : undefined}
     >
       <HelixMark
         className="h-3.5 w-3.5 shrink-0"
@@ -227,6 +230,14 @@ export function AIBadge({ label }: { label?: string }): JSX.Element {
       {text}
     </Badge>
   )
+  return showEvidence ? (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      {badge}
+      <HelperText id={evidenceId} className="min-w-0 basis-48 flex-1 [overflow-wrap:anywhere]">
+        {evidence}
+      </HelperText>
+    </div>
+  ) : badge
 }
 AIBadge.displayName = 'AIBadge'
 
@@ -308,43 +319,47 @@ export function AIFeatureCard({
       )}
     </Button>
   )
+  const evidence = (
+    <>
+      {children}
+      <AiOutputPanel
+        text={stream.text}
+        state={stream.state}
+        error={stream.error}
+        activity={stream.activity}
+        usage={stream.usage}
+      />
+    </>
+  )
+  const details = (
+    <>
+      <Text as="p" variant="bodySm" className="[overflow-wrap:anywhere]">{description}</Text>
+      {!canStart && emptyHint && <HelperText className="break-words">{emptyHint}</HelperText>}
+    </>
+  )
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-6">
       <div className="min-w-0 space-y-4">
-        <div
-          className={
-            effectivePlacement === 'inline'
-              ? 'flex min-w-0 flex-wrap items-center justify-between gap-4'
-              : 'flex min-w-0 flex-wrap items-start justify-between gap-4'
-          }
-        >
-          <div className="min-w-0 max-w-full flex-1 space-y-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <PanelTitle className="min-w-0 break-words">{title}</PanelTitle>
-              <AIBadge label={badgeLabel} />
-            </div>
-            <Text as="p" variant="bodySm" className="break-words">{description}</Text>
-            {!canStart && emptyHint && (
-              <HelperText className="break-words">{emptyHint}</HelperText>
-            )}
-          </div>
-          {effectivePlacement === 'inline' && button}
+        <div data-helix-zone="identity" className="min-w-0 border-b border-[var(--border-subtle)] pb-4">
+          <AIBadge label={badgeLabel} showEvidence />
         </div>
-        {inputSlot}
-        {effectivePlacement === 'below' && (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {button}
+        <div data-helix-zone="request" className="min-w-0 space-y-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0 max-w-full flex-1 space-y-1">
+              <PanelTitle className="min-w-0 [overflow-wrap:anywhere]">{title}</PanelTitle>
+              {details}
+            </div>
+            {effectivePlacement === 'inline' && button}
           </div>
-        )}
-        {children}
-        <AiOutputPanel
-          text={stream.text}
-          state={stream.state}
-          error={stream.error}
-          activity={stream.activity}
-          usage={stream.usage}
-        />
+          {inputSlot}
+          {effectivePlacement === 'below' && (
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{button}</div>
+          )}
+        </div>
+        <div data-helix-zone="evidence" className="min-w-0 space-y-4 border-t border-[var(--border-subtle)] pt-4 empty:hidden">
+          {evidence}
+        </div>
       </div>
     </GlassPanel>
   )
