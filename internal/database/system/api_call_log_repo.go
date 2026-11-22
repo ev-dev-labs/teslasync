@@ -231,14 +231,20 @@ func (r *APICallLogRepo) GetStats(ctx context.Context, start, endExclusive *time
 }
 
 func buildAPICallLogStatsQuery(start, endExclusive *time.Time) (string, []any) {
-	// Grouping sets produce the total and both breakdowns in one hypertable scan.
+	// Group the raw rows first so PostgreSQL can aggregate in parallel
+	// across chunks; grouping sets only process the small set of pairs.
 	query := `SELECT COALESCE(service, ''), COALESCE(http_method, ''),
 		GROUPING(service), GROUPING(http_method),
-		COUNT(*),
-		COUNT(*) FILTER (WHERE status_code >= 400 OR error_message IS NOT NULL),
-		COALESCE(AVG(duration_ms), 0),
-		COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours')
-		FROM api_call_logs`
+		COALESCE(SUM(call_count), 0)::bigint,
+		COALESCE(SUM(error_count), 0)::bigint,
+		COALESCE(SUM(duration_total) / NULLIF(SUM(call_count), 0), 0),
+		COALESCE(SUM(recent_count), 0)::bigint
+		FROM (
+			SELECT service, http_method, COUNT(*) AS call_count,
+				COUNT(*) FILTER (WHERE status_code >= 400 OR error_message IS NOT NULL) AS error_count,
+				SUM(duration_ms) AS duration_total,
+				COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 hours') AS recent_count
+			FROM api_call_logs`
 	var args []any
 	if start != nil {
 		args = append(args, *start)
@@ -252,7 +258,8 @@ func buildAPICallLogStatsQuery(start, endExclusive *time.Time) (string, []any) {
 			query += ` AND ts < $2`
 		}
 	}
-	query += ` GROUP BY GROUPING SETS ((), (service), (http_method))`
+	query += ` GROUP BY service, http_method
+		) AS per_pair GROUP BY GROUPING SETS ((), (service), (http_method))`
 	return query, args
 }
 

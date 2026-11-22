@@ -15,7 +15,7 @@ for (const { width, theme } of [{ width: 390, theme: 'dark' }, { width: 1440, th
     let charging = true;
     let saves = 0;
     await page.route(`**${apiPath}`, route => fulfillApiFixture(route, api, {
-      json: [{ feature: 'charging_readiness', allowed: charging }, { feature: 'site_rates', allowed: true }],
+      json: { data: [{ feature: 'charging_readiness', allowed: charging }, { feature: 'site_rates', allowed: true }] },
     }));
     await page.route(`**${apiPath}/charging_readiness`, route => {
       const request = route.request();
@@ -23,7 +23,7 @@ for (const { width, theme } of [{ width: 390, theme: 'dark' }, { width: 1440, th
       expect(request.headers()['x-teslasync-expected-principal']).toBe('open');
       charging = request.postDataJSON().allowed;
       saves += 1;
-      return fulfillApiFixture(route, api, { json: { feature: 'charging_readiness', allowed: charging } });
+      return fulfillApiFixture(route, api, { json: { data: { feature: 'charging_readiness', allowed: charging } } });
     });
     await page.goto(pagePath);
     await waitForHarnessReady(page, api);

@@ -37,11 +37,11 @@ describe('Smart Features permissions', () => {
     let allowed = true
     const requests = vi.mocked(request).mockReset().mockImplementation(async (path, options) => {
       if (path === '/system/auth-mode') return identity('account A')
-      if (path === list) return [{ ...recall, allowed }, charging]
+      if (path === list) return { data: [{ ...recall, allowed }, charging] }
       if (path === `${list}/recall_watch` && options?.method === 'PUT') {
         await new Promise<void>(resolve => { finishSave = resolve })
         allowed = false
-        return { ...recall, allowed }
+        return { data: { ...recall, allowed } }
       }
       throw new Error(`Unexpected request: ${path}`)
     })
@@ -64,7 +64,7 @@ describe('Smart Features permissions', () => {
   it('keeps the last verified value on save failure and never retries it for another principal', async () => {
     const requests = vi.mocked(request).mockReset().mockImplementation(async path => {
       if (path === '/system/auth-mode') return identity('first')
-      if (path === list) return [recall]
+      if (path === list) return { data: [recall] }
       if (path === `${list}/recall_watch`) throw new Error('Synthetic save failure')
       throw new Error(`Unexpected request: ${path}`)
     })
@@ -78,5 +78,20 @@ describe('Smart Features permissions', () => {
     })))
     expect(screen.queryByText(/could not save that permission/i)).not.toBeInTheDocument()
     expect(requests.mock.calls.filter(([path]) => path === `${list}/recall_watch`)).toHaveLength(1)
+  })
+
+  it('offers a retry instead of rendering unverified preferences from a malformed response', async () => {
+    let payload: unknown = { data: [{ ...recall, allowed: 'false' }] }
+    vi.mocked(request).mockReset().mockImplementation(async path => {
+      if (path === '/system/auth-mode') return identity('account A')
+      if (path === list) return payload
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    openPage()
+    const retry = await screen.findByRole('button', { name: 'Retry' })
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    payload = { data: [{ ...recall, allowed: false }] }
+    fireEvent.click(retry)
+    expect(await featureSwitch(/allow recall watch/i)).toHaveAttribute('aria-checked', 'false')
   })
 })

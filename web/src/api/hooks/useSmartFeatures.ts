@@ -10,6 +10,12 @@ export interface SmartFeaturePreference {
 
 const preferencesKey = (scope: PersonalScope | null) => ['smart-feature-preferences', scope] as const
 
+function isSmartFeaturePreference(value: unknown): value is SmartFeaturePreference {
+  return value !== null && typeof value === 'object'
+    && 'feature' in value && typeof value.feature === 'string'
+    && 'allowed' in value && typeof value.allowed === 'boolean'
+}
+
 export function useSmartFeatures(scope: PersonalScope | null, refetchInterval?: number) {
   return useQuery({
     queryKey: preferencesKey(scope),
@@ -17,11 +23,16 @@ export function useSmartFeatures(scope: PersonalScope | null, refetchInterval?: 
     gcTime: 0,
     refetchOnWindowFocus: 'always',
     refetchInterval,
-    queryFn: ({ signal }) => {
+    queryFn: async ({ signal }): Promise<SmartFeaturePreference[]> => {
       if (!scope) throw new Error('Missing Smart Features scope')
-      return request<SmartFeaturePreference[]>('/settings/smart-features', {
+      const response = await request<{ data: unknown } | null>('/settings/smart-features', {
         signal, cache: 'no-store', headers: expectedPrincipalHeader(scope),
       })
+      const data: unknown = response?.data
+      if (!Array.isArray(data) || !data.every(isSmartFeaturePreference)) {
+        throw new Error('Invalid Smart Features response')
+      }
+      return data
     },
   })
 }
@@ -32,12 +43,13 @@ export function useSetSmartFeature(scope: PersonalScope | null) {
     mutationKey: preferencesKey(scope),
     networkMode: 'always',
     retry: false,
-    mutationFn: (pref: SmartFeaturePreference) => {
+    mutationFn: async (pref: SmartFeaturePreference) => {
       if (!scope) throw new Error('Missing Smart Features scope')
-      return request<SmartFeaturePreference>(`/settings/smart-features/${encodeURIComponent(pref.feature)}`, {
+      const { data } = await request<{ data: SmartFeaturePreference }>(`/settings/smart-features/${encodeURIComponent(pref.feature)}`, {
         method: 'PUT', body: JSON.stringify({ allowed: pref.allowed }),
         requiresLiveMode: true, cache: 'no-store', headers: expectedPrincipalHeader(scope),
       })
+      return data
     },
     onSuccess: async () => {
       await Promise.all([

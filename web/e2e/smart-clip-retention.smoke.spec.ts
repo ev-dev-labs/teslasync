@@ -71,7 +71,7 @@ for (const variant of [
     });
     await page.route('**/api/v1/settings/smart-features', async intercepted => {
       await holdPermission;
-      return fulfillApiFixture(intercepted, api, { json: [{ feature: 'dashcam_retention', allowed: retentionAllowed }] });
+      return fulfillApiFixture(intercepted, api, { json: { data: [{ feature: 'dashcam_retention', allowed: retentionAllowed }] } });
     });
     await page.route('**/api/v1/vehicles', intercepted => fulfillApiFixture(intercepted, api, {
       json: [7, 12].map(id => ({

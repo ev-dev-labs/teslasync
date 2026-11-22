@@ -452,7 +452,7 @@ export function resolveApiFixture(
     return matched({ pack_id: 'classic', scope: createHash('sha256').update('open').digest('hex') });
   }
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
-  if (path === '/settings/smart-features') return matched([{ feature: 'charging_readiness', allowed: true }]);
+  if (path === '/settings/smart-features') return matched({ data: [{ feature: 'charging_readiness', allowed: true }] });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {
     return matched({ mode: 'open', authenticated: false, expires_at: null, expires_in: null, renewable: false });
