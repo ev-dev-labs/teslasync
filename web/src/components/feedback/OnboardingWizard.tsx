@@ -151,7 +151,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         aria-describedby="onboarding-desc"
         tabIndex={-1}
         data-testid="onboarding-wizard"
-        className="relative min-w-0 w-full max-w-md rounded-shape-lg border border-[var(--border-default)] p-6 bg-[var(--surface-1)] shadow-e3 outline-none forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]"
+        className="relative max-h-full w-full min-w-0 max-w-md overflow-y-auto rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-6 shadow-e3 outline-none forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]"
       >
         {/* Close button */}
         <Button
@@ -207,7 +207,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         </div>
 
         {/* Actions */}
-        <div data-app-part="dialog-footer" className="flex flex-wrap items-center justify-between gap-3">
+        <div data-app-part="dialog-footer" className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-4">
           <Button
             type="button"
             variant="ghost"
