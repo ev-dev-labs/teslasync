@@ -52,6 +52,18 @@ describe('Timeline — populated rendering', () => {
     expect(screen.getByText('08:15')).toBeInTheDocument();
   });
 
+  it('shows only supplied intervals between displayed events', () => {
+    render(<Timeline items={[
+      item({ time: '08:00', elapsed: 'Outside this list' }),
+      item({ time: '08:15', elapsed: '15 minutes later' }),
+      item({ time: 'Time unknown' }),
+    ]} />);
+    const events = screen.getAllByRole('listitem');
+    expect(within(events[1]).getByText('15 minutes later')).toBeVisible();
+    expect(screen.queryByText('Outside this list')).not.toBeInTheDocument();
+    expect(within(events[2]).queryByText('15 minutes later')).not.toBeInTheDocument();
+  });
+
   it('draws one row per item and preserves their order', () => {
     const { container } = render(
       <Timeline
@@ -377,7 +389,7 @@ describe('Timeline — long content and retained evidence', () => {
       </div>,
     );
     expect(screen.getByRole('list', { name: 'سجل الأوامر' })).toBeInTheDocument();
-    expect(screen.getByText(identifier)).toHaveClass('min-w-0', 'break-words', 'basis-48');
+    expect(screen.getByText(identifier)).toHaveClass('min-w-0', 'break-words', '[overflow-wrap:anywhere]');
     const subtitles = container.querySelectorAll('p');
     expect(subtitles[0].textContent).toBe(params);
     expect(subtitles[1].textContent).toBe(serverError);
