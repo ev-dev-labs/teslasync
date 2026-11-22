@@ -203,8 +203,8 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
         ariaLabel={title}
         className="w-alerts-preview p-2"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
-          <div>
+        <div data-app-part="dialog-header" className="flex min-w-0 items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
+          <div className="min-w-0 [overflow-wrap:anywhere]">
             <PanelTitle>{title}</PanelTitle>
             <Text as="p" size="xs" color="muted" className="mt-0.5">
               {isError ? unavailableLabel : countLabel}
@@ -228,25 +228,25 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
           </div>
         )}
         {preview.length > 0 && (
-          <ul className="max-h-alerts-preview space-y-0.5 overflow-y-auto py-1">
+          <ul data-app-part="list" className="max-h-alerts-preview space-y-0.5 overflow-y-auto py-1">
             {preview.map((alert) => {
               const critical = normalizeSeverity(alert.severity) === 'critical';
               const severityLabel = critical ? criticalLabel : warningLabel;
               return (
-                <li key={alert.id}>
+                <li data-app-part="list-row" key={alert.id}>
                   <PrefetchLink
                     to={getAlertDrillthroughHref(alert)}
                     onClick={close}
-                    className="flex min-h-12 items-start gap-2 rounded-md px-2 py-2 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    className="grid min-h-12 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 rounded-md px-2 py-2 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]"
                   >
-                    <Badge
-                      variant={critical ? 'danger' : 'warning'}
-                      size="sm"
-                      className="mt-0.5 shrink-0 px-1.5 py-0"
-                    >
-                      {severityLabel}
-                    </Badge>
-                    <span className="min-w-0 flex-1">
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      <Badge
+                        variant={critical ? 'danger' : 'warning'}
+                        size="sm"
+                        className="mb-1 max-w-full whitespace-normal px-1.5 py-0"
+                      >
+                        {severityLabel}
+                      </Badge>
                       <Text
                         as="span"
                         size="sm"
@@ -277,7 +277,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
           </ul>
         )}
 
-        <div className="border-t border-[var(--border-subtle)] px-2 pt-2">
+        <div data-app-part="dialog-footer" className="border-t border-[var(--border-subtle)] px-2 pt-2">
           <PrefetchLink
             to="/notifications/inbox?read=unread"
             onClick={close}
@@ -285,7 +285,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
               typography.size.xs,
               typography.weight.medium,
               typography.color.primary,
-              'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)]',
+              'inline-flex min-h-11 items-center [overflow-wrap:anywhere] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] xl:min-h-8',
             )}
           >
             {t('statusBar.alerts.viewAll', 'View all alerts')}
