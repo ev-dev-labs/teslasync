@@ -1428,6 +1428,12 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       }
       source = Buffer.from(text)
     }
+    if (path === 'web/src/features/system/components/chatbot/CodeBlock.tsx') {
+      const current = "      wrap={false}\n      ariaLabel={t('chatbot.aria.codeBlock',"
+      const text = source.toString('utf8')
+      expect(text.split(current), path + ': desktop code wrapping opt-out').toHaveLength(2)
+      source = Buffer.from(text.replace(current, "      ariaLabel={t('chatbot.aria.codeBlock',"))
+    }
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
       if (file !== path) continue
       const args = key.endsWith('HelpAria')

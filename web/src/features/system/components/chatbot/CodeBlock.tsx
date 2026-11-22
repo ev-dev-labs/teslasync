@@ -34,6 +34,7 @@ export function CodeBlock({ language, text, children, className }: CodeBlockProp
     <SharedCodeBlock
       language={language}
       text={text ?? ''}
+      wrap={false}
       ariaLabel={t('chatbot.aria.codeBlock', '{{language}} code snippet', {
         language: langLabel,
       })}

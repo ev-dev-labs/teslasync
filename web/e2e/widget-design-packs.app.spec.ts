@@ -625,13 +625,14 @@ for (const mode of ['dark', 'light'] as const) {
             const bounds = element.getBoundingClientRect();
             const body = element.closest('[data-testid="widget-body"]')?.getBoundingClientRect();
             return {
+              part: element.getAttribute('data-app-part') ?? 'classic-context',
               fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
               overflow: element.scrollWidth - element.clientWidth,
               contained: Boolean(body && bounds.left >= body.left - 1 && bounds.right <= body.right + 1),
             };
           }));
           for (const result of results) {
-            const label = `${pack} ${mode} ${width}px scale ${scale}`;
+            const label = `${pack} ${mode} ${width}px scale ${scale} ${result.part}`;
             expect(result.fontSize, `${label} font size`).toBeGreaterThanOrEqual(Math.max(16, 16 * scale) - 0.02);
             expect(result.overflow, `${label} overflow`).toBeLessThanOrEqual(1);
             expect(result.contained, `${label} widget containment`).toBe(true);

@@ -377,7 +377,7 @@
     font-size: var(--app-body-size, max(1rem, calc(1rem * var(--font-scale, 1))));
   }
   :is(:root, [data-app-design-preview])[data-app-design-pack="motorsport"] :where(
-    [data-testid="widget-body"] [data-app-metric="headline"] > [data-app-part~="metric-context"].text-sm,
+    [data-testid="widget-body"] [data-app-metric="headline"] [data-app-part~="metric-context"],
     [data-testid="widget-body"] [data-app-part~="metric-unit"].text-sm,
     [data-testid="widget-body"] + div a[href]
   ):not(:where([data-app-design-preserve], [data-app-design-preserve] *, [data-app-metric-grid="native-gauge"] *, [data-app-metric="ring"] *)):where([data-app-design-owner~="pack-motorsport"]) {
