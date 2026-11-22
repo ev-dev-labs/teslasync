@@ -36,6 +36,8 @@ export interface HealthRowProps {
   label: string
   /** Right-aligned summary (e.g. "12 / 12 healthy" or "0 vehicles · idle"). */
   summary: string
+  /** The same measured counts shown in the summary, when available. */
+  counts?: { healthy: number; total: number }
   /** Optional "View →" link. */
   to?: string
   /** External target — opens in new tab. Ignored if `to` is omitted. */
@@ -44,9 +46,11 @@ export interface HealthRowProps {
   onClick?: () => void
 }
 
-export function HealthRow({ status, icon, label, summary, to, external = false, onClick }: HealthRowProps) {
+export function HealthRow({ status, icon, label, summary, counts, to, external = false, onClick }: HealthRowProps) {
   const dotClass = DOT_FOR_STATUS[status]
   const summaryClass = TEXT_FOR_STATUS[status]
+  const hasProportion = counts && Number.isSafeInteger(counts.total) && counts.total > 0
+    && Number.isSafeInteger(counts.healthy) && counts.healthy >= 0 && counts.healthy <= counts.total
 
   const inner = (
     <>
@@ -62,9 +66,18 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
       <Text as="span" variant="bodySm" weight="medium" color="primary" className="min-w-0 flex-1 text-start [overflow-wrap:anywhere]">
         {label}
       </Text>
-      <Text as="span" variant="caption" className={cn('min-w-0 max-w-[50%] [overflow-wrap:anywhere]', summaryClass)}>
-        {summary}
-      </Text>
+      <span className={cn('flex min-w-0 max-w-[50%] flex-col items-end gap-1 text-end [overflow-wrap:anywhere]', summaryClass)}>
+        <Text as="span" variant="caption" className={summaryClass}>{summary}</Text>
+        {hasProportion && (
+          <meter
+            aria-hidden="true"
+            min={0}
+            max={counts.total}
+            value={counts.healthy}
+            className="h-1.5 w-20 max-w-full appearance-none overflow-hidden rounded-pill bg-[var(--surface-3)] [&::-moz-meter-bar]:bg-current [&::-webkit-meter-bar]:border-0 [&::-webkit-meter-bar]:bg-[var(--surface-3)] [&::-webkit-meter-optimum-value]:bg-current forced-colors:appearance-auto"
+          />
+        )}
+      </span>
       {(to || onClick) && (
         <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
       )}

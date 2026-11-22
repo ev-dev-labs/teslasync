@@ -727,6 +727,7 @@ export default function SystemStatusPage() {
                     icon={<Server className="h-4 w-4" />}
                     label={t('systemStatus.services', 'Services')}
                     summary={servicesSummary}
+                    counts={{ healthy: okCount, total: totalCount }}
                     onClick={() => scrollToSection('services')}
                   />
                   <HealthRow
@@ -748,6 +749,7 @@ export default function SystemStatusPage() {
                     icon={<Boxes className="h-4 w-4" />}
                     label={t('systemStatus.workers', 'Workers')}
                     summary={workersSummary}
+                    counts={workers ? { healthy: workers.healthy_count, total: workers.total } : undefined}
                     onClick={() => scrollToSection('workers')}
                   />
                   {/* Anomaly row — renders only when anomalies_last_24h > 0 */}
