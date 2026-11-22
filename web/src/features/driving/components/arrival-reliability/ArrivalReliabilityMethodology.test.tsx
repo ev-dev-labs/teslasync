@@ -53,19 +53,22 @@ describe('ArrivalReliabilityMethodology', () => {
     const { container } = render(
       <ArrivalReliabilityMethodology analysis={analysis} timeZone="UTC" />,
     );
-    expect(screen.getByRole('heading', { name: 'Methodology and limitations' }))
-      .toHaveClass(...typography.role.panelTitle.split(' '));
+    const heading = screen.getByRole('heading', { name: 'Methodology and limitations' });
+    expect(heading).toHaveClass(...typography.role.panelTitle.split(' '));
     for (const title of titles) {
       expect(screen.getByRole('heading', { name: title }))
         .toHaveClass(...typography.role.subhead.split(' '));
     }
-    const icons = container.querySelectorAll('svg');
+    const icons = [...heading.querySelectorAll('svg'), ...container.querySelectorAll('article svg')];
     expect(icons).toHaveLength(9);
     for (const icon of icons) {
       expect(icon).toHaveClass(typography.color.secondary, 'shrink-0');
       expect(icon).toHaveAttribute('aria-hidden', 'true');
       expect(icon).toHaveAttribute('focusable', 'false');
     }
+    const notice = container.querySelector('[data-app-feedback-kind="notice"]');
+    expect(notice).toHaveTextContent('Use these results only as returned historical evidence');
+    expect(notice?.querySelector('[data-app-part="feedback-icon"]')).toHaveAttribute('aria-hidden', 'true');
     for (const body of container.querySelectorAll('article p')) {
       expect(body).toHaveClass(...typography.role.bodySm.split(' '));
     }

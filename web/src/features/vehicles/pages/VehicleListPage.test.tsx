@@ -1156,14 +1156,14 @@ describe('VehicleListPage — loading, error & empty states', () => {
     const summary = screen.getByRole('region', { name: 'Fleet summary' });
     const pending = within(summary).getByRole('status', { name: 'Loading stat cards' });
     expect(pending).toHaveAttribute('aria-busy', 'true');
-    const summarySkeletons = pending.querySelectorAll(
-      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
-    );
+    const summarySkeletons = pending.children;
     expect(summarySkeletons).toHaveLength(4);
     for (const skeleton of summarySkeletons) {
-      expect(skeleton).toHaveClass('h-24', 'w-full', 'rounded-xl');
-      expect(skeleton).not.toHaveClass('animate-pulse');
+      expect(skeleton).toHaveClass('h-24');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton.querySelector('[data-app-skeleton="fact"]')).toBeInTheDocument();
     }
+    expect(pending.querySelector('.animate-pulse')).toBeNull();
     expect(summary.querySelector('[data-operational-value]')).toBeNull();
   });
 

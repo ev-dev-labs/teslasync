@@ -427,8 +427,8 @@ describe('Automation History', () => {
     expect(screen.getByLabelText('Filter executions by status', { selector: 'select' })).toBe(status);
     expect(screen.getByText('Filter executions by rule', { selector: 'label' })).toHaveAttribute('for', rule.id);
     expect(screen.getByText('Filter executions by status', { selector: 'label' })).toHaveAttribute('for', status.id);
-    expect(rule.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-72');
-    expect(status.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-60');
+    expect(rule.closest('[data-app-part="field"]')?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-72');
+    expect(status.closest('[data-app-part="field"]')?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-60');
     expect(rule).not.toHaveClass('flex-1', 'sm:max-w-72');
     expect(status).not.toHaveClass('flex-1', 'sm:max-w-60');
     expect(within(rule).getByRole('option', { name: 'Rule #99' })).toHaveValue('99');

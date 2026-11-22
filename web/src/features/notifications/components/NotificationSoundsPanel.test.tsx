@@ -325,7 +325,7 @@ describe('NotificationSoundsPanel — accessibility', () => {
 
     const svgs = Array.from(container.querySelectorAll('svg'));
     expect(svgs.length).toBeGreaterThan(0);
-    expect(svgs.every((s) => s.getAttribute('aria-hidden') === 'true')).toBe(true);
+    for (const svg of svgs) expect(svg.closest('[aria-hidden="true"]')).not.toBeNull();
   });
 });
 
@@ -336,8 +336,9 @@ describe('NotificationSoundsPanel — null safety', () => {
     );
 
     expect(() => render(<NotificationSoundsPanel />)).not.toThrow();
-    expect(screen.getByRole('slider', { name: 'Volume' })).toHaveAttribute('value', '0');
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    const slider = screen.getByRole('slider', { name: 'Volume' });
+    expect(slider).toHaveAttribute('value', '0');
+    expect(slider).toHaveAttribute('aria-valuetext', '0%');
   });
 
   it('forces a 0.5 test volume when the stored volume is undefined', () => {
