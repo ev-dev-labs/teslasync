@@ -1,8 +1,9 @@
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertPressureFromSI } from '@/lib/unitConversion';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
-interface PressureProps {
+interface PressureProps extends FormattedReadingOptions {
   /**
    * Canonical input in bar. Matches the convention used by
    * `useSettings.toPressureDisplay(bar)`.
@@ -11,14 +12,13 @@ interface PressureProps {
   /** Alternative input in PSI; converted to bar before display. */
   psi?: number | null;
   precision?: number;
-  className?: string;
 }
 
 /**
  * Pressure renderer that respects the user's bar/psi preference.
  * Hover title shows the source-unit value at the requested display precision.
  */
-export function Pressure({ bar, psi, precision, className }: PressureProps) {
+export function Pressure({ bar, psi, precision, label, className }: PressureProps) {
   const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;
@@ -37,13 +37,13 @@ export function Pressure({ bar, psi, precision, className }: PressureProps) {
   }
 
   if (sourceKpa == null) {
-    return <span className={className}>—</span>;
+    return <FormattedReading label={label} className={className}>—</FormattedReading>;
   }
 
   const display = fmtNumber(toPressureDisplay(sourceKpa), precision);
   return (
-    <span className={className} title={title}>
-      {display} {pressureUnit}
-    </span>
+    <FormattedReading label={label} className={className} title={title}>
+      {`${display} ${pressureUnit}`}
+    </FormattedReading>
   );
 }
