@@ -9,15 +9,15 @@ describe('ListSkeleton', () => {
     expect(
       screen.getByRole('status', { name: 'Loading recent jobs…' }),
     ).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('list-skeleton').children).toHaveLength(3);
+    expect(screen.getByTestId('list-skeleton').querySelectorAll('[data-app-part="list-row"]')).toHaveLength(3);
   });
 
   it('normalizes invalid row counts', () => {
     const { rerender } = render(<ListSkeleton rows={2.9} />);
-    expect(screen.getByTestId('list-skeleton').children).toHaveLength(2);
+    expect(screen.getByTestId('list-skeleton').querySelectorAll('[data-app-part="list-row"]')).toHaveLength(2);
 
     rerender(<ListSkeleton rows={Number.NaN} />);
-    expect(screen.getByTestId('list-skeleton').children).toHaveLength(4);
+    expect(screen.getByTestId('list-skeleton').querySelectorAll('[data-app-part="list-row"]')).toHaveLength(4);
 
     rerender(<ListSkeleton rows={-2} />);
     expect(screen.getByTestId('list-skeleton').children).toHaveLength(0);

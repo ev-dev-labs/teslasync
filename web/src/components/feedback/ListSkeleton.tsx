@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { Text } from '@/components/ui/Typography';
 import { Skeleton } from './Skeleton';
 
 export interface ListSkeletonProps {
@@ -29,6 +30,7 @@ export function ListSkeleton({
       className={cn('space-y-3', className)}
       data-testid={testId}
     >
+      {rowCount > 0 && <Text as="div" variant="caption" aria-hidden="true" className="[overflow-wrap:anywhere]">{loadingLabel}</Text>}
       {Array.from({ length: rowCount }).map((_, index) => (
         <div
           data-app-part="list-row"
@@ -38,10 +40,10 @@ export function ListSkeleton({
         >
           <Skeleton rounded className="h-9 w-9 shrink-0" />
           <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className={cn('h-4', index % 2 === 0 ? 'w-2/3' : 'w-1/2')} />
             <Skeleton className="h-3 w-5/6" />
           </div>
-          <Skeleton className="h-8 w-16 shrink-0" />
+          <Skeleton className="h-8 w-1/5 max-w-[4rem] shrink-0" />
         </div>
       ))}
     </div>
