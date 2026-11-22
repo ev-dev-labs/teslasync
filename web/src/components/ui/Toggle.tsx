@@ -1,5 +1,8 @@
 import { forwardRef, useId, type HTMLAttributes } from 'react';
+import { Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { Caption, Text } from './Typography';
 
 export interface ToggleProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
   label?: string;
@@ -56,6 +59,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const labelId = useId();
     // `role="switch"` REQUIRES a boolean `aria-checked`; a nullish `checked`
     // (JS callers / loosely-typed props) would otherwise drop the attribute
@@ -68,6 +72,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
         data-app-field-kind="choice"
         className={cn(
           'inline-flex max-w-full items-center gap-2 select-none',
+          label && 'rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] px-2 py-1',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           className,
         )}
@@ -80,6 +85,21 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
         }}
         {...props}
       >
+        {label && (
+          <>
+            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-shape-sm bg-[var(--surface-2)] text-[var(--text-secondary)]">
+              <Activity className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 break-words">
+              <Text data-app-part="field-label" id={labelId} size="sm" weight="medium" color="primary" className="block min-w-0 break-words">{label}</Text>
+              {!indeterminate && (
+                <Caption className="block" aria-hidden="true">
+                  {isChecked ? t('common.on', 'On') : t('common.off', 'Off')}
+                </Caption>
+              )}
+            </span>
+          </>
+        )}
         <button
           type="button"
           data-app-part="field-control"
@@ -125,11 +145,6 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
             </span>
           </span>
         </button>
-        {label && (
-          <span data-app-part="field-label" id={labelId} className="min-w-0 break-words text-sm font-medium text-[var(--text-secondary)]">
-            {label}
-          </span>
-        )}
       </div>
     );
   },

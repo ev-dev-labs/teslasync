@@ -22,7 +22,7 @@
  * test here (Select, Slider, FullscreenButton). The rendered `<button>` is a
  * real native button, so Space/Enter activation is browser-native; a
  * `fireEvent.click` is the faithful stand-in for that activation in jsdom.
- * The component uses no i18n or network, so nothing needs mocking.
+ * The localized state caption does not change the switch's accessible name.
  */
 import { createRef } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -96,6 +96,20 @@ describe('Toggle — role + checked state', () => {
 });
 
 describe('Toggle — visible label association', () => {
+  it('shows the current controlled state without changing the accessible name or labeling a partial state as on', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<Toggle label="Notifications" checked={false} onChange={onChange} />);
+    expect(screen.getByText('Off')).toBeVisible();
+    fireEvent.click(screen.getByText('Off'));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(screen.getByText('Off')).toBeVisible();
+    rerender(<Toggle label="Notifications" checked onChange={onChange} />);
+    expect(screen.getByText('On')).toBeVisible();
+    expect(screen.getByRole('switch', { name: 'Notifications', checked: true })).toBeInTheDocument();
+    rerender(<Toggle label="Notifications" checked indeterminate onChange={onChange} />);
+    expect(screen.queryByText('On')).toBeNull();
+  });
+
   it('renders the visible label and links it to the switch via aria-labelledby', () => {
     render(<Toggle checked={false} onChange={() => {}} label="Notifications" />);
     const sw = screen.getByRole('switch', { name: 'Notifications' });

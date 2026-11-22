@@ -1950,6 +1950,12 @@
       "title": "App connection expired"
     }
   },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical",
+    "success": "Success"
+  },
   "shortcuts": {
     "close": "Close modal / cancel",
     "goto": "Go to {{label}}",
@@ -2356,12 +2362,6 @@
   },
   "score": {
     "aria": "Score {{grade}}"
-  },
-  "severity": {
-    "info": "Info",
-    "warn": "Warning",
-    "critical": "Critical",
-    "success": "Success"
   },
   "smallMultiples": {
     "noData": "No data"
