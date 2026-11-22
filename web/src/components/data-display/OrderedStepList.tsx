@@ -82,7 +82,7 @@ export function OrderedStepList({
             data-step-id={step.id}
             data-state={step.state?.kind}
             aria-current={step.state?.kind === 'current' ? 'step' : undefined}
-            className="flex min-w-0 max-w-full items-start gap-3"
+            className="flex min-w-0 max-w-full items-start gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
           >
             <div aria-hidden="true">
               <IconBox
@@ -91,7 +91,7 @@ export function OrderedStepList({
                   step.state?.kind === 'current' && 'ring-2',
                 )}
               >
-                <Text size="sm" weight="semibold">{index + 1}</Text>
+                <Text size="sm" weight="semibold" className="tabular-nums">{index + 1}</Text>
               </IconBox>
             </div>
             <div className="min-w-0 flex-1 space-y-1 break-words [overflow-wrap:anywhere] [&_*]:max-w-full">
