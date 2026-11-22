@@ -44414,7 +44414,11 @@
     "screeningMethodology": "Methodology: the screening rule uses a fixed critical value of 1.96 and a lag-1 autocorrelation-adjusted effective sample size. It is not a calibrated 95% significance guarantee: the fixed value is not conservative for small effective samples, resampling and gaps can affect dependence, and selecting the strongest peak across multiple lags is not corrected for multiple testing. The summary labels are screening outcomes only; neither a threshold crossing nor a time lead proves causation."
   },
   "sparkline": {
-    "ariaLabel": "Trend sparkline"
+    "ariaLabel": "Trend sparkline",
+    "value": "Value",
+    "observation": "Observation {{index}} / {{count}}",
+    "inspect": "Inspect observations: {{trend}}",
+    "selection": "Observation {{index}} of {{count}}, value {{value}}"
   },
   "score": {
     "aria": "Score {{grade}}"

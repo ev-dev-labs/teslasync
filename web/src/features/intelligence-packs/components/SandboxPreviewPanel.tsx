@@ -129,7 +129,8 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
         <FormulaSeriesChart title={title} kind={kind} data={data} unit={result.unit} />
       ) : kind === 'sparkline' ? (
-        <Sparkline data={result.series} color={palette[0]} ariaLabel={title} />
+        <Sparkline data={result.series} color={palette[0]} ariaLabel={title} width={300} height={90} inspect
+          formatValue={value => result.unit ? `${fmtNumber(value)} ${result.unit}` : fmtNumber(value)} />
       ) : kind === 'radial-gauge' ? (
         // A pack formula has no declared ceiling, so the previous ring scaled
         // itself to the sample's own peak — which pinned it to a full circle

@@ -2373,7 +2373,11 @@
     "direction": "Sort direction"
   },
   "sparkline": {
-    "ariaLabel": "Trend sparkline"
+    "ariaLabel": "Trend sparkline",
+    "value": "Value",
+    "observation": "Observation {{index}} / {{count}}",
+    "inspect": "Inspect observations: {{trend}}",
+    "selection": "Observation {{index}} of {{count}}, value {{value}}"
   },
   "statCard": {
     "loading": "Loading",
