@@ -155,11 +155,12 @@ export function TimeMachineBanner({
       >
         <div className="flex flex-col gap-2">
           <span data-testid="time-machine-banner-body">{body}</span>
-          <div className="flex flex-wrap items-center gap-2">
+          <div data-app-part="feedback-actions" className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              wrapLabel
               onClick={() => setPickerOpen((prev) => !prev)}
               data-testid="time-machine-banner-pick"
               icon={<Clock className="h-3 w-3" aria-hidden />}
@@ -171,6 +172,7 @@ export function TimeMachineBanner({
                 type="button"
                 variant="ghost"
                 size="sm"
+                wrapLabel
                 onClick={handleReturnToLive}
                 data-testid="time-machine-banner-return"
               >
