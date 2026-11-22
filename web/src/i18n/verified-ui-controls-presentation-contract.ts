@@ -5,7 +5,7 @@ import { producerProjection, projectionDigest } from './producer-projection'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned UI and Smart Features source changes')
-  .toBe('8e8bc756c2052feb085d9a7363bf13faa1703c3a320e6842c30564d4751071fa')
+  .toBe('20cf7a4eb6a48df31674d013ddf060976a18c72242a28bdab0e676dcf5cb66ba')
 const patches = new Map(checkpoint.sources.map(patch => [patch.file, patch]))
 
 export function restoreUiControlsPresentationSource(file: string, source: string): string {

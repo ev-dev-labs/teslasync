@@ -304,7 +304,7 @@ const TOTAL_WH = 7500 * 3 + 26250; // 48.75 kWh
 const AVG_EFF_WH_KM = TOTAL_WH / (TOTAL_M / 1000); // distance weighted
 const COST_PER_KWH = 0.12; // matches the global useSettings stub
 
-const FLEET = [{ id: 7, display_name: 'Model 3', vin: 'VIN7' }] as unknown as Vehicle[];
+const FLEET = [{ id: 7, display_name: 'Model 3', displayName: 'Model 3', vin: 'VIN7' }] as unknown as Vehicle[];
 
 function selected(vehicleId: number | null) {
   return {
@@ -782,6 +782,15 @@ describe('DrivesListPage — collections', () => {
 });
 
 describe('DrivesListPage — desktop evidence grid', () => {
+  it('shows the route without repeating the selected vehicle name', () => {
+    mockMediaQuery.mockReturnValue(true);
+    renderPage();
+
+    const routeLink = within(evidenceTable()).getByRole('link', { name: /Home → Office.*Apr 24/ });
+    expect(routeLink).toHaveAttribute('href', '/drives/1');
+    expect(routeLink.closest('td')).not.toHaveTextContent('Model 3');
+  });
+
   it('filters Start and Destination independently before pagination', () => {
     mockMediaQuery.mockReturnValue(true);
     showDriveColumns('start', 'destination');

@@ -31,7 +31,7 @@ export function useDrivesListPageData() {
   const desktopEvidence = useMediaQuery('(min-width: 1024px)');
 
   /* Data hooks */
-  const { vehicleId, vehicle } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { tz } = useDateFormat();
@@ -146,7 +146,7 @@ export function useDrivesListPageData() {
 
   return {
     fmtNumber, fmtInt, fmtCompact, locale, precision, t, navigate, savedView, desktopEvidence,
-    vehicleId, vehicleName: vehicle?.displayName, startDate, endDate, priorRange, isAllTime, drivesQuery,
+    vehicleId, startDate, endDate, priorRange, isAllTime, drivesQuery,
     refetchDrives, hasDrivePayload, drivesState, isDrivesLoading,
     previewDrive, setPreviewDrive, exportScope, gridScope, tz,
     fsdRangeSupported, refetchFsd, fsdState, fsdDataAvailable, fsdByDriveID,

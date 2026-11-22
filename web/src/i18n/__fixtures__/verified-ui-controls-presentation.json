@@ -1247,6 +1247,66 @@
           ]
         }
       ]
+    },
+    {
+      "file": "web/src/features/driving/components/DrivesEvidenceTable.tsx",
+      "before": "2a924c1663769a8f61ab07ad1e0d31473b78021e8a67aa9ab7cfbdf0bd315f4a",
+      "after": "c1096d8e4966daecebcdfcc0bb39a01acf3080cdafd1dab85826daeeff84144f",
+      "beforeProjection": "39cb9b463a3cdda3353d005c83a8b6a27c7d432a6f1df8976520c2039471cb18",
+      "afterProjection": "d0466c156ae18f2236d5c32e2dae5144465a513103ce79bf015aa05596da416c",
+      "hunks": [
+        {
+          "start": 52,
+          "count": 0,
+          "previous": [
+            "  vehicleName?: string;"
+          ]
+        },
+        {
+          "start": 81,
+          "count": 1,
+          "previous": [
+            "  driveStatus, onDriveStatusChange, vehicleName, vehicleId,"
+          ]
+        },
+        {
+          "start": 147,
+          "count": 0,
+          "previous": [
+            "            {drive.vehicleId === vehicleId && vehicleName && <Text size=\"xs\" color=\"muted\" className=\"block truncate\">{vehicleName}</Text>}"
+          ]
+        },
+        {
+          "start": 492,
+          "count": 1,
+          "previous": [
+            "  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt, vehicleId, vehicleName, reviewLabels, driveStatus, onDriveStatusChange, anomalyDriveIds]);"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/hooks/useDrivesListPageData.ts",
+      "before": "898b77535483f082cb116c23539f891cb3b1ee5984f214427c39b26ef6be8273",
+      "after": "dcb52af904b3ca4e94f2aba6c1cc5dc69f1c2c39dd73cab6982c7494d3f3ee2d",
+      "beforeProjection": "f9422b79acebf54619f619ac956c1ca2a90296a680023771fedfba49b1e06257",
+      "afterProjection": "f9422b79acebf54619f619ac956c1ca2a90296a680023771fedfba49b1e06257",
+      "hunks": [
+        {
+          "start": 33,
+          "count": 1,
+          "previous": [
+            "  const { vehicleId, vehicle } = useSelectedVehicle();"
+          ]
+        },
+        {
+          "start": 148,
+          "count": 1,
+          "previous": [
+            "    vehicleId, vehicleName: vehicle?.displayName, startDate, endDate, priorRange, isAllTime, drivesQuery,"
+          ]
+        }
+      ]
     }
   ]
 }

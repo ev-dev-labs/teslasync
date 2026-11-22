@@ -50,7 +50,6 @@ interface DrivesEvidenceTableProps {
   onFilterChange: (key: DriveGridFilterKey, value: string) => void;
   driveStatus: 'all' | DriveReviewStatus;
   onDriveStatusChange: (value: string) => void;
-  vehicleName?: string;
   vehicleId: number | null;
   toDistanceDisplay: (meters: number) => number;
   toSpeedDisplay: (metersPerSecond: number) => number;
@@ -80,7 +79,7 @@ export function DrivesEvidenceTable({
   drives, gridScope, rangeTotal, emptyContent, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   selectedIds, onSelectionChange, onPreview, sortBy, sortDir, onSort,
   collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange,
-  driveStatus, onDriveStatusChange, vehicleName, vehicleId,
+  driveStatus, onDriveStatusChange, vehicleId,
   toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost,
   distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit,
   timezone, fsdAvailable, fsdByDriveID, anomalyDriveIds, toolbarActions,
@@ -146,7 +145,6 @@ export function DrivesEvidenceTable({
           <div className="min-w-0">
             <Link className="block truncate font-semibold text-[var(--text-primary)] hover:underline focus-visible:underline"
               title={route} aria-label={`${route} · ${formatDateTime(drive.startTs, { tz: timezone })}`} to={`/drives/${drive.id}`}>{route}</Link>
-            {drive.vehicleId === vehicleId && vehicleName && <Text size="xs" color="muted" className="block truncate">{vehicleName}</Text>}
           </div>
         </div>;
       },
@@ -492,7 +490,7 @@ export function DrivesEvidenceTable({
         </Button>
       ),
     },
-  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt, vehicleId, vehicleName, reviewLabels, driveStatus, onDriveStatusChange, anomalyDriveIds]);
+  ], [driveWarnings, distanceUnit, speedUnit, efficiencyUnit, temperatureUnit, powerUnit, fsdAvailable, fsdByDriveID, onPreview, t, timezone, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay, toTemperatureDisplay, toPowerDisplay, formatEnergy, formatEnergyCost, collection, collectionPills, onCollectionChange, onDriveFilterClear, fsdFilter, fsdPills, onFsdFilterChange, filters, onFilterChange, fmtNumber, fmtInt, reviewLabels, driveStatus, onDriveStatusChange, anomalyDriveIds]);
 
   const valueColumns = useMemo<Column<Drive>[]>(() => {
     const label = (key: DriveValueColumn, value: string | number | null): string => {

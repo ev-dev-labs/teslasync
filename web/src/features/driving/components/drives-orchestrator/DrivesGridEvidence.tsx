@@ -12,7 +12,7 @@ type Props = Pick<DrivesListPageController,
   | 'toPowerDisplay' | 'formatEnergy' | 'formatEnergyCost' | 'distanceUnit'
   | 'speedUnit' | 'efficiencyUnit' | 'unitPrefs' | 'tz' | 'fsdDataAvailable'
   | 'fsdByDriveID' | 'anomalyDriveIds' | 'safePage' | 'pageSize' | 'matchingTotal'
-  | 'setPage' | 't' | 'tableControls' | 'vehicleId' | 'vehicleName'
+  | 'setPage' | 't' | 'tableControls' | 'vehicleId'
   | 'driveStatus' | 'viewContext' | 'restoreView' | 'clearGridFilters'
   | 'collectionPills' | 'fsdPills' | 'pageState' | 'refetchPage'
   | 'canSelectMatching' | 'selectAllMatching' | 'matchingIsPending'>;
@@ -25,7 +25,7 @@ export function DrivesGridEvidence({
   toPowerDisplay, formatEnergy, formatEnergyCost, distanceUnit, speedUnit,
   efficiencyUnit, unitPrefs, tz, fsdDataAvailable, fsdByDriveID, anomalyDriveIds,
   safePage, pageSize, matchingTotal, setPage, t, tableControls,
-  vehicleId, vehicleName, driveStatus, viewContext, restoreView, clearGridFilters,
+  vehicleId, driveStatus, viewContext, restoreView, clearGridFilters,
   collectionPills, fsdPills, pageState, refetchPage, canSelectMatching, selectAllMatching, matchingIsPending,
 }: Props) {
   const setDriveStatus = (value: string) => setUrlBatch({ grid_status: value === 'all' ? null : value, page: null });
@@ -56,7 +56,6 @@ export function DrivesGridEvidence({
       filters={gridFilters}
       onFilterChange={changeGridFilter}
       vehicleId={vehicleId}
-      vehicleName={vehicleName}
       driveStatus={driveStatus}
       onDriveStatusChange={setDriveStatus}
       toDistanceDisplay={toDistanceDisplay}
