@@ -106,11 +106,11 @@ describe('AchievementUnlockedToast', () => {
     const dismiss = screen.getByRole('button', { name: /Dismiss achievement notification/i })
     expect(view).toHaveAttribute('data-app-part', 'button feedback-actions')
     expect(view).toHaveAttribute('type', 'button')
-    expect(view).toHaveClass('h-auto', 'p-0', 'text-yellow-300', 'hover:bg-transparent')
+    expect(view).toHaveClass('h-auto', 'p-0', 'text-[var(--theme-primary)]', 'hover:bg-transparent')
     expect(view).not.toHaveClass('h-9', 'px-3')
     expect(dismiss).toHaveAttribute('data-app-part', 'button feedback-dismiss')
     expect(dismiss).toHaveAttribute('type', 'button')
-    expect(dismiss).toHaveClass('h-auto', 'p-1.5', 'rounded-lg')
+    expect(dismiss).toHaveClass('h-8', 'max-md:min-h-11', 'p-1.5', 'rounded-lg')
     expect(dismiss).not.toHaveClass('h-9', 'px-3')
 
     view.focus()
