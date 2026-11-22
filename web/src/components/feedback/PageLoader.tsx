@@ -3,7 +3,7 @@ import { PageLoadSkeleton } from './PageLoadSkeleton';
 
 export interface PageLoaderProps {
   /**
-   * Accessible loading label for the page skeleton. Defaults to the shared,
+   * Visible and accessible loading label for the page skeleton. Defaults to the shared,
    * translated “Loading…” copy. Blank values fall back to the default.
    */
   label?: string;

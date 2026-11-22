@@ -27,14 +27,16 @@ describe('PageLoader', () => {
 
     const regions = screen.getAllByRole('status')
     expect(regions).toHaveLength(1)
-    // The accessible name is announced to assistive tech via aria-label.
-    expect(screen.getByRole('status', { name: DEFAULT_LABEL })).toBeInTheDocument()
+    const region = screen.getByRole('status', { name: DEFAULT_LABEL })
+    expect(region).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText(DEFAULT_LABEL)).toBeVisible()
   })
 
   it('renders a custom label and uses it as the status accessible name', () => {
-    render(<PageLoader label="Loading matrix…" />)
+    render(<PageLoader label="  Loading matrix…  " />)
 
     expect(screen.getByRole('status', { name: 'Loading matrix…' })).toBeInTheDocument()
+    expect(screen.getByText('Loading matrix…')).toBeVisible()
   })
 
   it('falls back to the default label when given a blank / whitespace-only label', () => {
