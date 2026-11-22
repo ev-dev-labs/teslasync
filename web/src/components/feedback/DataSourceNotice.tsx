@@ -284,18 +284,20 @@ export function DataSourceNotice({
           })}
         </ul>
         {retryable.length > 0 ? (
-          <Button
-            data-app-part="feedback-retry"
-            type="button"
-            variant="ghost"
-            size="sm"
-            wrapLabel
-            className="min-h-11 w-full min-w-0 md:min-h-9"
-            onClick={handleRetry}
-            icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
-          >
-            {retryText}
-          </Button>
+          <div data-app-part="feedback-actions" className="border-t border-[var(--border-subtle)] pt-2">
+            <Button
+              data-app-part="feedback-retry"
+              type="button"
+              variant="ghost"
+              size="sm"
+              wrapLabel
+              className="min-h-11 w-full min-w-0 md:min-h-9"
+              onClick={handleRetry}
+              icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
+            >
+              {retryText}
+            </Button>
+          </div>
         ) : null}
       </div>
     </DataStateNotice>
