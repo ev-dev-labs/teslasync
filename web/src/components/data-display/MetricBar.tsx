@@ -91,8 +91,8 @@ export function MetricBar({
             </Text>
           )}
         </div>
-        {scale && <Text as="div" data-app-part="metric-context" variant="caption" className="mt-1 break-words text-end tabular-nums">{scale}</Text>}
       )}
+      {showHeader && scale && <Text as="div" data-app-part="metric-context" variant="caption" className="mb-1 break-words text-end tabular-nums">{scale}</Text>}
       <div data-metric-track className={cn(
         'overflow-hidden',
         fill !== 'segmented' && 'rounded-pill bg-[var(--surface-2)]',
