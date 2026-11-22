@@ -782,6 +782,36 @@ groups:
           summary: "SLO smart_commute_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
           description: "Error budget for SLO \"smart_commute_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_smart_feature_preference_availability_burn
+    rules:
+      - alert: SLOSmartFeaturePreferenceAvailabilityFastBurn
+        expr: "(1 - slo:smart_feature_preference_availability:ratio_rate1h) > 0.072000 and (1 - slo:smart_feature_preference_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "smart_feature_preference_availability"
+          owner: "notifications"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO smart_feature_preference_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"smart_feature_preference_availability\" (objective 99.5%, owner notifications) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOSmartFeaturePreferenceAvailabilitySlowBurn
+        expr: "(1 - slo:smart_feature_preference_availability:ratio_rate6h) > 0.030000 and (1 - (((((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\",status_class!=\"5xx\"}[30m]))) or on() (0 * (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\"}[30m])))))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/settings/smart-features.*\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "smart_feature_preference_availability"
+          owner: "notifications"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO smart_feature_preference_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"smart_feature_preference_availability\" (objective 99.5%, owner notifications) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_widget_design_preference_availability_burn
     rules:
       - alert: SLOWidgetDesignPreferenceAvailabilityFastBurn
