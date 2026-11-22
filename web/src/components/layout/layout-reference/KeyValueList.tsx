@@ -12,11 +12,11 @@ export interface KeyValueItem {
  * StatStrip/StatGroup; this adapter is not a stat formatter or substitute. */
 export function KeyValueList({ items }: { items: readonly KeyValueItem[] }) {
   return (
-    <dl className="grid min-w-0 grid-cols-1 gap-x-4 @[640px]:grid-cols-2">
+    <dl className="grid min-w-0 grid-cols-1 gap-2 @[640px]:grid-cols-2">
       {(items ?? []).map(item => (
-        <div key={item.id} className="flex min-w-0 flex-wrap justify-between gap-2 border-b border-[var(--border-subtle)] py-3">
-          <Text as="dt" variant="bodySm" className="min-w-0 max-w-full break-words">{item.label}</Text>
-          <dd className="min-w-0 max-w-full break-words text-end">
+        <div key={item.id} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 [overflow-wrap:anywhere]">
+          <Text as="dt" variant="caption" className="min-w-0 max-w-full">{item.label}</Text>
+          <dd className="min-w-0 max-w-full text-end">
             {item.value == null && item.missingReason ? (
               <Tooltip content={item.missingReason} multiline>
                 <Text variant="bodySm" tabIndex={0} className="inline-flex min-h-11 items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
