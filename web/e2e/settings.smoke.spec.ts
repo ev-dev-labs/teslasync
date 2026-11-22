@@ -89,8 +89,10 @@ for (const { width, theme, scale } of [320, 390, 768, 1024, 1280, 1440, 1920, 25
     expect(actionBox!.y).toBeGreaterThanOrEqual(descriptionBox!.y + descriptionBox!.height)
     await expect(actionCard.getByRole('heading')).toBeVisible()
     expect(await actionCard.getByRole('heading').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
-    const shortcutCards = page.getByRole('region', { name: 'Settings shortcuts', exact: true }).locator('[data-print-card]')
-    await expect(shortcutCards).toHaveCount(3)
+    const shortcuts = page.getByRole('region', { name: 'Settings shortcuts', exact: true })
+    const shortcutCards = shortcuts.locator('[data-print-card]')
+    await expect(shortcuts.getByRole('link', { name: /Smart Features/ })).toHaveAttribute('href', '/settings/smart-features')
+    await expect(shortcutCards).toHaveCount(4)
     for (const [index, card] of (await shortcutCards.all()).entries()) {
       const paragraph = card.locator('p')
       const box = await paragraph.boundingBox()

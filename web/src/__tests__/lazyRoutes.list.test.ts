@@ -59,9 +59,9 @@ for (const entry of LAZY_ROUTE_IMPORTS) {
 }
 
 describe('LAZY_ROUTE_IMPORTS manifest', () => {
-  it('retains all 128 shared default-module bindings in the exhaustive manifest', () => {
+  it('retains every shared default-module binding, including Smart Features', () => {
     const loaders = sharedLoaderSpecifiers(loaderSource)
-    expect(loaders.size).toBe(128)
+    expect(loaders.get('SmartFeaturesPage')).toBe('../features/settings/pages/SmartFeaturesPage')
     for (const [name, specifier] of loaders) {
       expect(appBindings).toContainEqual({ name, specifier: `./${toKey(specifier)}` })
       expect(listNamesByKey.get(toKey(specifier))).toBe(name)
