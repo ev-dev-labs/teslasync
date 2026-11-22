@@ -45,7 +45,7 @@ describe('SearchInput', () => {
     clearScope(scope);
   });
 
-  it('forwards a programmatic label to the search field', () => {
+  it('keeps the name visible after the user enters a query', () => {
     render(
       <SearchInput
         value=""
@@ -54,7 +54,9 @@ describe('SearchInput', () => {
       />,
     );
 
-    expect(screen.getByRole('searchbox', { name: 'Filter by owner' })).toBeInTheDocument();
+    const search = screen.getByRole('searchbox', { name: 'Filter by owner' });
+    fireEvent.change(search, { target: { value: 'fleet' } });
+    expect(screen.getByText('Filter by owner', { selector: 'label' })).toHaveAttribute('for', search.id);
   });
 
   it('reflects the initial controlled value', () => {

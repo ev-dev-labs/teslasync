@@ -238,14 +238,8 @@ export function SearchInput({
   }, []);
 
   const label = clearLabel ?? t('common.clear', 'Clear');
-  // A11Y: a search field must never be named by its placeholder alone —
-  // placeholder text disappears the moment the user types, so the
-  // control becomes anonymous to voice-control and screen-reader users
-  // exactly when they need to refer to it. Fall back to the placeholder
-  // as a *label* (which persists), then to a generic translated name,
-  // so no call site can ship an unnamed search box.
   const accessibleName =
-    ariaLabel ?? placeholder ?? t('search.input.label', 'Search query');
+    ariaLabel?.trim() || placeholder?.trim() || t('search.input.label', 'Search query');
   const historyEnabled = Boolean(historyScope);
   const activeOptionId = activeIdx >= 0 ? `${listboxId}-opt-${activeIdx}` : undefined;
 
@@ -260,7 +254,7 @@ export function SearchInput({
         type="search"
         value={local}
         onChange={handleInputChange}
-        aria-label={accessibleName}
+        label={accessibleName}
         placeholder={placeholder}
         autoFocus={autoFocus}
         onFocus={historyEnabled ? handleFocus : undefined}
