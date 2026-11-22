@@ -12,10 +12,11 @@ import { resolveLocale } from '@/lib/locale';
 import { useSettings } from '@/hooks/useSettings';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { TzMode } from '@/lib/timezone';
+import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
 
 export type DateTimeVariant = 'full' | 'date' | 'time' | 'relative' | 'short' | 'day';
 
-interface DateTimeProps {
+interface DateTimeProps extends FormattedReadingOptions {
   value: string | Date | null | undefined;
   /** `day` formats a YYYY-MM-DD business date; other variants format instants. */
   variant?: DateTimeVariant;
@@ -34,7 +35,6 @@ interface DateTimeProps {
   in?: TzMode;
   /** Explicit clock precision uses the selected locale and default timezone mode. */
   clock?: FormatOptions['clock'];
-  className?: string;
 }
 
 /**
@@ -58,15 +58,15 @@ export function DateTime(props: DateTimeProps) {
   return <PureDateTime {...props} />;
 }
 
-function BusinessDay({ value, className }: DateTimeProps) {
+function BusinessDay({ value, label, className }: DateTimeProps) {
   const { settings } = useSettings();
   const key = typeof value === 'string' ? value : undefined;
   const display = formatDayKey(key, { locale: resolveLocale(settings.locale) });
-  return <span className={className}>{display}</span>;
+  return <FormattedReading label={label} className={className}>{display}</FormattedReading>;
 }
 
-function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
-  return renderSpan({ value, variant, className });
+function PureDateTime({ value, variant = 'full', label, className }: DateTimeProps) {
+  return renderSpan({ value, variant, label, className });
 }
 
 
@@ -78,7 +78,7 @@ function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
  * only when `in` / `showTz` / `clock` is set, so the render path is consistent
  * for the lifetime of any given DateTime instance.
  */
-function DateTimeWithTz({ value, variant = 'full', in: mode, clock, className }: DateTimeProps) {
+function DateTimeWithTz({ value, variant = 'full', in: mode, clock, label, className }: DateTimeProps) {
   const { settings } = useSettings();
   const { tz: resolvedTz } = useDateFormat(mode);
   // A malformed IANA zone (e.g. a garbage `vehicle.timezone` that slipped past
@@ -86,17 +86,16 @@ function DateTimeWithTz({ value, variant = 'full', in: mode, clock, className }:
   // known zone. Validity is cached, so this stays cheap per row.
   const tz = isValidTimeZone(resolvedTz) ? resolvedTz : 'UTC';
   const locale = resolveLocale(settings.locale);
-  return renderSpan({ value, variant, className, opts: { tz, locale, clock } });
+  return renderSpan({ value, variant, label, className, opts: { tz, locale, clock } });
 }
 
-interface RenderArgs {
+interface RenderArgs extends FormattedReadingOptions {
   value: string | Date | null | undefined;
   variant: DateTimeVariant;
-  className?: string;
   opts?: FormatOptions;
 }
 
-function renderSpan({ value, variant, className, opts }: RenderArgs) {
+function renderSpan({ value, variant, label, className, opts }: RenderArgs) {
   let display: string;
   switch (variant) {
     case 'relative':
@@ -117,5 +116,5 @@ function renderSpan({ value, variant, className, opts }: RenderArgs) {
       break;
   }
 
-  return <span className={className}>{display}</span>;
+  return <FormattedReading label={label} className={className}>{display}</FormattedReading>;
 }
