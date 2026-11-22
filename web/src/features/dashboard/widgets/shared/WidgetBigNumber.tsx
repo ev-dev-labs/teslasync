@@ -90,13 +90,14 @@ export function WidgetBigNumber({
   // to "—"), so it follows the unit's rule: only rendered alongside a value.
   const deltaText = delta?.text?.trim() ? delta.text : null;
   const TrendIcon = delta?.trend ? trendGlyph[delta.trend] : null;
+  const showDelta = Boolean(deltaText && hasValue);
 
   return (
     <div data-app-part="metric" data-app-metric="headline" className={cn('widget-big-number flex h-full min-w-0 flex-col justify-center gap-2', align === 'center' ? 'items-center text-center' : 'items-start')}>
       {label && label !== widgetTitle && (
-        <span data-app-part="metric-label" className={dashboardTokens.metricLabel}>{label}</span>
+        <span data-app-part="metric-label" className={cn(dashboardTokens.metricLabel, 'max-w-full [overflow-wrap:anywhere]')}>{label}</span>
       )}
-      <div data-app-part="metric-reading" className="flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1">
+      <div data-app-part="metric-reading" className={cn('flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1', align === 'center' && 'justify-center')}>
         <span data-app-part="metric-value" className="min-w-0">
           {hasValue ? (
             animated && typeof value === 'number' ? (
@@ -105,25 +106,27 @@ export function WidgetBigNumber({
               <span className={cn(metricClass, 'min-w-0 break-all', valueColor)}>{value}</span>
             )
           ) : (
-            <span className={cn(metricClass, 'text-[var(--text-muted)]')}>{nullDisplay}</span>
+            <span className={cn(metricClass, 'text-[var(--text-muted)] [overflow-wrap:anywhere]')}>{nullDisplay}</span>
           )}
         </span>
-        {unit && hasValue && <span data-app-part="metric-unit" className={dashboardTokens.unit}>{unit}</span>}
+        {unit && hasValue && <span data-app-part="metric-unit" className={cn(dashboardTokens.unit, 'max-w-full [overflow-wrap:anywhere]')}>{unit}</span>}
       </div>
 
-      {deltaText && hasValue && (
-        <span data-app-part="metric-comparison" className={cn('inline-flex items-center gap-1 text-xs font-semibold tabular-nums', deltaToneClass[delta?.tone ?? 'neutral'])}>
-          {TrendIcon && <TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />}
-          {deltaText}
-        </span>
-      )}
-
-      {subtitle && <span data-app-part="metric-context" className={dashboardTokens.metricLabel}>{subtitle}</span>}
-
-      {badge && (
-        <Badge variant={badgeVariantMap[badge.variant]} size="sm">
-          {badge.text}
-        </Badge>
+      {(showDelta || subtitle || badge) && (
+        <div className={cn('flex max-w-full flex-col gap-1.5 border-t border-[var(--border-subtle)] pt-2 [overflow-wrap:anywhere]', align === 'center' ? 'items-center' : 'items-start')}>
+          {showDelta && (
+            <span data-app-part="metric-comparison" className={cn('inline-flex max-w-full items-center gap-1 text-xs font-semibold tabular-nums', deltaToneClass[delta?.tone ?? 'neutral'])}>
+              {TrendIcon && <TrendIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+              {deltaText}
+            </span>
+          )}
+          {subtitle && <span data-app-part="metric-context" className={cn(dashboardTokens.metricLabel, 'max-w-full')}>{subtitle}</span>}
+          {badge && (
+            <Badge variant={badgeVariantMap[badge.variant]} size="sm" className="max-w-full whitespace-normal">
+              {badge.text}
+            </Badge>
+          )}
+        </div>
       )}
     </div>
   );
