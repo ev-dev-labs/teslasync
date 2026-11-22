@@ -3,6 +3,8 @@ import { Gift, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Text } from '../ui/Typography'
 import { EmptyState } from './EmptyState'
 import {
   CHANGELOG,
@@ -118,59 +120,60 @@ export default function ReleaseNotes({ limit = 3 }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div data-app-part="list" className="min-w-0 space-y-3">
       {releases.map((release) => {
         const isExpanded = expanded === release.version
         const triggerId = `${baseId}-trigger-${release.version}`
         const panelId = `${baseId}-panel-${release.version}`
         return (
-          <GlassPanel key={release.version} className="overflow-hidden">
-            <button
+          <GlassPanel key={release.version} data-app-part="panel list-row" className="overflow-hidden">
+            <Button
               id={triggerId}
               type="button"
+              variant="ghost"
               onClick={() => toggle(release.version)}
-              className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-white/[0.02]"
+              className="h-auto min-h-11 w-full justify-between rounded-none p-4 text-start hover:bg-[var(--surface-2)]"
               aria-expanded={isExpanded}
               aria-controls={panelId}
             >
-              <div className="flex flex-wrap items-center gap-3">
-                <Gift className={cn('h-4 w-4', ICON_TINT[release.badge])} aria-hidden />
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 whitespace-normal">
+                <Gift className={cn('h-4 w-4 shrink-0', ICON_TINT[release.badge])} aria-hidden />
+                <Text size="sm" weight="semibold" color="primary" className="min-w-0 [overflow-wrap:anywhere]">
                   v{release.version}
-                </span>
+                </Text>
                 <Badge variant={BADGE_VARIANT[release.badge]} size="sm">
                   {t(BADGE_KEY[release.badge], BADGE_FALLBACK[release.badge])}
                 </Badge>
                 <span className="text-xs text-[var(--text-muted)]">{release.date}</span>
-              </div>
+              </span>
               {isExpanded ? (
                 <ChevronUp className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
               ) : (
                 <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
               )}
-            </button>
+            </Button>
             {isExpanded && (
               <div
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
-                className="border-t border-white/[0.06] px-4 pb-4 pt-3"
+                className="border-t border-[var(--border-subtle)] px-4 pb-4 pt-3"
               >
                 <p className="text-xs font-medium tracking-wider text-[var(--text-muted)] mb-2">
                   {t('changelog.releaseNotes.heading', "What's new")}
                 </p>
-                <ul className="space-y-1.5">
+                <ul className="divide-y divide-[var(--border-subtle)]">
                   {(release.changes ?? []).map((item, i) => (
                     <li
                       key={`${release.version}-${i}`}
-                      className="flex items-start gap-2 text-sm text-[var(--text-secondary)]"
+                      className="flex min-w-0 items-start gap-2 py-2 text-sm text-[var(--text-secondary)]"
                     >
                       <span
                         role="img"
                         aria-label={t(CHANGE_TYPE_KEY[item.type], CHANGE_TYPE_FALLBACK[item.type])}
                         className={cn('mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', DOT_TINT[item.type])}
                       />
-                      <span className="break-words">{item.text}</span>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{item.text}</span>
                     </li>
                   ))}
                 </ul>
