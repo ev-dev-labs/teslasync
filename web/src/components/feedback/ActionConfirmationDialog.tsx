@@ -25,7 +25,7 @@ export function ActionConfirmationDialog({
       originSnapshot={originSnapshot}
       title={t('actionConfirmation.title', 'Confirm sensitive action')}
       message={t('actionConfirmation.body', 'This action can change or remove data. Your authentication provider handles sign-in; TeslaSync only asks you to confirm your intent.')}
-      details={<Code>{path}</Code>}
+      details={<Code className="block rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 whitespace-pre-wrap [overflow-wrap:anywhere]">{path}</Code>}
       requireTypedConfirmation="CONFIRM"
       typedConfirmationLabel={t('actionConfirmation.type', 'Type CONFIRM to continue')}
       confirmLabel={t('common.confirm', 'Confirm')}
