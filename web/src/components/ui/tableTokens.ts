@@ -4,6 +4,7 @@ export const tableTokens = {
   wrapper: 'w-full border-collapse text-sm text-[var(--text-primary)]',
   head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] text-xs normal-case tracking-normal',
   headCell: 'px-4 py-3.5 text-left font-semibold',
+  headLabelMinHeight: 'min-h-11 md:min-h-6',
   body: 'divide-y divide-[var(--border-subtle)]',
   row: 'align-middle transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
   cell: 'px-4 py-3.5',

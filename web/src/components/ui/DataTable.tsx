@@ -1999,7 +1999,7 @@ export function DataTable<T>({
                     <div className={cn('flex gap-1', (Boolean(col.headerAction) || hasInlineFilter) && 'flex-col',
                       col.align === 'right' && (col.headerAction ? 'items-end' : !hasInlineFilter && 'justify-end'),
                       col.align === 'center' && (col.headerAction ? 'items-center' : !hasInlineFilter && 'justify-center'))}>
-                    <div className={cn('flex items-center gap-1', hasInlineFilter && 'min-h-8',
+                    <div className={cn('flex items-center gap-1', hasInlineFilter ? 'min-h-8' : tableTokens.headLabelMinHeight,
                       col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
                       {draggable && (
                         <span
@@ -2018,7 +2018,8 @@ export function DataTable<T>({
                           data-grid-sort-active={sortKey === col.key || undefined}
                           onClick={() => onSort?.(col.key)}
                           className={cn(
-                            'h-auto min-h-11 gap-1 p-0 text-size-inherit font-semibold select-none md:min-h-6',
+                            tableTokens.headLabelMinHeight,
+                            'h-auto gap-1 p-0 text-[length:inherit] font-semibold leading-[inherit] select-none',
                             'hover:text-[var(--text-secondary)]',
                           )}
                         >

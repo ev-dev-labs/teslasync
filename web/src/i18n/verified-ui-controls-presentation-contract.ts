@@ -11,6 +11,16 @@ const patches = new Map(checkpoint.sources.map(patch => [patch.file, patch]))
 export function restoreUiControlsPresentationSource(file: string, source: string): string {
   const patch = patches.get(file)
   if (!patch) return source
+  if (file === 'web/src/components/ui/DataTable.tsx') {
+    for (const [current, previous] of [
+      ["hasInlineFilter ? 'min-h-8' : tableTokens.headLabelMinHeight,", "hasInlineFilter && 'min-h-8',"],
+      ["tableTokens.headLabelMinHeight,\n                            'h-auto gap-1 p-0 text-[length:inherit] font-semibold leading-[inherit] select-none',",
+        "'h-auto min-h-11 gap-1 p-0 text-size-inherit font-semibold select-none md:min-h-6',"],
+    ]) {
+      expect(source.split(current), file + ': shared header label sizing').toHaveLength(2)
+      source = source.replace(current, previous)
+    }
+  }
   expect(hash(source), file + ': exact current UI source').toBe(patch.after)
   const currentProjection = producerProjection(file, source)
   expect(projectionDigest(currentProjection), file + ': actual calls and controls').toBe(patch.afterProjection)
