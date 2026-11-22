@@ -19,12 +19,17 @@ import {
  */
 
 describe('PageHeaderSkeleton', () => {
-  it('renders with role=status and aria-busy=true', () => {
+  it('names the busy status with visible loading copy and hides decorative header blocks', () => {
     render(<PageHeaderSkeleton />);
     const region = screen.getByTestId('page-header-skeleton');
-    expect(region).toBeInTheDocument();
-    expect(region).toHaveAttribute('role', 'status');
+    const label = screen.getByText(/^loading/i);
+    expect(label).toBeVisible();
+    expect(region).toHaveAccessibleName(label.textContent ?? '');
     expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(region).toHaveAttribute('role', 'status');
+    const shapes = region.querySelectorAll('[data-app-part="skeleton"]');
+    expect(shapes).toHaveLength(2);
+    for (const shape of shapes) expect(shape).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

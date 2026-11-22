@@ -60,9 +60,9 @@ describe('DriveDetailSkeleton', () => {
     const header = screen.getByTestId('page-header-skeleton');
     expect(header).toBeInTheDocument();
     expect(header).toHaveAttribute('aria-busy', 'true');
-    expect(header.children[0]).toHaveClass('h-8', 'w-64', 'bg-[var(--skeleton-bg)]');
-    expect(header.children[1]).toHaveClass('h-4', 'w-96', 'max-w-full', 'bg-[var(--skeleton-bg)]');
-    for (const line of header.children) expect(line).toHaveAttribute('aria-hidden', 'true');
+    const headerBlocks = header.querySelectorAll('[data-app-part="skeleton"]');
+    expect(headerBlocks).toHaveLength(2);
+    for (const block of headerBlocks) expect(block).toHaveAttribute('aria-hidden', 'true');
     const hero = container.querySelector('.h-36');
     expect(hero).toBeInTheDocument();
     expect(hero).toHaveClass('h-36', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
@@ -74,7 +74,8 @@ describe('DriveDetailSkeleton', () => {
     expect(statGrid).toHaveAttribute('aria-busy', 'true');
     expect(statGrid).toHaveClass('sm:grid-cols-4', 'lg:grid-cols-8');
     for (const card of statGrid.children) {
-      expect(card).toHaveClass('h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(card).toHaveClass('h-24');
+      expect(card.querySelector('[data-app-skeleton="fact"]')).toBeInTheDocument();
       expect(card).toHaveAttribute('aria-hidden', 'true');
     }
 
