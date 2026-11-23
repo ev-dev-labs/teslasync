@@ -136,6 +136,7 @@ describe('WarrantyCommandPage — mobile table preservation', () => {
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+vi.mock('@/lib/timezone', async () => vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone'));
 vi.mock('@/api/hooks/usePersonalIdentity', async () => ({
   ...await vi.importActual<typeof import('@/api/hooks/usePersonalIdentity')>('@/api/hooks/usePersonalIdentity'),
   usePersonalIdentity: () => ({ data: { mode: 'open' } }),
@@ -167,7 +168,7 @@ import { expectOperationalBand, summaryMetric } from '../components/operationalb
 import type { ClaimStatus, Warranty, WarrantyCoverage, WarrantyKind, WarrantyOverview } from '@/types/ownership';
 import { formatDateTime } from '@/lib/dateFormat';
 import * as settingsHook from '@/hooks/useSettings';
-import * as timezoneHook from '@/lib/timezone';
+import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';
 import { formatPct } from '../formatters';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -265,7 +266,9 @@ function renderPage() {
   const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <WarrantyCommandPage />
+        <WorkspaceDateFormatProvider>
+          <WarrantyCommandPage />
+        </WorkspaceDateFormatProvider>
       </QueryClientProvider>
     </MemoryRouter>
   );
@@ -511,7 +514,6 @@ describe('WarrantyCommandPage — saved date preferences', () => {
       ...defaults, locale,
       settings: { ...defaults.settings, locale, tz_display_default: 'user', timezone_user: tz },
     });
-    const timezone = vi.spyOn(timezoneHook, 'useTimezone').mockReturnValue(tz);
     const overview = makeOverview();
     const coverage = overview.coverages[0];
     coverage.time_expiry_at = instant;
@@ -527,7 +529,6 @@ describe('WarrantyCommandPage — saved date preferences', () => {
 
     const expected = formatDateTime(instant, { locale, tz });
     expect(expected).toContain(day);
-    expect(timezone).toHaveBeenCalledWith('user');
     expect(card('Recorded coverages')).toHaveTextContent(expected);
     expect(card('Claim ledger')).toHaveTextContent(expected);
     expect(summaryMetric('Coverage posture', 'next')).toHaveTextContent(expected);

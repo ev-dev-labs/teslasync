@@ -1205,13 +1205,16 @@ describe('virtualization discovery: JSX context must be genuine', () => {
     expect(mapCallbackReturnsJsx(obj, obj.indexOf('('))).toBe(false)
   })
 
-  it('tracks both charging card renderers, including delegated date-grouped rows', () => {
+  it('recognizes the shared Charging grid without losing coverage of standalone date-grouped lists', () => {
     const audit = readFileSync(join(webRoot, 'scripts', 'audit-virtualization.mjs'), 'utf8')
     const list = /ACKNOWLEDGED_LONG_LIST_SURFACES = \[([\s\S]*?)\n\];/.exec(audit)?.[1] ?? ''
     expect(list).not.toBe('')
     const page = readFileSync(join(webRoot, 'src', 'features', 'charging', 'pages', 'ChargingListPage.tsx'), 'utf8')
-    expect(classifyLongListSource(page).isLongListSurface).toBe(true)
-    expect(list).toContain("'features/charging/pages/ChargingListPage.tsx'")
+    expect(page).toContain('<ChargingEvidenceTable')
+    expect(classifyLongListSource(page).isLongListSurface).toBe(false)
+    expect(list).not.toContain("'features/charging/pages/ChargingListPage.tsx'")
+    const standalone = readFileSync(join(webRoot, 'src', 'features', 'charging', 'components', 'charging-list', 'SessionListSection.tsx'), 'utf8')
+    expect(classifyLongListSource(standalone).isLongListSurface).toBe(true)
     expect(list).toContain("'features/charging/components/charging-list/SessionListSection.tsx'")
   })
 })

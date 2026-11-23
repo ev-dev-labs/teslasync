@@ -182,7 +182,8 @@ describe('NotificationReportPanel', () => {
     expect(within(sources).getByRole('cell', { name: '2' })).toHaveClass('text-right', 'tabular-nums');
     expect(sources.closest('[data-grid-variant]')).toHaveAttribute('data-grid-variant', 'embedded');
     const eventTypes = screen.getByRole('table', { name: 'Event types' });
-    expect(within(eventTypes).getByRole('cell', { name: 'Alert triggered' })).toBeInTheDocument();
+    const otherEvent = within(eventTypes).getByRole('cell', { name: 'Other' }).closest('tr')!;
+    expect(within(otherEvent).getByRole('cell', { name: '1' })).toBeInTheDocument();
     expect(within(eventTypes).getByRole('cell', { name: 'System MQTT outage' })).toBeInTheDocument();
   });
 

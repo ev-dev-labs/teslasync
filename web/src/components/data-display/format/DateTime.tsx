@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import {
   formatDateTime,
   formatRelativeTime,
@@ -13,6 +14,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { TzMode } from '@/lib/timezone';
 import { FormattedReading, type FormattedReadingOptions } from './FormattedReading';
+import { WorkspaceDateFormatContext } from './WorkspaceDateFormatContext';
 
 export type DateTimeVariant = 'full' | 'date' | 'time' | 'relative' | 'short' | 'day';
 
@@ -21,16 +23,7 @@ interface DateTimeProps extends FormattedReadingOptions {
   /** `day` formats a YYYY-MM-DD business date; other variants format instants. */
   variant?: DateTimeVariant;
   /**
-   * Override which timezone the timestamp is rendered in. Ignored for `day`.
-   * When unset
-   * the component preserves its prior pure behavior (uses the browser's
-   * locale + timezone) — this is the back-compat path used by hundreds
-   * of call sites and unit tests that render outside Router/Query
-   * providers.
-   *
-   * When set, the component subscribes to `useSelectedVehicle()` and
-   * `useSettings()` to resolve the IANA name. See
-   * `web/src/lib/timezone.ts` for the resolution rules.
+   * Override the saved display timezone mode. Ignored for `day`.
    */
   in?: TzMode;
   /** Explicit clock precision uses the selected locale and default timezone mode. */
@@ -44,18 +37,19 @@ interface DateTimeProps extends FormattedReadingOptions {
  * never resolves a timezone or displays a clock. Wraps the pure helpers
  * in `@/lib/dateFormat`.
  *
- * When `in` or explicit `clock` options are set, renders via the
- * provider-aware variant `<DateTimeWithTz>`. The default no-prop path
- * stays pure to keep render cost low across table-heavy pages.
+ * The workspace resolves display preferences once, so ordinary timestamps
+ * update with preferences without adding data subscriptions in each row.
  */
 export function DateTime(props: DateTimeProps) {
+  const options = useContext(WorkspaceDateFormatContext);
   if (props.variant === 'day') {
     return <BusinessDay {...props} />;
   }
-  if (props.in !== undefined || props.clock !== undefined) {
+  if (props.in !== undefined || (props.clock !== undefined && options === undefined)) {
     return <DateTimeWithTz {...props} />;
   }
-  return <PureDateTime {...props} />;
+  const { value, variant = 'full', label, className, clock } = props;
+  return renderSpan({ value, variant, label, className, opts: clock ? { ...options, clock } : options });
 }
 
 function BusinessDay({ value, label, className }: DateTimeProps) {
@@ -65,19 +59,6 @@ function BusinessDay({ value, label, className }: DateTimeProps) {
   return <FormattedReading label={label} className={className}>{display}</FormattedReading>;
 }
 
-function PureDateTime({ value, variant = 'full', label, className }: DateTimeProps) {
-  return renderSpan({ value, variant, label, className });
-}
-
-
-/**
- * Renders the timestamp in the IANA timezone resolved from the user's
- * settings + the active vehicle. Always calls `useDateFormat` and
- * `useSettings` so React's hook rules are honored regardless of which
- * branch was taken on the previous render — this component is mounted
- * only when `in` / `showTz` / `clock` is set, so the render path is consistent
- * for the lifetime of any given DateTime instance.
- */
 function DateTimeWithTz({ value, variant = 'full', in: mode, clock, label, className }: DateTimeProps) {
   const { settings } = useSettings();
   const { tz: resolvedTz } = useDateFormat(mode);

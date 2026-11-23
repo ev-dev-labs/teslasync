@@ -28,11 +28,15 @@ import { InboxSummary } from './InboxSummary';
 import type { NotificationLog } from '@/api/types';
 import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
 import * as settingsModule from '@/hooks/useSettings';
-import * as timezoneModule from '@/lib/timezone';
 import {
   assertOperationalBriefDisclosure,
   assertOperationalMetricUnavailable,
 } from '@/test/operationalBriefAssertions';
+
+vi.mock('@/lib/timezone', async () => vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone'));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
+}));
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -203,7 +207,7 @@ describe('InboxSummary — accepted severity aliases and archived scope', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Latest 50 archived entries · all time');
     expect(screen.getByRole('dialog')).toHaveTextContent('not the workspace period or the server total');
-    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(new Date(archivedAt), { locale: 'en-US', tz: 'UTC' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(archivedAt, { locale: 'en-US', tz: 'Asia/Tokyo' }));
   });
 
   it('retains cached metrics and explicit paused trust instead of claiming a loaded fresh sample', () => {
@@ -309,7 +313,7 @@ describe('InboxSummary — initial acquisition is not resolved emptiness', () =>
   });
 });
 
-describe('InboxSummary — saved user-context date display', () => {
+describe('InboxSummary — saved date display preferences', () => {
   it.each([
     { locale: 'de-DE-u-hc-h23', tz: 'Pacific/Honolulu', archived: false },
     { locale: 'en-US-u-hc-h12', tz: 'America/New_York', archived: true },
@@ -319,16 +323,12 @@ describe('InboxSummary — saved user-context date display', () => {
     const preferences = settingsModule.useSettings();
     vi.spyOn(settingsModule, 'useSettings').mockReturnValue({
       ...preferences, locale,
-      settings: { ...preferences.settings, locale, timezone_user: tz, tz_display_default: 'vehicle' },
+      settings: { ...preferences.settings, locale, timezone_user: tz, tz_display_default: 'user' },
     });
-    const timezone = vi.spyOn(timezoneModule, 'useTimezone').mockImplementation((mode) =>
-      mode === 'user' ? tz : 'Asia/Tokyo',
-    );
     const timestamp = new Date(Date.now() - 5 * 60_000).toISOString();
     const row = makeLog({ created_at: timestamp, archived_at: timestamp });
     const original = { ...row };
     renderSummary(makeQuery({ data: [row] }), archived);
-    expect(timezone).toHaveBeenCalledWith('user');
     expect(cardValue(archived ? 'Last archived' : 'Last received')).toBe(formatRelativeTime(timestamp, { locale, tz }));
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(timestamp, { locale, tz }));

@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DateTime } from '../DateTime';
 import type { DateTimeVariant } from '../DateTime';
+import { WorkspaceDateFormatProvider } from '../WorkspaceDateFormatProvider';
 
 // The timezone-aware branch (`<DateTime in=… />`) reads the IANA
 // zone from `useDateFormat()`, which in production reaches useSelectedVehicle →
@@ -14,7 +15,7 @@ import type { DateTimeVariant } from '../DateTime';
 const tzMock = vi.hoisted(() => ({ tz: 'UTC', lastMode: undefined as string | undefined }));
 const settingsMock = vi.hoisted(() => ({ locale: 'en-US', tz_display_default: 'vehicle' }));
 vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: settingsMock }),
+  useSettings: () => ({ settings: settingsMock, locale: settingsMock.locale }),
 }));
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
@@ -62,6 +63,29 @@ describe('DateTime — publication business days', () => {
     settingsMock.locale = 'en-US';
     rerender(<DateTime value="2026-07-02" variant="day" />);
     expect(container.textContent).toBe('Jul 2, 2026');
+  });
+
+  describe('DateTime — workspace display preferences', () => {
+    it('updates instant clocks without moving calendar days', () => {
+      tzMock.tz = 'America/Los_Angeles';
+      const readings = (
+        <>
+          <DateTime value="2026-07-02T00:30:47Z" variant="date" />
+          <DateTime value="2026-07-02T00:30:47Z" variant="time" clock={{ second: '2-digit', hour12: false }} />
+          <DateTime value="2026-07-02" variant="day" />
+        </>
+      );
+      const { getByText, rerender } = render(<WorkspaceDateFormatProvider>{readings}</WorkspaceDateFormatProvider>);
+      const instant = getByText('Jul 1, 2026');
+      const calendar = getByText('Jul 2, 2026');
+      expect(getByText('17:30:47')).toBeInTheDocument();
+
+      tzMock.tz = 'Asia/Tokyo';
+      rerender(<WorkspaceDateFormatProvider>{readings}</WorkspaceDateFormatProvider>);
+      expect(instant).toHaveTextContent('Jul 2, 2026');
+      expect(calendar).toHaveTextContent('Jul 2, 2026');
+      expect(getByText('09:30:47')).toBeInTheDocument();
+    });
   });
 
   it.each([null, undefined, '', '2026-02-30', ISO, new Date(ISO)])(

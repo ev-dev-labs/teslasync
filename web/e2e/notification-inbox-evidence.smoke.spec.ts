@@ -39,7 +39,7 @@ for (const theme of ['light', 'dark'] as const) {
         }
       }
       await expectNoHorizontalOverflow(page);
-      await frameFor('Event types').screenshot({ path: info.outputPath(`notification-report-${width}-${theme}.png`) });
+      await frameFor('Trigger sources').screenshot({ path: info.outputPath(`notification-report-${width}-${theme}.png`) });
     });
   }
   for (const width of [320, 390, 768, 1024, 1280, 1440]) {

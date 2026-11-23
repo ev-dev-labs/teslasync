@@ -26,6 +26,59 @@
       ]
     },
     {
+      "file": "web/src/components/layout/Layout.tsx",
+      "before": "3f198e8a6514dc86ab1081520b915bcfd5906d7da1bc3dafd4b97e31c95081d4",
+      "after": "4c4cd207e25f3bd5ddd6e7971d9bb15ab476d6423f4020c21cc755ad9a85e295",
+      "hunks": [
+        {
+          "start": 80,
+          "current": [
+            "import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1063,
+          "current": [
+            "      <WorkspaceDateFormatProvider>"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1339,
+          "current": [
+            "      </WorkspaceDateFormatProvider>"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceContextControl.tsx",
+      "before": "73561f633f504e2ad3d2b78331337f667b2dbfa79ed2fc50a6956fabade1e84f",
+      "after": "f32ddd74670e7abfc1cfb5295e25ec79077aecfef6bc79b4969690b545eb8388",
+      "hunks": [
+        {
+          "start": 19,
+          "current": [
+            "import { formatDayKey } from '@/lib/dateFormat'"
+          ],
+          "previous": [
+            "import { formatDate, formatDateShort } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 289,
+          "current": [
+            "                  { start: formatDayKey(range.start, { style: 'short' }), end: formatDayKey(range.end) },"
+          ],
+          "previous": [
+            "                  { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },"
+          ]
+        }
+      ]
+    },
+    {
       "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
       "before": "dea9edf7530ba935d478baf276f1441f2638edc526a4b0bfa35b893b52159b24",
       "after": "19caf42b6a277d0f2718a2b85eb030670bf36d5736c9dd9e69be0c671b289c26",
@@ -1201,6 +1254,29 @@
       ]
     },
     {
+      "file": "web/src/features/notifications/components/ArchivedSummary.tsx",
+      "before": "70f3b239255c0adcb3f511931d72cc63bc775e0419080c4896b10d2f7b2f40e5",
+      "after": "76bdf5d11370d1be98e0a878c762b96c1fc971ff70ad6b4e779880cb5f27dd70",
+      "hunks": [
+        {
+          "start": 18,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat';"
+          ],
+          "previous": [
+            "import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';"
+          ]
+        },
+        {
+          "start": 37,
+          "current": [
+            "  const { formatRelativeTime, formatDateTime } = useDateFormat();"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
       "file": "web/src/features/notifications/components/InboxSummary.tsx",
       "before": "0667148e86ce877b9afc24ce27070550b9d54b93cc185fc73a871c7cc5ac6def",
       "after": "d602c4311832fdf6b264914e3024801ef961d6ae3723f6ea29242c3f36f4f64c",
@@ -1512,6 +1588,52 @@
           "previous": [
             "                          {t('ai.settings.featureSpend.callsTokens', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC', {"
           ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/FeatureToggles.tsx",
+      "before": "57014ecabb98014b125c0a45fbb649b6d726271234d322f88adb2b902a4798af",
+      "after": "37a3d63c822aa92b58773a5f239c944f2d5a88ccd1ed6c624956d77665db64eb",
+      "hunks": [
+        {
+          "start": 8,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat'"
+          ],
+          "previous": [
+            "import { formatDateTime } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 13,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/RegionSettings.tsx",
+      "before": "341d944eb5fd5f26b54b655b60a80952d27b3012db16929243f3319d6ba8131e",
+      "after": "bf025f5d2ff65288e28bf06c6b9057d8f47be7193e8e62f452c1bafc153c2842",
+      "hunks": [
+        {
+          "start": 8,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat'"
+          ],
+          "previous": [
+            "import { formatDateTime } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 13,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": []
         }
       ]
     },
@@ -2687,29 +2809,6 @@
           ],
           "previous": [
             "  const { formatDateTime } = useDateFormat('user');"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "web/src/lib/notificationEventType.ts",
-      "before": "ca54a604c154c8fdce2eb9aa22d7e0d439f89f172fcaeb8156d0a8d4877941fb",
-      "after": "1ac3de46e5da4ee63caf9a610407961bc2be380b22883d4f050546dfc011e9a2",
-      "hunks": [
-        {
-          "start": 27,
-          "current": [
-            "  const label = value.replace(/[._-]+/g, ' ').trim();"
-          ],
-          "previous": []
-        },
-        {
-          "start": 30,
-          "current": [
-            "    : label ? label[0].toUpperCase() + label.slice(1) : value;"
-          ],
-          "previous": [
-            "    : 'Other';"
           ]
         }
       ]
