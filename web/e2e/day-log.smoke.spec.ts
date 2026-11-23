@@ -77,6 +77,15 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(header.locator('#daylog-timezone')).toHaveCount(0);
       await expect.poll(scopes).toContainEqual(['7', '2026-09-14', vehicleTimezone]);
       await expectNoHorizontalOverflow(page);
+      const workspace = page.locator('[data-role="workspace-header"]');
+      const workspaceBreadcrumb = workspace.getByRole('navigation', { name: 'Breadcrumb', includeHidden: true });
+      if (width < 640) {
+        await expect(workspaceBreadcrumb).toBeHidden();
+        await expect(page.locator('[data-role="compact-breadcrumbs"]').getByRole('navigation', { name: 'Breadcrumb' })).toBeVisible();
+        await expect(workspace.getByRole('combobox', { name: 'Select vehicle' })).toBeVisible();
+      } else {
+        await expect(workspaceBreadcrumb).toBeVisible();
+      }
       const navigation = header.getByTestId('daylog-date-navigation');
       const navBox = await navigation.boundingBox();
       expect(navBox).not.toBeNull();
@@ -97,7 +106,6 @@ for (const theme of ['light', 'dark'] as const) {
         expect(copy!.y - navBox!.y - navBox!.height).toBeLessThanOrEqual(8);
       }
       if (width === 1440) {
-        const workspace = page.locator('[data-role="workspace-header"]');
         await expect(workspace.getByRole('combobox', { name: 'Select vehicle' })).toBeVisible();
         await workspace.screenshot({ path: testInfo.outputPath('workspace-header.png') });
         const controls = [

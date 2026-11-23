@@ -171,14 +171,14 @@ export function DataTableResizer({
       className={cn(
         tableTokens.resizer,
         // Keep the visible divider narrow without making its hit target narrow.
-        // The hit target straddles the column boundary (half in each cell) so
-        // it never covers header controls; the divider line stays centered on
-        // the boundary itself.
+        // Straddle interior boundaries, but keep the last hit target inside
+        // the table so it cannot create a scrollbar by itself.
         'w-11 min-h-11 md:w-6 md:min-h-6 translate-x-1/2 touch-none opacity-100 bg-transparent ' +
           'hover:bg-transparent focus-visible:bg-transparent motion-reduce:transition-none ' +
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
           'focus-visible:outline-[var(--focus-ring)] ' +
           'after:pointer-events-none after:absolute after:inset-y-0 after:right-1/2 after:w-0.5 ' +
+          'group-last/th:translate-x-0 group-last/th:after:right-0 group-last/th:focus-visible:-outline-offset-2 ' +
           'after:bg-[var(--text-secondary)] after:opacity-0 ' +
           'hover:after:opacity-100 focus-visible:after:opacity-100 ' +
           'forced-colors:focus-visible:outline-[Highlight] forced-colors:after:bg-[CanvasText]',
