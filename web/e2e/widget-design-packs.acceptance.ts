@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { isMobileGridWidth } from '../src/components/ui/mobile-grid-reference/helpers';
 
 export function unexpectedNeutralScopes(page: Page, attribute: string): Locator {
   const thumbnail = '[aria-labelledby="settings-widget-design-packs"] [data-app-design-thumbnail]';
@@ -164,19 +165,70 @@ async function assertReadableTextInset(frame: Locator, text: Locator, descriptio
   `${description} keeps readable text clear of its frame`).toBeGreaterThanOrEqual(4);
 }
 
+export function previewLedger(section: Locator) {
+  const mobile = isMobileGridWidth(section.page().viewportSize()?.width ?? Infinity);
+  const surface = section.getByRole(mobile ? 'group' : 'table', { name: 'Sample journey ledger', exact: true });
+  return {
+    mobile,
+    surface,
+    rows: mobile ? surface.locator('[data-mobile-row-key]') : surface.locator('tbody').getByRole('row'),
+  };
+}
+
+async function openPreviewLedgerColumn(section: Locator, label: string) {
+  await section.getByRole('button', { name: 'Filter & sort', exact: true }).click();
+  const dialog = section.page().getByRole('dialog', { name: 'Filter & sort', exact: true });
+  await dialog.getByRole('combobox', { name: 'Column', exact: true }).selectOption({ label });
+  return dialog;
+}
+
+export async function sortPreviewLedgerByDistance(section: Locator, ...directions: ('ascending' | 'descending')[]) {
+  const { mobile, surface } = previewLedger(section);
+  if (mobile) {
+    const dialog = await openPreviewLedgerColumn(section, 'Distance');
+    for (const direction of directions) {
+      await dialog.getByRole('button', { name: `Sort ${direction}`, exact: true }).click();
+    }
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  } else {
+    const sort = surface.getByRole('button', { name: 'Distance', exact: true });
+    for (const direction of directions) {
+      await sort.click();
+      await expect(surface.getByRole('columnheader', { name: 'Distance', exact: true }))
+        .toHaveAttribute('aria-sort', direction);
+    }
+  }
+}
+
+export function previewLedgerQualityControl(section: Locator) {
+  const { mobile, surface } = previewLedger(section);
+  const name = mobile ? 'Filter & sort' : 'Source quality filter';
+  return { mobile, name, trigger: (mobile ? section : surface).getByRole('button', { name, exact: true }) };
+}
+
+export async function openPreviewLedgerQualityFilter(section: Locator) {
+  const { mobile, name, trigger } = previewLedgerQualityControl(section);
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const dialog = section.page().getByRole('dialog', { name, exact: true });
+  if (mobile) await dialog.getByRole('combobox', { name: 'Column', exact: true }).selectOption({ label: 'Source quality' });
+  return dialog;
+}
+
 export async function assertTableNoMatchContained(section: Locator) {
-  const viewport = await section.locator('[data-grid-viewport]').boundingBox();
+  const { mobile, surface } = previewLedger(section);
+  const viewport = await (mobile ? surface : section.locator('[data-grid-viewport]')).boundingBox();
   expect(viewport).not.toBeNull();
-  const table = section.getByRole('table', { name: 'Sample journey ledger' });
-  const message = table.getByRole('status');
-  await expect(message).toHaveText('No sample journeys match.');
+  const message = surface.getByText('No sample journeys match.', { exact: true });
+  await expect(message).toBeVisible();
   const text = await message.evaluate(element => {
     const range = document.createRange();
     range.selectNodeContents(element);
     return [...range.getClientRects()].map(box => ({ left: box.left, right: box.right }));
   });
   expect(text.length).toBeGreaterThan(0);
-  const reset = await table.getByRole('button', { name: 'Clear filters', exact: true }).boundingBox();
+  const reset = await surface.getByRole('button', { name: 'Clear filters', exact: true }).boundingBox();
   expect(reset).not.toBeNull();
   for (const box of [...text, { left: reset!.x, right: reset!.x + reset!.width }]) {
     expect(box.left, 'no-match copy and recovery action remain inside the visible table viewport').toBeGreaterThanOrEqual(viewport!.x - 1);
@@ -264,21 +316,27 @@ export async function inspectPreviewInteractions(page: Page, preview: Locator, t
   await expect(feedback.getByText('Sample source recovered')).toBeVisible();
   await feedback.getByRole('button', { name: 'Show error again' }).click();
   const tableSection = preview.locator('[data-preview-section="table"]');
-  const table = tableSection.getByRole('table', { name: 'Sample journey ledger' });
-  await expect(table.getByRole('row')).toHaveCount(4);
-  await table.getByRole('button', { name: 'Distance', exact: true }).click();
-  await expect(table.getByRole('row').nth(1)).toContainText('Park pause');
-  await tableSection.getByRole('button', { name: 'Next page', exact: true }).click();
-  await expect(table.getByRole('row').nth(1)).toContainText('Studio connection');
-  await expect(table.getByRole('cell', { name: 'Park pause', exact: true })).toHaveCount(0);
+  const { mobile, surface, rows } = previewLedger(tableSection);
+  await expect(rows).toHaveCount(3);
+  await sortPreviewLedgerByDistance(tableSection, 'ascending');
+  await expect(rows.first()).toContainText('Park pause');
+  await expect(rows.getByText('Studio connection', { exact: true })).toHaveCount(0);
+  if (mobile) {
+    await surface.getByRole('button', { name: 'Load 3 more', exact: true }).click();
+    await expect(rows).toHaveCount(6);
+    await expect(rows.nth(3)).toContainText('Studio connection');
+    await expect(rows.first()).toContainText('Park pause');
+  } else {
+    await tableSection.getByRole('button', { name: 'Next page', exact: true }).click();
+    await expect(rows.first()).toContainText('Studio connection');
+    await expect(rows.getByText('Park pause', { exact: true })).toHaveCount(0);
+  }
   const search = tableSection.getByRole('searchbox', { name: 'Search loaded rows' });
   await search.fill('Studio');
-  await expect(table.getByRole('row')).toHaveCount(2);
-  await expect(table.getByText('—', { exact: true })).toHaveCount(1);
+  await expect(rows).toHaveCount(1);
+  await expect(rows.getByText('—', { exact: true })).toHaveCount(1);
   await search.fill('');
-  const filterTrigger = tableSection.getByRole('button', { name: 'Source quality filter', exact: true });
-  await filterTrigger.click();
-  const filter = page.getByRole('dialog', { name: 'Source quality filter', exact: true });
+  const filter = await openPreviewLedgerQualityFilter(tableSection);
   await expect(filter).toBeVisible();
   const complete = filter.getByRole('checkbox', { name: 'Complete', exact: true });
   await expect(complete).toBeChecked();
@@ -286,11 +344,18 @@ export async function inspectPreviewInteractions(page: Page, preview: Locator, t
   await expect(complete).not.toBeChecked();
   await filter.screenshot({ path: testInfo.outputPath(`${evidence}-filter-open.png`), animations: 'disabled' });
   await filter.getByRole('button', { name: 'Done', exact: true }).click();
-  await expect(table.getByRole('row')).toHaveCount(2);
-  await filterTrigger.click();
-  await filter.getByRole('button', { name: 'Clear', exact: true }).click();
-  await filter.getByRole('button', { name: 'Done', exact: true }).click();
-  await table.getByRole('button', { name: 'Distance', exact: true }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Studio connection');
+  if (mobile) {
+    await tableSection.getByRole('button', { name: 'Clear Source quality filter', exact: true }).click();
+  } else {
+    await openPreviewLedgerQualityFilter(tableSection);
+    await filter.getByRole('button', { name: 'Clear', exact: true }).click();
+    await filter.getByRole('button', { name: 'Done', exact: true }).click();
+  }
+  await expect(rows).toHaveCount(3);
+  await sortPreviewLedgerByDistance(tableSection, 'descending');
+  await expect(rows.first()).toContainText('Harbor loop');
   const chart = preview.locator('[data-preview-section="chart"]');
   const legend = chart.getByRole('button', { name: 'Sample reference (%)', exact: true });
   await legend.click();
@@ -579,8 +644,7 @@ export async function inspectPortaledIsolation(page: Page, preview: Locator) {
   await expect(dialog).toBeHidden();
   // The actual shared DataTable filter is a different portal consumer, not a
   // custom preview stand-in for an open listbox/filter family.
-  await preview.getByRole('button', { name: 'Source quality filter', exact: true }).click();
-  const filter = page.getByRole('dialog', { name: 'Source quality filter', exact: true });
+  const filter = await openPreviewLedgerQualityFilter(preview.locator('[data-preview-section="table"]'));
   await expect(filter).toBeVisible();
   expect(await filter.evaluate(element =>
     element.closest('[data-app-design-preview]')?.getAttribute('data-app-design-pack'))).toBe('quiet');

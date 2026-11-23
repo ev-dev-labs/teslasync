@@ -282,10 +282,16 @@ export function ChargingEvidenceTable({
         rowHref: session => `/charging/${session.id}`,
         onQuickView: onPreview,
         quickViewLabel: t('charging.quickView', 'Quick view charging session'),
-        inlineActions: session => <>
-          {session.live && <Badge variant="info" size="sm">{t('charging.sessionCharging', 'Charging')}</Badge>}
-          {anomalies.has(session.id) && <Badge variant="danger" size="sm">{anomalies.get(session.id)?.message}</Badge>}
-        </>,
+        inlineActions: (session, visibleKeys) => {
+          const livePower = session.live && visibleKeys.has('power') ? sessionDisplayPowerW(session) : null;
+          return <>
+            {session.live && <Badge variant="info" size="sm">{t('charging.sessionCharging', 'Charging')}</Badge>}
+            {livePower != null && <Text variant="caption" className="min-w-0 break-words">
+              {t('charging.currentPower', 'Current power')}: {formatPower(livePower)}
+            </Text>}
+            {anomalies.has(session.id) && <Badge variant="danger" size="sm">{anomalies.get(session.id)?.message}</Badge>}
+          </>;
+        },
         showRowCount: false,
         columnToolsInPicker: true,
         compactRows: true,

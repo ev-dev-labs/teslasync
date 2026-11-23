@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { DEFAULT_PINNED_NAV_PATHS } from '../src/lib/navPins';
 import {
-  assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady,
+  assertMockApiComplete, closeMockApiFixtures, fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState, waitForHarnessReady,
 } from './mockApi';
 
 test.use({
@@ -37,8 +37,8 @@ async function syntheticVideo(page: Page) {
 }
 
 for (const variant of [
-  { name: 'desktop', width: 1440, height: 900, theme: 'light', pack: 'v6' },
-  { name: 'mobile', width: 390, height: 844, theme: 'dark', pack: 'blueprint' },
+  { name: 'desktop', width: 1440, height: 900, theme: 'light', pack: 'v6', displayZone: 'user', displayTime: '07:30 AM' },
+  { name: 'mobile', width: 390, height: 844, theme: 'dark', pack: 'blueprint', displayZone: 'utc', displayTime: '11:30 AM' },
 ] as const) {
   test(`private retention requires an actual imported clip and confirmed deadline: ${variant.name}`, async ({ page }) => {
     test.setTimeout(120_000);
@@ -60,6 +60,12 @@ for (const variant of [
     await seedBrowserState(page, variant.theme, route);
     const api = await installApiMocks(page, 'populated', variant.theme);
     if (!api) throw new Error('Synthetic authenticated fleet required');
+    await page.route('**/api/v1/settings', intercepted => fulfillApiFixture(intercepted, api, {
+      json: {
+        ...mockAppSettings, mode: variant.theme, tz_display_default: variant.displayZone,
+        timezone_user: 'America/New_York',
+      },
+    }));
     api.navPins = [...DEFAULT_PINNED_NAV_PATHS, '@navigation-initialized'].map((path, index) => ({
       id: index + 1, item_type: 'navigation', item_id: path, position: index, pinned_at: '2026-03-08T05:30:00Z',
     }));
@@ -151,8 +157,14 @@ for (const variant of [
     retentionAllowed = true;
     await page.reload();
     await recommendation.press('Enter');
-    await expect(region.getByRole('region', { name: 'Selected clip' })).toBeFocused();
-    await expect(region.getByText(/Deadline you confirmed:/)).toContainText('7:30');
+    const selected = region.getByRole('region', { name: 'Selected clip' });
+    await expect(selected).toBeFocused();
+    await expect(region.getByText(/Deadline you confirmed:/)).toContainText(variant.displayTime);
+    await expect(selected.getByRole('status')).toContainText(variant.displayTime);
+    await expect(selected.getByRole('status')).not.toContainText('America/New_York');
+    await selected.getByRole('button', { name: 'Edit deadline' }).click();
+    await expect(deadline).toHaveValue('2026-03-08T07:30');
+    await selected.getByRole('button', { name: 'Cancel', exact: true }).click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       region.getByRole('button', { name: 'Download original clip' }).press('Enter'),
@@ -200,7 +212,10 @@ for (const variant of [
     await expect(recommendation).toHaveCount(0);
     await page.goto(route);
     await recommendation.click();
-    await page.clock.setFixedTime(new Date('2026-03-08T11:31:00Z'));
+    await page.clock.setFixedTime(new Date('2026-03-08T11:29:59Z'));
+    await page.reload();
+    await expect(recommendation).toBeVisible();
+    await page.clock.setFixedTime(new Date('2026-03-08T11:30:00Z'));
     await page.reload();
     await selectClip();
     await expect(region.getByText(/The recorded deadline has passed/)).toBeVisible();

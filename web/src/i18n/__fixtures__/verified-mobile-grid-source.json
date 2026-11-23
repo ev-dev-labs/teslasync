@@ -268,7 +268,7 @@
     {
       "file": "web/src/features/charging/components/ChargingEvidenceTable.tsx",
       "before": "6ddf3801fa244bea286840463c2b3e644320329f87568293f5170a1fa13acf1e",
-      "after": "e0bdd7d07fd343fd793d83bdbf4b82df55414365bbb04ba5957e5f2fed7c741e",
+      "after": "9c0c1bcd3f2160259d5f2de83f354d9cd13ad4925d6c7e1bd4731a9d2d661621",
       "hunks": [
         {
           "start": 3,
@@ -340,7 +340,7 @@
         },
         {
           "start": 253,
-          "count": 40,
+          "count": 46,
           "previous": []
         }
       ]

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { installApiMocks, seedBrowserState } from './mockApi'
+import { fulfillApiFixture, installApiMocks, seedBrowserState } from './mockApi'
 
 if (process.env.TESLASYNC_BROWSER_PATH) {
   test.use({ launchOptions: { executablePath: process.env.TESLASYNC_BROWSER_PATH } })
@@ -40,10 +40,8 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
       await seedBrowserState(page, theme, '/tesla-physics/clocks')
-      await installApiMocks(page, 'populated', theme)
-      await page.route(/\/api\/v1\/physics\/exclusive(?:\?|$)/, async (route) => {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(report) })
-      })
+      const mocks = await installApiMocks(page, 'populated', theme)
+      await page.route(/\/api\/v1\/physics\/exclusive(?:\?|$)/, route => fulfillApiFixture(route, mocks, { json: report }))
 
       await page.goto('/tesla-physics/clocks')
       await expect(page.getByRole('heading', { name: 'Tesla physics', exact: true })).toBeVisible()
@@ -88,8 +86,24 @@ test('Tesla Physics workbench preserves deep links, evidence and mobile/desktop 
       await page.getByRole('combobox', { name: 'Filter charge-port samples by state' }).selectOption('Complete')
       await page.getByRole('button', { name: 'Inspect raw evidence: Charge-port court (1 rows)', exact: true }).click()
       const chargeEvidence = page.getByRole('region', { name: 'Inspect raw evidence: Charge-port court (1 rows)', exact: true })
-      await expect(chargeEvidence.locator('tbody > tr')).toHaveCount(1)
-      await expect(chargeEvidence.getByText('Showing 1–1 of 1', { exact: true })).toBeVisible()
+      if (width === 390) {
+        const cards = chargeEvidence.locator('[data-mobile-table]')
+        const row = cards.locator('[data-mobile-row-key]')
+        await expect(row).toHaveCount(1)
+        await expect(row.getByText('Complete', { exact: true })).toBeVisible()
+        await expect(cards.getByRole('status')).toHaveText('Showing 1 of 1 · 1 matching / 1 loaded rows')
+        await row.getByRole('button', { name: 'Quick view', exact: true }).press('Enter')
+        const details = page.getByRole('dialog')
+        await expect(details.getByText('Engaged', { exact: true })).toBeVisible()
+        await expect(details.getByText(/^12\.5(?:0+)? A$/)).toBeVisible()
+        await details.getByRole('button', { name: 'Close', exact: true }).last().press('Enter')
+        await expect(details).toHaveCount(0)
+      } else {
+        const row = chargeEvidence.locator('tbody > tr')
+        await expect(row).toHaveCount(1)
+        await expect(row.getByRole('cell', { name: 'Complete', exact: true })).toBeVisible()
+        await expect(chargeEvidence.getByText('Showing 1–1 of 1', { exact: true })).toBeVisible()
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
       if (process.env.DESIGN_PACK_CHECK_ONLY !== '1') {
         await page.screenshot({ path: testInfo.outputPath(`physics-charge-port-${theme}-${width}.png`), fullPage: true })

@@ -5,7 +5,7 @@ import { producerProjection } from './producer-projection'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned mobile grid source delta')
-  .toBe('ebaeee55386d402b4b60a9e3bd0ebafb97312881ec0c6499756a3b20eac4916b')
+  .toBe('c54f27a3891d41a3e0d0c0716343934780c45a51a5e4fa2d89f0aeeea3689941')
 const patches = new Map(checkpoint.sources.map(patch => [patch.file, patch]))
 
 export function restoreMobileGridSource(file: string, source: string): string {

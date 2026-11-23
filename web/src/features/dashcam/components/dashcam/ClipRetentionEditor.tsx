@@ -54,7 +54,7 @@ export function ClipRetentionEditor({ name, plan, now, checking, disabled, onAct
         : status === 'snoozed' ? t('dashcam.retention.snoozed', 'Snoozed for one hour.')
         : status === 'due' ? t('dashcam.retention.due', 'Review now: the recorded deadline is within 24 hours.')
         : t('dashcam.retention.watching', 'Active: review will appear in the final 24 hours.')}
-      {plan && <> <DateTime value={plan.deadline} /> ({zone})</>}
+      {plan && <> <DateTime value={plan.deadline} /></>}
     </Text>
     {status === 'due' && <Text as="p" variant="bodySm">
       {t('dashcam.retention.downloadWarning', 'Download copies the original, unredacted video to this device. Review it before sharing; nothing is sent automatically.')}

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { attachJsonEvidence, routeBuiltApplication, test } from './app-design-test';
 import { assertMockApiAfterNavigation, assertMockApiComplete, fulfillApiFixture, prepareMockApiNavigation, waitForHarnessReady } from './mockApi';
 import { createReviewPreference, installGeofenceReviewSources, installPackReview, packNames, selectReviewPack } from './widget-design-packs.mock';
-import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, profileAttributes, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
+import { assertContained, assertNavigationTextContained, assertOwnerGuardActivation, assertPlotAndMap, assertTableNoMatchContained, compositionGeometry, inspectNestedDialog, inspectPortaledIsolation, inspectPreviewInteractions, isolationAppearance, openPreviewLedgerQualityFilter, previewLedger, previewLedgerQualityControl, profileAttributes, sortPreviewLedgerByDistance, unexpectedNeutralScopes } from './widget-design-packs.acceptance';
 import { APPLICATION_DESIGNS, getAppDesignAttributes } from '../src/components/ui/app-designs/designs';
 import { PACK_IDS, type PackId } from '../src/features/dashboard/widgets/designPacks/types';
 import { CHART_COLORS_NEON_DARK } from '../src/lib/colors';
@@ -1112,11 +1112,12 @@ async function inspectRetainedAndNativeControls(preview: Locator) {
   await expect(select).toHaveValue('detail');
   await form.getByRole('textbox', { name: 'Local review notes' }).fill('Synthetic local notes — not persisted');
   const search = preview.getByRole('searchbox', { name: 'Search loaded rows' });
+  const table = preview.locator('[data-preview-section="table"]');
   await search.fill('No matching synthetic journey');
   await expect(preview.getByText('No sample journeys match.', { exact: true })).toBeVisible();
-  await assertTableNoMatchContained(preview.locator('[data-preview-section="table"]'));
+  await assertTableNoMatchContained(table);
   await search.fill('');
-  await expect(preview.getByRole('table', { name: 'Sample journey ledger' }).getByRole('row')).toHaveCount(4);
+  await expect(previewLedger(table).rows).toHaveCount(3);
   const chart = preview.locator('[data-preview-section="chart"]');
   const fallback = chart.getByRole('table', { name: 'Sample battery trace — data table', includeHidden: true });
   await expect(fallback.getByRole('row', { includeHidden: true })).toHaveCount(8);
@@ -1251,10 +1252,11 @@ async function inspectIncompletePreview(page: Page, preview: Locator, tableDiagn
     })),
   { message: 'neutral error wrappers settle inherited text color after owner removal' }).toBe(true);
   const inline = await isolationAppearance(preview);
+  const tableSection = preview.locator('[data-preview-section="table"]');
   if (tableDiagnostics) {
-    tableDiagnostics.push(await preview.locator('[data-preview-section="table"]').evaluate(section => {
+    tableDiagnostics.push(await tableSection.evaluate(section => {
       const origin = section.getBoundingClientRect();
-      return [...section.querySelectorAll('table, tr, th, td, th *, td *')].map(node => {
+      return [...section.querySelectorAll('table, tr, th, td, th *, td *, [data-mobile-table], [data-mobile-row-key], [data-card] *')].map(node => {
         const box = node.getBoundingClientRect();
         const style = getComputedStyle(node);
         return {
@@ -1273,15 +1275,14 @@ async function inspectIncompletePreview(page: Page, preview: Locator, tableDiagn
     }));
   }
   const portals: Record<string, unknown> = {};
+  const quality = previewLedgerQualityControl(tableSection);
   for (const [trigger, name] of [
     ['Preview help', 'Preview help'], ['Inspect sample journey', 'Synthetic journey details'],
-    ['Source quality filter', 'Source quality filter'],
+    [quality.name, quality.name],
   ]) {
-    const opener = preview.getByRole('button', { name: trigger, exact: true });
-    if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'false');
-    await opener.click({ timeout: 30_000 });
-    const portal = page.getByRole('dialog', { name, exact: true });
-    if (trigger === 'Source quality filter') await expect(opener).toHaveAttribute('aria-expanded', 'true');
+    const filter = trigger === quality.name;
+    if (!filter) await preview.getByRole('button', { name: trigger, exact: true }).click({ timeout: 30_000 });
+    const portal = filter ? await openPreviewLedgerQualityFilter(tableSection) : page.getByRole('dialog', { name, exact: true });
     await expect(portal).toBeVisible();
     expect(await portal.evaluate((element, attributes) => {
       const boundary = element.closest('[data-app-design-preview]');
@@ -1294,12 +1295,13 @@ async function inspectIncompletePreview(page: Page, preview: Locator, tableDiagn
     await settlePointer(portal);
     portals[name] = await isolationAppearance(portal);
     if (trigger === 'Preview help') await portal.getByRole('button', { name: 'Dismiss help' }).click();
-    else if (trigger === 'Source quality filter') await portal.getByRole('button', { name: 'Done', exact: true }).click();
+    else if (filter) await portal.getByRole('button', { name: 'Done', exact: true }).click();
     else await page.keyboard.press('Escape');
     await expect(portal).toBeHidden();
     if (trigger === 'Inspect sample journey') {
       await expect(preview.getByRole('button', { name: trigger, exact: true })).toBeFocused();
     }
+    if (filter) await expect(quality.trigger).toHaveAttribute('aria-expanded', 'false');
   }
   await preview.evaluate((element, value) => element.setAttribute('data-app-data', value), getAppDesignAttributes('quiet')['data-app-data']);
   await expect(preview).toHaveAttribute('data-app-design-owner', /(?:^|\s)pack-quiet(?:\s|$)/);
@@ -1488,10 +1490,7 @@ async function prepareMainInteractionState(preview: Locator) {
   }
   await form.getByRole('switch', { name: 'Show comparison context' }).click();
   await form.getByRole('button', { name: 'Apply locally' }).click();
-  const distance = preview.getByRole('table', { name: 'Sample journey ledger' })
-    .getByRole('button', { name: 'Distance', exact: true });
-  await distance.click();
-  await distance.click();
+  await sortPreviewLedgerByDistance(preview.locator('[data-preview-section="table"]'), 'ascending', 'descending');
 }
 
 async function prepareMainNativeState(preview: Locator) {
