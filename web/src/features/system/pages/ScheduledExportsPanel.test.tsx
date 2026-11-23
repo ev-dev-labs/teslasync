@@ -193,6 +193,14 @@ function renderPanel() {
   return render(<ScheduledExportsPanel />, { wrapper });
 }
 
+function scheduleRow(id: number) {
+  const row = screen.getByTestId('scheduled-exports-table').querySelector<HTMLElement>(
+    `[data-grid-row-key="${id}"], [data-mobile-row-key="${id}"]`,
+  );
+  if (!row) throw new Error(`No scheduled export row for ${id}`);
+  return row;
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -287,7 +295,7 @@ describe('Scheduled export responsive callers', () => {
     }
     expect(H.createFn).not.toHaveBeenCalled();
     fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Edit' }));
+    fireEvent.click(within(scheduleRow(2)).getByRole('button', { name: 'Edit' }));
     const editor = screen.getByTestId('scheduled-exports-form');
     expect(editor).toHaveAttribute('data-app-part', 'card');
     expect(within(editor).getByRole('textbox', { name: 'Name' })).toHaveValue('Charging weekly');
@@ -320,7 +328,7 @@ describe('Scheduled export responsive callers', () => {
     await waitFor(() => expect(H.createFn).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Keyboard schedule', delivery: { kind: 'email', target: 'test@example.com' },
     })));
-    for (const action of within(screen.getByTestId('scheduled-exports-row-1')).getAllByRole('button')) {
+    for (const action of within(scheduleRow(1)).getAllByRole('button')) {
       expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal');
     }
   });
@@ -328,6 +336,28 @@ describe('Scheduled export responsive callers', () => {
 
 describe('ScheduledExportsPanel — data state', () => {
   beforeEach(() => setQuery({ data: DATA }));
+
+  it('keeps schedule actions and full details available from a phone card', () => {
+    const media = vi.spyOn(window, 'matchMedia').mockImplementation(query => ({
+      matches: query === '(width < 640px)', media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }) as unknown as MediaQueryList);
+    try {
+      renderPanel();
+      expect(screen.queryByRole('table', { name: 'Scheduled exports' })).not.toBeInTheDocument();
+      const row = within(scheduleRow(2));
+      expect(row.getByText('Charging weekly')).toBeVisible();
+      fireEvent.click(row.getByRole('button', { name: 'Quick view' }));
+      const details = screen.getByRole('dialog', { name: 'Charging weekly' });
+      expect(within(details).getByText('webhook → https://hook.example/x')).toBeVisible();
+      expect(within(details).getByText('OK')).toBeVisible();
+      fireEvent.keyDown(details, { key: 'Escape' });
+      fireEvent.click(row.getByRole('button', { name: 'Edit' }));
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Charging weekly');
+    } finally {
+      media.mockRestore();
+    }
+  });
 
   it('renders a row per schedule with name, type/format, and cron', () => {
     renderPanel();
@@ -343,30 +373,30 @@ describe('ScheduledExportsPanel — data state', () => {
 
   it('renders delivery kind, with a target arrow only for email/webhook', () => {
     renderPanel();
-    expect(within(screen.getByTestId('scheduled-exports-row-1')).getByText('download')).toBeInTheDocument();
+    expect(within(scheduleRow(1)).getByText('download')).toBeInTheDocument();
     expect(
-      within(screen.getByTestId('scheduled-exports-row-2')).getByText('webhook → https://hook.example/x'),
+      within(scheduleRow(2)).getByText('webhook → https://hook.example/x'),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByTestId('scheduled-exports-row-3')).getByText('email → you@ex.com'),
+      within(scheduleRow(3)).getByText('email → you@ex.com'),
     ).toBeInTheDocument();
   });
 
   it('renders status badges and the never/last-run placeholders', () => {
     renderPanel();
     // last_run_at null → "Never"
-    expect(within(screen.getByTestId('scheduled-exports-row-1')).getByText('Never')).toBeInTheDocument();
-    expect(within(screen.getByTestId('scheduled-exports-row-2')).getByText('OK')).toBeInTheDocument();
-    expect(within(screen.getByTestId('scheduled-exports-row-3')).getByText('Failed')).toBeInTheDocument();
+    expect(within(scheduleRow(1)).getByText('Never')).toBeInTheDocument();
+    expect(within(scheduleRow(2)).getByText('OK')).toBeInTheDocument();
+    expect(within(scheduleRow(3)).getByText('Failed')).toBeInTheDocument();
   });
 
   it('dims disabled rows and swaps the toggle affordance', () => {
     renderPanel();
-    const disabled = screen.getByTestId('scheduled-exports-row-3');
+    const disabled = scheduleRow(3);
     expect(disabled.className).toContain('opacity-50');
     expect(within(disabled).getByRole('button', { name: 'Enable' })).toBeInTheDocument();
 
-    const enabled = screen.getByTestId('scheduled-exports-row-1');
+    const enabled = scheduleRow(1);
     expect(enabled.className).not.toContain('opacity-50');
     expect(within(enabled).getByRole('button', { name: 'Disable' })).toBeInTheDocument();
   });
@@ -385,7 +415,7 @@ describe('ScheduledExportsPanel — loading / error / empty', () => {
     setQuery({ data: DATA });
     rerender(<ScheduledExportsPanel />);
     expect(screen.getByTestId('scheduled-exports-table')).toBeInTheDocument();
-    for (const row of DATA) expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    for (const row of DATA) expect(scheduleRow(row.id)).toBeInTheDocument();
     setQuery({ data: [] });
     rerender(<ScheduledExportsPanel />);
     expect(screen.getByText('No schedules yet')).toBeInTheDocument();
@@ -446,7 +476,7 @@ describe('ScheduledExportsPanel — loading / error / empty', () => {
     setQuery({ data: DATA, fetchStatus: 'paused' });
     renderPanel();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    for (const row of DATA) expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+    for (const row of DATA) expect(scheduleRow(row.id)).toBeInTheDocument();
     expect(screen.queryByText('No schedules yet')).toBeNull();
   });
 
@@ -458,7 +488,7 @@ describe('ScheduledExportsPanel — loading / error / empty', () => {
 
     expect(within(screen.getByTestId('stale-refresh-warning')).getByText(message)).toBeVisible();
     for (const row of DATA) {
-      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+      expect(scheduleRow(row.id)).toBeInTheDocument();
     }
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(H.refetch).toHaveBeenCalledTimes(1);
@@ -475,7 +505,7 @@ describe('ScheduledExportsPanel — create form', () => {
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
 
     expect(screen.getByTestId('scheduled-exports-form')).toBeInTheDocument();
-    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('textbox', { name: 'Name', exact: true }) as HTMLInputElement).value).toBe('');
     expect((screen.getByPlaceholderText('0 9 * * 0') as HTMLInputElement).value).toBe('0 9 * * 0');
     expect((screen.getByLabelText('Export type') as HTMLSelectElement).value).toBe('drives');
     expect((screen.getByLabelText('Format') as HTMLSelectElement).value).toBe('csv');
@@ -499,7 +529,7 @@ describe('ScheduledExportsPanel — create form', () => {
   it('submits a create payload (download drops the target) and closes the form', async () => {
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My export' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'My export' } });
     fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
 
     await waitFor(() => expect(H.createFn).toHaveBeenCalledTimes(1));
@@ -520,7 +550,7 @@ describe('ScheduledExportsPanel — create form', () => {
   it('trims and keeps the delivery target for email deliveries', async () => {
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Emailed' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'Emailed' } });
     fireEvent.change(screen.getByLabelText('Delivery kind'), { target: { value: 'email' } });
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
       target: { value: '  ops@example.com  ' },
@@ -537,7 +567,7 @@ describe('ScheduledExportsPanel — create form', () => {
     H.createFn.mockRejectedValueOnce(new Error('server 400'));
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Bad' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'Bad' } });
     fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
 
     await waitFor(() => expect(H.createFn).toHaveBeenCalledTimes(1));
@@ -570,33 +600,33 @@ describe('ScheduledExportsPanel — save settlement identity', () => {
       if (mode === 'create') {
         fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
       } else {
-        fireEvent.click(within(screen.getByTestId('scheduled-exports-row-2'))
+        fireEvent.click(within(scheduleRow(2))
           .getByRole('button', { name: 'Edit' }));
       }
-      fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  retained draft  ' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: '  retained draft  ' } });
       const form = screen.getByTestId('scheduled-exports-form');
       act(() => {
         fireEvent.submit(form);
         fireEvent.submit(form);
         fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-        fireEvent.click(within(screen.getByTestId('scheduled-exports-row-1'))
+        fireEvent.click(within(scheduleRow(1))
           .getByRole('button', { name: 'Edit' }));
         fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
       });
       expect(mutation).toHaveBeenCalledTimes(1);
-      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
-      expect(screen.getByLabelText('Name')).toBeDisabled();
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('  retained draft  ');
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toBeDisabled();
       expect(form).toHaveAttribute('aria-busy', 'true');
 
       setQuery({ data: [makeRow({ id: 4, name: 'New list scope' })] });
       rerender(<ScheduledExportsPanel />);
-      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('  retained draft  ');
       if (mode === 'edit') {
         expect(mutation).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
       }
       await act(async () => pending.reject(new Error('Save failed')));
-      expect(screen.getByLabelText('Name')).toHaveValue('  retained draft  ');
-      expect(screen.getByLabelText('Name')).toBeEnabled();
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('  retained draft  ');
+      expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toBeEnabled();
       fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
       await waitFor(() => expect(screen.queryByTestId('scheduled-exports-form')).toBeNull());
       expect(mutation).toHaveBeenCalledTimes(2);
@@ -609,13 +639,13 @@ describe('ScheduledExportsPanel — save settlement identity', () => {
     H.createFn.mockReturnValueOnce(pending.promise);
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Submitted draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'Submitted draft' } });
     fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
     // Programmatic change bypasses the disabled fieldset; settlement must still
     // verify the exact draft rather than destructively clearing newer state.
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Newer draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'Newer draft' } });
     await act(async () => pending.resolve(makeRow()));
-    expect(screen.getByLabelText('Name')).toHaveValue('Newer draft');
+    expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('Newer draft');
     expect(screen.getByTestId('scheduled-exports-form-submit')).toBeEnabled();
     fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
     await waitFor(() => expect(screen.queryByTestId('scheduled-exports-form')).toBeNull());
@@ -632,10 +662,10 @@ describe('ScheduledExportsPanel — save settlement identity', () => {
     oldPanel.unmount();
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-new-button'));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New instance draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'New instance draft' } });
     fireEvent.submit(screen.getByTestId('scheduled-exports-form'));
     await act(async () => oldSave.resolve(makeRow()));
-    expect(screen.getByLabelText('Name')).toHaveValue('New instance draft');
+    expect(screen.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue('New instance draft');
     expect(screen.getByTestId('scheduled-exports-form-submit')).toBeDisabled();
     await act(async () => newSave.resolve(makeRow()));
     expect(screen.queryByTestId('scheduled-exports-form')).toBeNull();
@@ -648,10 +678,10 @@ describe('ScheduledExportsPanel — edit form', () => {
   it('pre-fills the form from the selected row (inputFromRow)', () => {
     renderPanel();
     fireEvent.click(
-      within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Edit' }),
+      within(scheduleRow(2)).getByRole('button', { name: 'Edit' }),
     );
     const form = screen.getByTestId('scheduled-exports-form');
-    expect((within(form).getByLabelText('Name') as HTMLInputElement).value).toBe('Charging weekly');
+    expect((within(form).getByRole('textbox', { name: 'Name', exact: true }) as HTMLInputElement).value).toBe('Charging weekly');
     expect((within(form).getByPlaceholderText('0 9 * * 0') as HTMLInputElement).value).toBe('0 8 * * 1');
     expect((within(form).getByLabelText('Delivery kind') as HTMLSelectElement).value).toBe('webhook');
     expect(
@@ -662,10 +692,10 @@ describe('ScheduledExportsPanel — edit form', () => {
   it('submits an update payload scoped to the row id', async () => {
     renderPanel();
     fireEvent.click(
-      within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Edit' }),
+      within(scheduleRow(2)).getByRole('button', { name: 'Edit' }),
     );
     const form = screen.getByTestId('scheduled-exports-form');
-    fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'Charging biweekly' } });
+    fireEvent.change(within(form).getByRole('textbox', { name: 'Name', exact: true }), { target: { value: 'Charging biweekly' } });
     fireEvent.submit(form);
 
     await waitFor(() => expect(H.updateFn).toHaveBeenCalledTimes(1));
@@ -694,7 +724,7 @@ describe('ScheduledExportsPanel — row actions', () => {
   it('toggles an enabled row off via the update mutation', async () => {
     renderPanel();
     fireEvent.click(
-      within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Disable' }),
+      within(scheduleRow(2)).getByRole('button', { name: 'Disable' }),
     );
     await waitFor(() => expect(H.updateFn).toHaveBeenCalledTimes(1));
     expect(H.updateFn).toHaveBeenCalledWith(
@@ -705,7 +735,7 @@ describe('ScheduledExportsPanel — row actions', () => {
   it('toggles a disabled row on via the update mutation', async () => {
     renderPanel();
     fireEvent.click(
-      within(screen.getByTestId('scheduled-exports-row-3')).getByRole('button', { name: 'Enable' }),
+      within(scheduleRow(3)).getByRole('button', { name: 'Enable' }),
     );
     await waitFor(() => expect(H.updateFn).toHaveBeenCalledTimes(1));
     expect(H.updateFn).toHaveBeenCalledWith(
@@ -717,11 +747,11 @@ describe('ScheduledExportsPanel — row actions', () => {
     H.updateFn.mockRejectedValueOnce(new Error('nope'));
     renderPanel();
     fireEvent.click(
-      within(screen.getByTestId('scheduled-exports-row-2')).getByRole('button', { name: 'Disable' }),
+      within(scheduleRow(2)).getByRole('button', { name: 'Disable' }),
     );
     await waitFor(() => expect(H.updateFn).toHaveBeenCalledTimes(1));
     // No unhandled rejection; the row is still rendered.
-    expect(screen.getByTestId('scheduled-exports-row-2')).toBeInTheDocument();
+    expect(scheduleRow(2)).toBeInTheDocument();
   });
 });
 
@@ -784,7 +814,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(H.removeFn).toHaveBeenCalledTimes(1);
     for (const row of DATA) {
-      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+      expect(scheduleRow(row.id)).toBeInTheDocument();
       expect(screen.getByTestId(`scheduled-exports-delete-${row.id}`)).toBeDisabled();
     }
 
@@ -811,7 +841,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeEnabled();
     expect(within(dialog).getByText('This will stop future runs of Charging weekly. Past download artifacts are not affected.')).toBeVisible();
     for (const row of DATA) {
-      expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
+      expect(scheduleRow(row.id)).toBeInTheDocument();
     }
 
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -863,7 +893,7 @@ describe('ScheduledExportsPanel — accessibility', () => {
   it('gives every row action an accessible name', () => {
     setQuery({ data: DATA });
     renderPanel();
-    const row = screen.getByTestId('scheduled-exports-row-2');
+    const row = scheduleRow(2);
     expect(within(row).getByRole('button', { name: 'Run now' })).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'Disable' })).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'Edit' })).toBeInTheDocument();

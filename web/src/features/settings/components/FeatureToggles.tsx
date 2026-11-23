@@ -6,11 +6,12 @@ import { GlassPanel, IconBox, Badge, DataTable, Text, type Column } from '@/comp
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { Flag, RefreshCw, Info, AlertTriangle } from 'lucide-react'
 
 export function FeatureToggles() {
   const { t } = useTranslation('settings')
+  const { formatDateTime } = useDateFormat()
   const { data: featureConfig, isLoading, isError, refetch } = useTeslaFeatureConfig()
   const featureConfigRefresh = useRefreshTeslaFeatureConfig()
 

@@ -456,9 +456,27 @@ func TestPrivateEnrollmentAndDecisionJourney(t *testing.T) {
 		t.Fatalf("declined routine resurfaced: %+v", got.Routines)
 	}
 	expectStatus(t, f.request(t, http.MethodPost, "/api/v1/smart-commute/routines", owner, manualRoutine(42)), http.StatusCreated)
+	analysisURL := "/api/v1/smart-commute/analyses"
+	expectStatus(t, f.request(t, http.MethodPost, analysisURL, owner,
+		map[string]any{"vehicle_id": 42, "time_zone": "Invalid/Zone"}), http.StatusBadRequest)
+	expectStatus(t, f.request(t, http.MethodPost, analysisURL, owner,
+		map[string]any{"vehicle_id": 42, "time_zone": "Asia/Tokyo"}), http.StatusNoContent)
+	got = snapshot(t, f.request(t, http.MethodGet, "/api/v1/smart-commute?vehicle_id=42", owner, nil))
+	if got.Settings.TimeZone != "Asia/Tokyo" || !got.Settings.Enabled || !got.Settings.LocalAnalysisEnabled {
+		t.Fatalf("analysis did not update only its time zone: %+v", got.Settings)
+	}
+	for _, routine := range got.Routines {
+		if routine.Status == "confirmed" && routine.TimeZone != "America/Los_Angeles" {
+			t.Fatalf("analysis retimed an existing routine: %+v", routine)
+		}
+		if routine.Status == "suggested" && routine.TimeZone != "Asia/Tokyo" {
+			t.Fatalf("analysis produced a suggestion in the prior zone: %+v", routine)
+		}
+	}
 	beforePause := f.spy.count.Load()
 	expectStatus(t, f.request(t, http.MethodPut, "/api/v1/smart-commute", owner, settings(42, true, true, true)), http.StatusNoContent)
-	expectStatus(t, f.request(t, http.MethodPost, "/api/v1/smart-commute/analyses", owner, map[string]int64{"vehicle_id": 42}), http.StatusConflict)
+	expectStatus(t, f.request(t, http.MethodPost, analysisURL, owner,
+		map[string]any{"vehicle_id": 42, "time_zone": "Asia/Tokyo"}), http.StatusConflict)
 	expectStatus(t, f.request(t, http.MethodPut, "/api/v1/smart-commute", owner, settings(42, false, false, false)), http.StatusNoContent)
 	if f.spy.count.Load() != beforePause {
 		t.Fatalf("pause or disable scanned history: %d -> %d", beforePause, f.spy.count.Load())

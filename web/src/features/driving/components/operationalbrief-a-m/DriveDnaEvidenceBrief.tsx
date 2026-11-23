@@ -12,7 +12,7 @@ type Props = ComponentProps<typeof DriveDnaKpiBand>;
 export function DriveDnaEvidenceBrief({ drive, model, state, units, capReached }: Props) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
-  const { formatDateTime } = useDateFormat('vehicle');
+  const { formatDateTime } = useDateFormat();
   const metadataReady = state.list.isResolved && !state.list.error;
   const telemetryReady = state.hasDrive && state.telemetry.isResolved && !state.telemetry.error;
   const metrics: readonly StatMetric[] = [

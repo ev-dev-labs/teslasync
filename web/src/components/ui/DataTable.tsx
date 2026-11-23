@@ -9,7 +9,7 @@ import { Button } from './Button'
 import { Select } from './Select'
 import { MobileDataTableAdapter } from './MobileDataTableAdapter'
 import type { MobileDataTablePresentation } from './MobileDataTableAdapter.types'
-import { isMobileGridWidth } from './mobile-grid-reference/helpers'
+import { isMobileGridWidth, MOBILE_GRID_BOUNDARY } from './mobile-grid-reference/helpers'
 import { Checkbox } from './Checkbox'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
@@ -34,6 +34,7 @@ import { DensityToggle } from '../forms/DensityToggle'
 import type { ExportScope, GridExportScope } from '../forms/ListExportMenu'
 import { useStatusAnnouncer } from '@/hooks/useStatusAnnouncer'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   applyColumnLayout,
   defaultColumnLayout,
@@ -57,6 +58,10 @@ import {
 import './data-table.css'
 
 type RowKey = string | number
+
+const defaultMobilePresentation: MobileDataTablePresentation<unknown> = {
+  roles: {}, displayValue: () => null, columnToolsInPicker: true, compactRows: true,
+}
 
 /**
  * Maximum characters taken from a derived row label.
@@ -227,8 +232,8 @@ export interface PaginationConfig {
 }
 
 interface DataTableProps<T> {
-  /** Opt-in below 640px of allocated container width; the same table pipeline owns both surfaces. */
-  mobilePresentation?: MobileDataTablePresentation<T>
+  /** Override default phone cards. False reserves the native table for a separate responsive host. */
+  mobilePresentation?: MobileDataTablePresentation<T> | false
   /** Remove the outer frame when the enclosing panel already owns the surface. */
   variant?: 'standalone' | 'embedded'
   columns: Column<T>[]
@@ -337,6 +342,8 @@ interface DataTableProps<T> {
    * generic wording when it cannot.
    */
   rowLabel?: (row: T) => string
+  /** Semantic row styling retained in both the table and card presentations. */
+  rowClassName?: (row: T) => string | undefined
   /**
    * Accessible name for the `<table>` element, rendered as a
    * visually-hidden `<caption>`.
@@ -523,7 +530,7 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
  *  All advanced props are optional — passing only `columns` + `data` gives the
  *  same lightweight behavior as the base table. */
 export function DataTable<T>({
-  mobilePresentation,
+  mobilePresentation: configuredMobilePresentation,
   variant = 'standalone',
   columns,
   data,
@@ -550,6 +557,7 @@ export function DataTable<T>({
   selectable = 'none',
   selectedKeys,
   rowLabel,
+  rowClassName,
   caption,
   onSelectionChange,
   bulkActions,
@@ -595,19 +603,22 @@ export function DataTable<T>({
   const frameRef = useRef<HTMLDivElement>(null)
   const [observedCards, setObservedCards] = useState(false)
   const [compactGroups, setCompactGroups] = useState(false)
-  const [wideTools, setWideTools] = useState(false)
+  const [observedWideTools, setWideTools] = useState(false)
   const [queryField, setQueryField] = useState('')
-  const mobileEnabled = mobilePresentation != null
-  const mobileActive = mobileEnabled && observedCards
-  const cardMaxWidth = mobilePresentation?.cardMaxWidth
-  const observesGridWidth = mobileEnabled || Boolean(rowGrouping) || enableValueFilters
+  const phoneViewport = useMediaQuery(`(width < ${MOBILE_GRID_BOUNDARY}px)`)
+  const customMobile = Boolean(configuredMobilePresentation)
+  const mobileActive = customMobile ? observedCards : configuredMobilePresentation !== false && phoneViewport
+  const mobilePresentation = configuredMobilePresentation || defaultMobilePresentation
+  const cardMaxWidth = mobilePresentation.cardMaxWidth
+  const wideTools = observedWideTools && !mobileActive
+  const observesGridWidth = customMobile || Boolean(rowGrouping) || enableValueFilters
     || columns.some(column => column.filter || column.quickFilter || column.sortValue || (onControlledSort && column.sortable))
   useEffect(() => {
     if (!observesGridWidth || !frameRef.current || typeof ResizeObserver === 'undefined') return
     const frame = frameRef.current
     const update = (width: number) => {
       if (width > 0) {
-        const useCards = mobileEnabled && (cardMaxWidth == null ? isMobileGridWidth(width) : width <= cardMaxWidth)
+        const useCards = customMobile && (cardMaxWidth == null ? isMobileGridWidth(width) : width <= cardMaxWidth)
         setObservedCards(useCards)
         setCompactGroups(isMobileGridWidth(width))
         setWideTools(width > 700 && !useCards)
@@ -620,7 +631,7 @@ export function DataTable<T>({
     })
     observer.observe(frame)
     return () => observer.disconnect()
-  }, [mobileEnabled, cardMaxWidth, observesGridWidth])
+  }, [customMobile, cardMaxWidth, observesGridWidth])
   const [localSearch, setLocalSearch] = useState('')
   const deferredLocalSearch = useDeferredValue(localSearch)
   const localSearchEnabled = searchable && !paginationControls && !controls?.search
@@ -695,12 +706,13 @@ export function DataTable<T>({
     && valueSelections[column.key] == null) : []
   const showSearchChip = Boolean(showMatchingCount && searchControls?.value)
   const chipCount = callerFilterChips.length + valueFilterChips.length + Number(showSearchChip)
-  const groupScope = JSON.stringify([rowGrouping?.resetKey, valueSelections, deferredLocalSearch])
+  const grouping = mobileActive ? mobilePresentation.grouping ?? rowGrouping : rowGrouping
+  const groupScope = JSON.stringify([grouping?.resetKey, valueSelections, deferredLocalSearch])
   const [groupExpansion, setGroupExpansion] = useState<{ scope: string; open: Record<string, boolean> }>({ scope: groupScope, open: {} })
   if (groupExpansion.scope !== groupScope) {
     setGroupExpansion({ scope: groupScope, open: {} })
   }
-  const groupsExpandedByFilter = !!rowGrouping?.autoExpand || hasValueFilters || !!deferredLocalSearch.trim()
+  const groupsExpandedByFilter = !!grouping?.autoExpand || hasValueFilters || !!deferredLocalSearch.trim()
   const groupIsOpen = (key: string) => groupExpansion.scope === groupScope && typeof groupExpansion.open[key] === 'boolean'
     ? groupExpansion.open[key] : groupsExpandedByFilter
   const toggleGroup = (key: string) => {
@@ -724,10 +736,10 @@ export function DataTable<T>({
     else {
       searchControls?.onChange('')
       columns.forEach(column => column.onFilterClear?.())
-      mobilePresentation?.onClear?.()
+      mobilePresentation.onClear?.()
     }
   }
-  const mobileFilteredPresentation = mobilePresentation && localFilterNoMatch
+  const mobileFilteredPresentation = localFilterNoMatch
     && (!mobilePresentation.state || mobilePresentation.state.kind === 'ready')
     ? { ...mobilePresentation, state: {
       kind: 'empty' as const, message: noMatchMessage,
@@ -802,6 +814,7 @@ export function DataTable<T>({
           ? tableTokens.headCell
           : 'px-d-pad-x py-d-pad-y text-d-base'
   const paginationEnabled = !!pagination && !paginationControls
+  const mobileRevealEnabled = paginationEnabled || (virtualized && !paginationControls)
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
   const defaultPageSize =
     paginationConfig.defaultPageSize ?? paginationConfig.pageSizeOptions?.[0] ?? 25
@@ -1268,6 +1281,7 @@ export function DataTable<T>({
     const trClass = cn(
       tableTokens.row,
       selected && tableTokens.rowSelected,
+      rowClassName?.(row),
     )
     const handleRowContextMenu = rowContextMenu
       ? (e: ReactMouseEvent<HTMLTableRowElement>) => {
@@ -1294,6 +1308,7 @@ export function DataTable<T>({
       <tr
         key={`row:${reconciliationKey}`}
         data-app-part="table-row"
+        data-grid-row-key={rowKey}
         className={trClass}
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
@@ -1597,7 +1612,7 @@ export function DataTable<T>({
   }, [])
 
   const hasSelectionSummary = showSelectionSummary && isSelectable && selectedRows.length > 0
-  const mobileControlsInToolbar = mobileActive && mobilePresentation?.controlsInToolbar === true
+  const mobileControlsInToolbar = mobileActive && mobilePresentation.controlsInToolbar === true
   const hasColumnTools = valueColumns.length > 0 || columns.some(column => column.filter || column.quickFilter || (onSort && canSort(column)))
   const showQueryPicker = hasColumnTools && (valueColumns.length > 0 || (mobileActive && !mobileControlsInToolbar)
     || columns.some(column => column.filter || canSort(column)) && (visibleColumns.length < columns.length || Boolean(effectiveMobileColumns)))
@@ -1739,7 +1754,7 @@ export function DataTable<T>({
       variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame,
       'space-y-0 overflow-visible p-0',
       rowGrouping && '[container-type:inline-size]',
-      mobilePresentation && 'mgr-host',
+      (customMobile || mobileActive) && 'mgr-host',
     )}
       data-app-part={variant === 'standalone' ? 'panel' : undefined}
       data-surface-variant={variant}
@@ -1831,17 +1846,21 @@ export function DataTable<T>({
         {matchingActions && <div className="ms-auto">{matchingActions}</div>}
         </div>
       )}
-      {mobileActive && mobilePresentation ? (
+      {mobileActive ? (
         emptyContent != null && filteredData.length === 0
           ? <div className="p-4">{emptyContent}</div>
           : <SectionErrorBoundary name={`table:${name ?? tableId ?? 'DataTable'}:mobile`}>
           <MobileDataTableAdapter
-            rows={paginationEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
+            rows={mobileRevealEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
             columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
-            presentation={mobileFilteredPresentation ?? mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
+            presentation={mobileFilteredPresentation} label={accessibleTableName}
+            rowLabel={customMobile ? rowLabel : row => rowLabelFor(row, keyExtractor(row)) ?? accessibleTableName}
+            rowClassName={rowClassName}
+            renderColumnCells={!customMobile}
+            mobileColumns={mobileSet}
             compact={mobilePresentation.compactRows === true && (effectiveDensity === 'compact'
               || (effectiveDensity === 'auto' && globalCompact))}
-            grouping={rowGrouping ? { config: rowGrouping, isOpen: groupIsOpen, onToggle: toggleGroup } : undefined}
+            grouping={grouping ? { config: grouping, isOpen: groupIsOpen, onToggle: toggleGroup } : undefined}
             selectedKeys={selectionSet} selectable={isSelectable && Boolean(onSelectionChange)}
             multiSelect={selectable === 'multi'}
             allSelected={allSelected} someSelected={someSelected}
@@ -1856,19 +1875,19 @@ export function DataTable<T>({
                 {action.label}
               </Button>
             )) : undefined}
-            onLoadMore={paginationEnabled && mobilePage * pageSize < filteredData.length
+            onLoadMore={mobileRevealEnabled && mobilePage * pageSize < filteredData.length
               ? () => setMobilePage(previous => previous + 1) : undefined}
             nextCount={Math.min(pageSize, Math.max(0, filteredData.length - mobilePage * pageSize))}
             onClear={onClearAllFilters || searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}
             count={mobilePresentation.showRowCount === false ? null : <Text size="sm" color="muted" role="status">
-              {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
+              {mobileRevealEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
                 count: Math.min(mobilePage * pageSize, filteredData.length), total: filteredData.length,
               })}
-              {' · '}{t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+              {mobileRevealEnabled && ' · '}{t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
                 filtered: filteredData.length, loaded: data.length,
               })}
             </Text>}
-            controls={mobileControlsInToolbar ? null : showQueryPicker && mobilePresentation.columnToolsInPicker ? (
+            controls={mobileControlsInToolbar ? null : mobilePresentation.columnToolsInPicker ? (
               paginationEnabled && <Select aria-label={t('pagination.pageSize', 'Rows per page')}
                 value={String(pageSize)} options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
                 onChange={event => handlePageSizeChange(Number(event.target.value))} />

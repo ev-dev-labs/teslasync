@@ -10574,6 +10574,7 @@
         "attribution": "Provider and model identify the latest call found in the 50 most recent calls, not a breakdown of the 7-day total.",
         "recentUnavailable": "Recent call attribution is unavailable or out of date. Spend totals remain available.",
         "callsTokens": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC",
+        "callsTokensLocalized": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}}",
         "sample": "Recent call: {{provider}} / {{model}}",
         "sampleLoading": "Loading recent call attribution…",
         "noSample": "No recent provider/model sample for this feature."
@@ -37833,6 +37834,7 @@
     "timeZone": "IANA time zone",
     "timeZoneHint": "For example, America/Los_Angeles.",
     "saveTimeZone": "Save time zone",
+    "scheduleZone": "This recurring time follows {{zone}}.",
     "enable": "Enable Smart Commute for this vehicle",
     "enableHint": "Enable this vehicle’s commute settings and routines.",
     "localAnalysis": "Allow local analysis of completed drives",
@@ -37886,6 +37888,7 @@
     "destinationLatitude": "Destination latitude",
     "destinationLongitude": "Destination longitude",
     "invalidForm": "Enter a name, valid local time, time zone and coordinates.",
+    "invalidRoutine": "Enter a name, valid local time and coordinates.",
     "saveRoutine": "Save routine",
     "states": {
       "off": "Off",

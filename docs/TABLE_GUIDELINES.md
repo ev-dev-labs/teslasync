@@ -159,8 +159,12 @@ pages. Explicit Clear selection still clears the complete selection.
 Use `pruneSelectionOnFilter` for permission or other bulk-edit workflows that
 must discard no-longer-matching rows. Collapsing a group does not filter it.
 
-The opt-in `mobilePresentation` uses that same DataTable pipeline. Its reveal
-limit is independent of desktop pagination; revealing more mobile records must
+DataTable uses the shared card layout on phones. By default its summary renders
+the visible identity and key cells directly, so existing links and controls
+still work; Quick view exposes the rest of the visible columns. Provide a
+`mobilePresentation` to choose domain-specific summary fields, links, or a
+different allocated width. Both layouts use the same DataTable pipeline. The
+reveal limit is independent of desktop pagination; revealing more mobile records must
 not rewrite a caller's controlled page or the desktop page-size preference.
 Returning to desktop restores the existing pagination behavior. Mobile details
 render null or undefined values as unknown (`—`), not a blank or fabricated zero;

@@ -13,6 +13,7 @@ import type { SmartCommuteRoutine } from '@/types/smartCommute'
 interface Props {
   scope: PersonalScope
   routine: SmartCommuteRoutine
+  displayZone: string
   disabled: boolean
   onChange: (change: SmartCommuteChange) => Promise<boolean>
   onClose: () => void
@@ -20,7 +21,7 @@ interface Props {
 
 const daysOfTraceHistory = 56
 
-export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, onClose }: Props) {
+export function SmartCommuteTrafficReview({ scope, routine, displayZone, disabled, onChange, onClose }: Props) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
   const [window] = useState(() => {
@@ -43,7 +44,7 @@ export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, 
     .map((row) => ({
       value: String(row.id),
       label: t('smartCommute.traffic.driveOption', '{{time}} (drive {{id}})', {
-        time: formatDateTime(row.startTs, { tz: routine.time_zone }), id: row.id,
+        time: formatDateTime(row.startTs, { tz: displayZone }), id: row.id,
       }),
     }))
   const reviewed = preview.data?.data

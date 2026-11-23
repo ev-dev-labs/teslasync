@@ -93,11 +93,11 @@ for (const theme of ['light', 'dark'] as const) {
         await metric(backlog, 'inbox-warn', '13');
         await metric(backlog, 'inbox-info', '12');
         await expect(page.getByTestId('inbox-result-count')).toHaveText('83 notifications');
-        const table = width === 320 ? page.locator('main [data-mobile-table]') : page.locator('main').getByRole('table', { name: 'Inbox', exact: true });
+        const table = width === 320 ? page.getByRole('group', { name: 'Inbox', exact: true }) : page.getByRole('table', { name: 'Inbox', exact: true });
         const rows = table.getByRole('button', { name: width === 320 ? /^Synthetic active notification \d+$/ : /^Open notification:/ });
         await expect(rows).toHaveCount(25);
         if (width === 320) {
-          await expect(page.locator('main [data-grid-footer]')).toBeVisible();
+          await expect(page.locator('[data-grid-frame]').filter({ has: table }).locator('[data-grid-footer]')).toBeVisible();
         } else {
           await expectIntegratedGridFooter(table);
         }

@@ -40,8 +40,8 @@ export function HvacCyclingRunDirectory({
 }: HvacCyclingRunDirectoryProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('utc');
-  const date = (ms: number) => formatDateTime(new Date(ms), { tz: summary.timeZone });
+  const { formatDateTime } = useDateFormat();
+  const date = (ms: number) => formatDateTime(ms);
   const directory = summary.runDirectory;
   const resolved = state.vehicleSelected && state.isResolved && !state.isLoading && !state.error;
   const unknownCount = t('common.unknown', 'Unknown');

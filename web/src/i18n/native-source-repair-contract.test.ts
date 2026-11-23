@@ -12,6 +12,7 @@ import {
 } from './verified-native-source-repair-contract';
 import { restoreAppDesignSource } from './verified-widget-implementation-contract';
 import { restoreGridAccessSource } from './verified-grid-access-contract';
+import { restoreWorkspaceDisplaySource } from './verified-workspace-display-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const tooltip = 'web/src/components/ui/Tooltip.tsx';
@@ -96,7 +97,7 @@ describe('exact e1fb native source repair successor (not native certification)',
 
   it.each(repair.sources)('pins actual source and restores the complete predecessor: $file', patch => {
     const actual = source(patch.file);
-    const current = restoreMobilePresentationSource(patch.file, actual);
+    const current = restoreMobilePresentationSource(patch.file, restoreWorkspaceDisplaySource(patch.file, actual));
     const previous = restoreNativeSourceRepair(patch.file, actual);
     expect(hash(current)).toBe(patch.after);
     expect(hash(previous)).toBe(patch.before);

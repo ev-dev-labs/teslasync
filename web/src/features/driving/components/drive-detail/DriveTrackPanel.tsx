@@ -31,7 +31,7 @@ export function DriveTrackPanel({ driveId, vehicleId }: { driveId: number; vehic
 function DriveTrackReview({ scope, vehicleId, identityPending, driveId }: PrivateVehicleReviewScope & { driveId: number }) {
   const { t } = useTranslation();
   const { search } = useLocation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useDriveTrackReview(scope, vehicleId, driveId);
   const change = useDriveTrackChange(scope, vehicleId, driveId);

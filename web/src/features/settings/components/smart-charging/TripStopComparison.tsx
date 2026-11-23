@@ -25,7 +25,7 @@ interface Props {
 
 export function TripStopComparison({ scope, plan, places, disabled, placesUnavailable }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const formPanel = useRef<HTMLDivElement>(null)

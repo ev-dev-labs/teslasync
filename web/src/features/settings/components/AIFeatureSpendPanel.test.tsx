@@ -77,10 +77,10 @@ beforeEach(() => {
 
 describe('AIFeatureSpendPanel', () => {
   it.each([
-    ['user', 'America/Los_Angeles', '2026-09-25T00:15:00Z', '25. Sept. 2026, 00:15'],
-    ['vehicle', 'Pacific/Auckland', '2026-09-25T23:45:00Z', '25. Sept. 2026, 23:45'],
-    ['user', 'America/Los_Angeles', '2026-09-25T23:30:00-07:00', '26. Sept. 2026, 06:30'],
-  ])('uses the saved locale and UTC audit day despite %s timezone %s', async (mode, timezone, timestamp, expected) => {
+    ['user', 'America/Los_Angeles', '2026-09-25T00:15:00Z', '24. Sept. 2026, 17:15'],
+    ['vehicle', 'Pacific/Auckland', '2026-09-25T23:45:00Z', '26. Sept. 2026, 08:45'],
+    ['utc', 'America/Los_Angeles', '2026-09-25T23:30:00-07:00', '26. Sept. 2026, 06:30'],
+  ])('uses the saved locale and %s time-zone mode with user zone %s', async (mode, timezone, timestamp, expected) => {
     savedPreferences.locale = 'de-DE'
     savedPreferences.tz_display_default = mode
     savedPreferences.timezone_user = timezone
@@ -89,7 +89,7 @@ describe('AIFeatureSpendPanel', () => {
       : recent) as ReturnType<typeof request>)
     renderPanel()
     const item = await screen.findByRole('listitem')
-    expect(within(item).getByText(`3 calls · 120 in / 40 out · last call ${expected} UTC`)).toBeInTheDocument()
+    expect(within(item).getByText(`3 calls · 120 in / 40 out · last call ${expected}`)).toBeInTheDocument()
   })
 
   it.each(['invalid-date', '', null, undefined])('shows the invalid placeholder for last call %s', async (timestamp) => {
@@ -99,7 +99,7 @@ describe('AIFeatureSpendPanel', () => {
       : recent) as ReturnType<typeof request>)
     renderPanel()
     const item = await screen.findByRole('listitem')
-    expect(within(item).getByText('3 calls · 120 in / 40 out · last call — UTC')).toBeInTheDocument()
+    expect(within(item).getByText('3 calls · 120 in / 40 out · last call —')).toBeInTheDocument()
   })
 
   it('makes no usage requests when AI is off', async () => {

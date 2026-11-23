@@ -66,7 +66,8 @@ function Details(props: PrivateVehicleReviewScope) {
 
 function Review({ scope, vehicleId, identityPending, subscription }: PrivateVehicleReviewScope & { subscription: Subscription }) {
   const { t } = useTranslation();
-  const { formatDateTime, tz, locale } = useDateFormat('user');
+  const { formatDateTime, locale } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useSubscriptionRenewal(scope, vehicleId, subscription.id);
   const source = useDataState(query);
@@ -114,7 +115,7 @@ function Review({ scope, vehicleId, identityPending, subscription }: PrivateVehi
               : plan.next_check_at ? t('ownership.subscription.renewal.waiting', 'Active. Waiting for the recorded review window.')
                 : t('ownership.subscription.renewal.finished', 'No current review. Record the next renewal date to schedule another check.')}</Text>
     {plan?.next_check_at && <Text variant="caption">{t('ownership.subscription.renewal.next', 'Next check: {{date}}.', {
-      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),
+      date: formatDateTime(plan.next_check_at),
     })}</Text>}
     {change.error && <QueryError error={change.error} />}
     {!canWrite && writeBlockReason && <Text as="p" variant="bodySm">{writeBlockReason}</Text>}
@@ -157,7 +158,7 @@ function Review({ scope, vehicleId, identityPending, subscription }: PrivateVehi
       </Button>
     </form>}
     {plan && review && <>
-      <SubscriptionRenewalEvidence review={review} timeZone={plan.time_zone} />
+      <SubscriptionRenewalEvidence review={review} />
       <Button type="button" variant="ghost" className="min-h-11" disabled={blocked}
         onClick={() => change.mutate({ kind: 'dismiss', revision }, { onSuccess: finish })}>
         {t('ownership.subscription.renewal.dismiss', 'Dismiss this renewal review')}

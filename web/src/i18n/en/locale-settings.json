@@ -468,6 +468,7 @@
         "attribution": "Provider and model identify the latest call found in the 50 most recent calls, not a breakdown of the 7-day total.",
         "recentUnavailable": "Recent call attribution is unavailable or out of date. Spend totals remain available.",
         "callsTokens": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC",
+        "callsTokensLocalized": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}}",
         "sample": "Recent call: {{provider}} / {{model}}",
         "sampleLoading": "Loading recent call attribution…",
         "noSample": "No recent provider/model sample for this feature."
@@ -3546,7 +3547,6 @@
   },
   "smartCommute": {
     "addManual": "Add a routine manually",
-    "analysisTimeZone": "Time zone for local analysis",
     "analyzeAgain": "Analyze completed drives again",
     "changeFailed": "The change was not saved. Refresh and try again.",
     "chooseVehicle": "Choose the vehicle whose routines you want to manage.",
@@ -3579,7 +3579,7 @@
     "formPrivacy": "These coordinates stay on this server. Saving a routine does not send a notification or command.",
     "identityMissing": "Identity unavailable",
     "identityMissingDescription": "Your authentication provider did not supply a verified identity.",
-    "invalidForm": "Enter a name, valid local time, time zone and coordinates.",
+    "invalidRoutine": "Enter a name, valid local time and coordinates.",
     "localAnalysis": "Allow local analysis of completed drives",
     "localAnalysisHint": "Use this vehicle’s completed drives on this server to suggest routines.",
     "localOnly": "Local analysis examines up to eight weeks of this vehicle’s completed drives on this server. It does not identify the driver.",
@@ -3610,8 +3610,8 @@
     "question": "Is this your regular {{day}} drive?",
     "routines": "Your routines",
     "saveRoutine": "Save routine",
-    "saveTimeZone": "Save time zone",
     "schedule": "{{day}} at {{time}} ({{zone}})",
+    "scheduleZone": "This recurring time follows {{zone}}.",
     "selectVehicle": "Select a vehicle",
     "showNow": "Show suggestion now",
     "snooze": "Snooze for 24 hours",
@@ -3625,8 +3625,6 @@
       "setup": "Needs setup"
     },
     "status": "Status: {{status}}",
-    "timeZone": "IANA time zone",
-    "timeZoneHint": "For example, America/Los_Angeles.",
     "title": "Smart Commute",
     "traffic": {
       "allow": "Allow sharing this trace with HERE for this routine",

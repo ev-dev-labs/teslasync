@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { DataTableRowGrouping } from './DataTable'
 import type { MobileRole, MobileState, MobileVariant } from './mobile-grid-reference/types'
 
 export type MobileTableRowKey = string | number
@@ -26,6 +27,8 @@ export interface MobileDataTablePresentation<T> {
   quickViewLabel?: string
   /** Use cards through this allocated width when a record needs more room. */
   cardMaxWidth?: number
+  /** Group cards without changing the native table's row order or layout. */
+  grouping?: DataTableRowGrouping<T>
   badgeVariant?: (row: T) => 'neutral' | 'success' | 'warning' | 'info' | 'danger'
   /** Place mobile column controls in the shared table toolbar instead of a separate row. */
   controlsInToolbar?: boolean

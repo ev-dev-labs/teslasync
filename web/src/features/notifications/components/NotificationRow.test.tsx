@@ -28,25 +28,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import '../../../i18n';
 
 import { NotificationRow, type NotificationRowProps } from './NotificationRow';
 import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
+import * as settingsHook from '@/hooks/useSettings';
+import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';
+import type { TzMode } from '@/lib/timezone';
 
 const fixtures = vi.hoisted(() => ({
-  userZone: 'UTC',
   selectedZone: 'Europe/Berlin',
   translations: {} as Record<string, string>,
-  timezone: vi.fn(),
   translate: vi.fn(),
 }));
 
-vi.mock('@/lib/timezone', async importOriginal => ({
-  ...await importOriginal<typeof import('@/lib/timezone')>(),
-  useTimezone: (mode: string) => {
-    fixtures.timezone(mode);
-    return mode === 'vehicle' ? fixtures.selectedZone : fixtures.userZone;
-  },
+vi.mock('@/lib/timezone', async () => vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone'));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: fixtures.selectedZone } }),
 }));
 
 vi.mock('react-i18next', async importOriginal => ({
@@ -65,12 +64,20 @@ vi.mock('react-i18next', async importOriginal => ({
 
 const CREATED_AT = new Date('2024-01-02T03:04:05Z').toISOString();
 
+function setDisplayPreferences(mode: TzMode, timezone = 'America/New_York') {
+  const defaults = settingsHook.useSettings();
+  vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+    ...defaults,
+    settings: { ...defaults.settings, tz_display_default: mode, timezone_user: timezone },
+  });
+}
+
 beforeEach(() => {
-  fixtures.userZone = 'UTC';
+  vi.restoreAllMocks();
   fixtures.selectedZone = 'Europe/Berlin';
   fixtures.translations = {};
-  fixtures.timezone.mockClear();
   fixtures.translate.mockClear();
+  setDisplayPreferences('user', 'UTC');
 });
 
 function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
@@ -123,6 +130,10 @@ interface RenderOpts {
   onMarkUnread?: NotificationRowProps['onMarkUnread'];
 }
 
+function RowWorkspace({ children }: { children: ReactNode }) {
+  return <MemoryRouter><WorkspaceDateFormatProvider>{children}</WorkspaceDateFormatProvider></MemoryRouter>;
+}
+
 function renderRow(opts: RenderOpts = {}) {
   const log = opts.log ?? makeLog();
   // Distinguish "not passed" (default to fixture) from "explicitly undefined"
@@ -145,9 +156,9 @@ function renderRow(opts: RenderOpts = {}) {
   };
 
   const utils = render(
-    <MemoryRouter>
+    <RowWorkspace>
       <NotificationRow {...props} />
-    </MemoryRouter>,
+    </RowWorkspace>,
   );
   return { ...utils, log, rule, vehicle, onSelectionChange };
 }
@@ -358,40 +369,51 @@ describe('NotificationRow', () => {
     expect(screen.queryByText(severity)).not.toBeInTheDocument();
   });
 
-  it('uses one user timezone without a zone suffix instead of borrowing selected or row vehicle identity', () => {
-    fixtures.userZone = 'America/New_York';
+  it.each([
+    ['user', 'Jan 1, 2024, 10:04 PM'],
+    ['vehicle', 'Jan 2, 2024, 04:04 AM'],
+    ['utc', 'Jan 2, 2024, 03:04 AM'],
+  ] as const)('uses the saved %s time zone without a zone suffix', (mode, clock) => {
+    setDisplayPreferences(mode);
     const { container } = renderRow({
       vehicle: { ...VEHICLE, timezone: 'America/Los_Angeles' },
     });
-    expect(fixtures.timezone).toHaveBeenCalledWith('user');
-    expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
-    expect(screen.getByText('Jan 1, 2024, 10:04 PM')).toBeInTheDocument();
+    expect(screen.getByText(clock)).toBeInTheDocument();
     expect(container.querySelector('[title]')).toBeNull();
   });
 
-  it('keeps retained row timestamps stable across unrelated workspace selection changes', () => {
-    fixtures.userZone = 'America/New_York';
+  it('keeps retained row timestamps stable in user mode across workspace selection changes', () => {
+    setDisplayPreferences('user');
     const { container, rerender } = renderRow();
     const before = screen.getByText('Jan 1, 2024, 10:04 PM').textContent;
     fixtures.selectedZone = 'Pacific/Auckland';
     rerender(
-      <MemoryRouter>
+      <RowWorkspace>
         <NotificationRow log={makeLog()} rule={RULE} vehicle={VEHICLE} selected={false} onSelectionChange={vi.fn()} />
-      </MemoryRouter>,
+      </RowWorkspace>,
     );
     expect(screen.getByText('Jan 1, 2024, 10:04 PM').textContent).toBe(before);
     expect(container.querySelector('[title]')).toBeNull();
-    expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
+  });
+
+  it('updates an already mounted row when the workspace display mode changes', () => {
+    setDisplayPreferences('user');
+    const row = <NotificationRow log={makeLog()} selected={false} onSelectionChange={vi.fn()} />;
+    const { rerender } = render(<RowWorkspace>{row}</RowWorkspace>);
+    expect(screen.getByText('Jan 1, 2024, 10:04 PM')).toBeInTheDocument();
+
+    setDisplayPreferences('utc');
+    rerender(<RowWorkspace>{row}</RowWorkspace>);
+    expect(screen.getByText('Jan 2, 2024, 03:04 AM')).toBeInTheDocument();
   });
 
   it.each([undefined, '', 'UTC', 'Invalid/VehicleZone'])(
     'keeps the user-zone rendering without a zone suffix when row timezone is %s',
     timezone => {
-      fixtures.userZone = 'America/New_York';
+      setDisplayPreferences('user');
       const { container } = renderRow({ vehicle: { ...VEHICLE, timezone } });
       expect(screen.getByText('Jan 1, 2024, 10:04 PM')).toBeInTheDocument();
       expect(container.querySelector('[title]')).toBeNull();
-      expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
     },
   );
 

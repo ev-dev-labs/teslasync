@@ -110,7 +110,12 @@ const ALTERNATIVE_EXPORT_SURFACES = [
   {
     file: 'features/charging/pages/ChargingListPage.tsx',
     label: 'Charging history',
-    markers: ['ListExportMenu', 'onExportCsv=', 'onExportJson='],
+    markers: ['<ChargingEvidenceTable', 'onExportCsv: handleExportCsv', 'onExportJson: handleExportJson'],
+  },
+  {
+    file: 'features/charging/components/ChargingEvidenceTable.tsx',
+    label: 'Charging history grid export controls',
+    markers: ['<DataTable', 'controls={controls}'],
   },
   {
     file: 'features/trips/pages/TripListPage.tsx',

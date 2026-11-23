@@ -27,12 +27,13 @@ import {
   Button,
   Code,
   ConfirmDialog,
+  DataTable,
   GlassPanel,
   Heading,
   Input,
   Select,
-  Table,
   Text,
+  type Column,
 } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
@@ -220,6 +221,78 @@ export function ScheduledExportsPanel() {
       if (deleteRequest.current === request) deleteRequest.current = null;
     }
   }
+
+  const columns: Column<ScheduledExport>[] = [
+    {
+      key: 'name', header: t('dataExport.scheduled.table.name', 'Name'), required: true, visibleOnMobile: true,
+      render: row => <Text as="span" className="font-medium">{row.name}</Text>,
+    },
+    {
+      key: 'type', header: t('dataExport.scheduled.table.type', 'Type'), visibleOnMobile: true,
+      render: row => `${row.export_type} (${row.format})`,
+    },
+    {
+      key: 'cron', header: t('dataExport.scheduled.table.cron', 'Cron'), visibleOnMobile: true,
+      render: row => <Code>{row.schedule_cron}</Code>,
+    },
+    {
+      key: 'delivery', header: t('dataExport.scheduled.table.delivery', 'Delivery'),
+      render: row => row.delivery.kind + (row.delivery.target ? ` → ${row.delivery.target}` : ''),
+    },
+    {
+      key: 'nextRun', header: t('dataExport.scheduled.table.nextRun', 'Next run'), visibleOnMobile: true,
+      render: row => row.next_run_at ? <TimeStamp value={row.next_run_at} /> : <Text as="span" color="muted">—</Text>,
+    },
+    {
+      key: 'lastRun', header: t('dataExport.scheduled.table.lastRun', 'Last run'),
+      render: row => row.last_run_at ? <TimeStamp value={row.last_run_at} /> : (
+        <Text as="span" color="muted">{t('dataExport.scheduled.status.never', 'Never')}</Text>
+      ),
+    },
+    {
+      key: 'status', header: t('dataExport.scheduled.table.status', 'Status'),
+      render: row => row.last_status === 'ok'
+        ? <Badge variant="success">{t('dataExport.scheduled.status.ok', 'OK')}</Badge>
+        : row.last_status === 'failed'
+          ? <Badge variant="danger">{t('dataExport.scheduled.status.failed', 'Failed')}</Badge>
+          : <Text as="span" color="muted">—</Text>,
+    },
+    {
+      key: 'actions', header: t('dataExport.scheduled.table.actions', 'Actions'), align: 'right',
+      required: true, visibleOnMobile: true,
+      render: row => (
+        <div className="flex flex-wrap justify-end gap-2 md:gap-1">
+          <Button size="sm" variant="ghost"
+            onClick={() => runNow.mutate(row.id)}
+            loading={runNow.isPending && runNow.variables === row.id}
+            data-testid={`scheduled-exports-run-${row.id}`}
+            wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0">
+            {t('dataExport.scheduled.actions.runNow', 'Run now')}
+          </Button>
+          <Button size="sm" variant="ghost"
+            onClick={() => toggleEnabled(row)} disabled={savePending}
+            wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0">
+            {row.enabled
+              ? t('dataExport.scheduled.actions.disable', 'Disable')
+              : t('dataExport.scheduled.actions.enable', 'Enable')}
+          </Button>
+          <Button size="sm" variant="ghost"
+            onClick={() => startEdit(row)} disabled={saving}
+            wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0">
+            {t('dataExport.scheduled.actions.edit', 'Edit')}
+          </Button>
+          <Button size="sm" variant="danger" disabled={remove.isPending}
+            onClick={() => {
+              if (!deleteRequest.current) setPendingDelete(row);
+            }}
+            data-testid={`scheduled-exports-delete-${row.id}`}
+            wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0">
+            {t('dataExport.scheduled.actions.delete', 'Delete')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <GlassPanel className="min-w-0 p-4 md:p-6" data-testid="scheduled-exports-panel">
@@ -447,113 +520,18 @@ export function ScheduledExportsPanel() {
             )}
           />
         ) : (
-          <div className="max-w-full overflow-x-auto" data-testid="scheduled-exports-table">
-            <Table>
-              <thead data-app-part="table-head">
-                <tr data-app-part="table-row">
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.name', 'Name')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.type', 'Type')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.cron', 'Cron')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.lastRun', 'Last run')}</th>
-                  <th data-app-part="table-cell" scope="col">{t('dataExport.scheduled.table.status', 'Status')}</th>
-                  <th data-app-part="table-cell" scope="col" className="text-right">{t('dataExport.scheduled.table.actions', 'Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr data-app-part="table-row"
-                    key={row.id}
-                    data-testid={`scheduled-exports-row-${row.id}`}
-                    className={row.enabled ? '' : 'opacity-50'}
-                  >
-                    <td data-app-part="table-cell" className="font-medium">{row.name}</td>
-                    <td data-app-part="table-cell">{row.export_type} ({row.format})</td>
-                    <td data-app-part="table-cell"><Code>{row.schedule_cron}</Code></td>
-                    <td data-app-part="table-cell">
-                      {row.delivery.kind}
-                      {row.delivery.target ? ` → ${row.delivery.target}` : ''}
-                    </td>
-                    <td data-app-part="table-cell">
-                      {row.next_run_at ? (
-                        <TimeStamp value={row.next_run_at} />
-                      ) : (
-                        <Text as="span" color="muted">—</Text>
-                      )}
-                    </td>
-                    <td data-app-part="table-cell">
-                      {row.last_run_at ? (
-                        <TimeStamp value={row.last_run_at} />
-                      ) : (
-                        <Text as="span" color="muted">
-                          {t('dataExport.scheduled.status.never', 'Never')}
-                        </Text>
-                      )}
-                    </td>
-                    <td data-app-part="table-cell">
-                      {row.last_status === 'ok' ? (
-                        <Badge variant="success">{t('dataExport.scheduled.status.ok', 'OK')}</Badge>
-                      ) : row.last_status === 'failed' ? (
-                        <Badge variant="danger">{t('dataExport.scheduled.status.failed', 'Failed')}</Badge>
-                      ) : (
-                        <Text as="span" color="muted">—</Text>
-                      )}
-                    </td>
-                    <td data-app-part="table-cell">
-                      <div className="flex flex-wrap justify-end gap-2 md:gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => runNow.mutate(row.id)}
-                          loading={runNow.isPending && runNow.variables === row.id}
-                          data-testid={`scheduled-exports-run-${row.id}`}
-                          wrapLabel
-                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        >
-                          {t('dataExport.scheduled.actions.runNow', 'Run now')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleEnabled(row)}
-                          disabled={savePending}
-                          wrapLabel
-                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        >
-                          {row.enabled
-                            ? t('dataExport.scheduled.actions.disable', 'Disable')
-                            : t('dataExport.scheduled.actions.enable', 'Enable')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => startEdit(row)}
-                          disabled={saving}
-                          wrapLabel
-                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        >
-                          {t('dataExport.scheduled.actions.edit', 'Edit')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          disabled={remove.isPending}
-                          onClick={() => {
-                            if (!deleteRequest.current) setPendingDelete(row);
-                          }}
-                          data-testid={`scheduled-exports-delete-${row.id}`}
-                          wrapLabel
-                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        >
-                          {t('dataExport.scheduled.actions.delete', 'Delete')}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+          <div className="min-w-0" data-testid="scheduled-exports-table">
+            <DataTable
+              tableId="scheduled-exports"
+              caption={t('dataExport.scheduled.title', 'Scheduled exports')}
+              columns={columns}
+              data={rows}
+              keyExtractor={row => row.id}
+              rowLabel={row => row.name}
+              rowClassName={row => row.enabled ? undefined : 'opacity-50'}
+              variant="embedded"
+              exportable={false}
+            />
           </div>
         )}
       </div>

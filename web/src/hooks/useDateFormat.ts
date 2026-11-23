@@ -90,7 +90,7 @@ function isTzMode(value: unknown): value is TzMode {
  * Returned formatters are `useCallback`-memoized over `locale + tz`, so
  * passing them straight to memoized child props is safe.
  */
-export function useDateFormat(mode?: TzMode): UseDateFormatResult {
+export function useDateFormat(mode?: TzMode, ...vehicle: [timezone?: string | null]): UseDateFormatResult {
   const { settings, locale } = useSettings()
   // `??` only substitutes null/undefined, so an empty string or a legacy
   // out-of-union value persisted in `tz_display_default` would slip through
@@ -100,7 +100,7 @@ export function useDateFormat(mode?: TzMode): UseDateFormatResult {
   // `locale`.
   const requestedMode = mode ?? settings.tz_display_default
   const effectiveMode: TzMode = isTzMode(requestedMode) ? requestedMode : 'vehicle'
-  const tz = useTimezone(effectiveMode)
+  const tz = useTimezone(effectiveMode, ...vehicle)
 
   const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])
 

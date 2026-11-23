@@ -44,6 +44,7 @@
 //       hoist it to a `.ts` helper. Residual scope (documented): a `.ts`
 //       helper whose output reaches a page caption instead of a tick is
 //       review-enforced; the audit cannot see render intent.
+//   R7. DateTime and TimeStamp must inherit the saved display preference.
 //
 // Exempt files (the shared layer itself): `src/lib/dateFormat.ts`,
 // `src/lib/dateConvert.ts`, `src/lib/timezone.ts`, `src/lib/dateRange.ts`,
@@ -300,6 +301,14 @@ function scanSource(text, rel) {
         'R3', node,
         'timeZoneName outside the shared date layer (renders a zone name/offset)',
         'use formatGmtOffset() from @/lib/dateConvert for DST-disambiguating offsets',
+      )
+    }
+    if (ts.isJsxAttribute(node) && ts.isIdentifier(node.name) && node.name.text === 'in'
+      && SHARED_DATE_COMPONENTS.has(enclosingJsxElementName(node))) {
+      report(
+        'R7', node,
+        'explicit display zone on a shared date component bypasses the saved preference',
+        'omit the in prop; keep operational schedule zones in the saved schedule or calendar input',
       )
     }
     ts.forEachChild(node, visit)

@@ -10,10 +10,12 @@ import { NavigationGuardProvider } from '@/components/feedback'
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs'
 import { matchesAppDesignCss } from '@/components/feedback/appDesignCss.test-utils'
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types'
+import { patchMatchMedia } from '@/test/setup'
 import InstallPackDialog from './InstallPackDialog'
 
-const state = vi.hoisted(() => ({ desktop: true, install: vi.fn() }))
-vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => state.desktop }))
+const state = vi.hoisted(() => ({ install: vi.fn() }))
+const desktopQuery = '(min-width: 1024px)'
+const phoneQuery = '(width < 640px)'
 vi.mock('@/hooks/useAiEnabled', () => ({ useAiEnabled: () => false }))
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({ data: [], refetch: vi.fn() }),
@@ -49,7 +51,6 @@ function consumes(node: Element, packId: typeof PACK_IDS[number], part: string) 
     selector.includes(`[data-app-part~="${part}"]`) && node.matches(selector)))
 }
 beforeEach(() => {
-  state.desktop = true
   state.install.mockReset()
 })
 
@@ -59,6 +60,7 @@ describe('install defaults, mobile preview and filter-recovery ownership (source
     const profile = getAppDesignAttributes(packId)
     for (const [name, value] of Object.entries(profile)) document.documentElement.setAttribute(name, value)
     const release = observeAppDesignScopes(document.documentElement)
+    const viewport = patchMatchMedia(query => query === desktopQuery)
     const tree = () => <QueryClientProvider client={client}><MemoryRouter><NavigationGuardProvider>
       <InstallPackDialog pack={pack} onClose={vi.fn()} />
     </NavigationGuardProvider></MemoryRouter></QueryClientProvider>
@@ -89,9 +91,10 @@ describe('install defaults, mobile preview and filter-recovery ownership (source
       expect(screen.getByRole('checkbox', { name: 'Complete original rule 10' })).toBeChecked()
       fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
 
-      state.desktop = false
-      view.rerender(tree())
-      await act(async () => {})
+      await act(async () => {
+        viewport.fire(phoneQuery, true)
+        viewport.fire(desktopQuery, false)
+      })
       expect(screen.queryByRole('table', { name: 'Choose rules' })).not.toBeInTheDocument()
       const previews = screen.getAllByRole('region', { name: /^Complete original rule/ })
       expect(previews).toHaveLength(10)
@@ -114,6 +117,7 @@ describe('install defaults, mobile preview and filter-recovery ownership (source
       expect(state.install).not.toHaveBeenCalled()
     } finally {
       view.unmount()
+      viewport.restore()
       release()
       for (const name of Object.keys(profile)) document.documentElement.removeAttribute(name)
       client.clear()

@@ -90,7 +90,7 @@ export function useSmartCommuteTrafficPreview(scope: PersonalScope, vehicleId: n
 
 export type SmartCommuteChange =
   | { kind: 'settings'; settings: SmartCommuteSettings }
-  | { kind: 'analyze' }
+  | { kind: 'analyze'; timeZone: string }
   | { kind: 'create'; routine: SmartCommuteRoutineInput }
   | { kind: 'confirm'; id: number; routine: SmartCommuteRoutineInput }
   | { kind: 'decline'; id: number }
@@ -118,7 +118,7 @@ export function useSmartCommuteChange(scope: PersonalScope | null, vehicleId: nu
           })
         case 'analyze':
           return request<void>('/smart-commute/analyses', {
-            ...options, method: 'POST', body: JSON.stringify({ vehicle_id: vehicleId }),
+            ...options, method: 'POST', body: JSON.stringify({ vehicle_id: vehicleId, time_zone: change.timeZone }),
           })
         case 'create':
           return request<void>('/smart-commute/routines', {

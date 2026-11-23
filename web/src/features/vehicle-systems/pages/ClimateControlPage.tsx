@@ -1586,7 +1586,7 @@ export default function ClimateControlPage() {
               variant="embedded"
               name={t('widget.climateHistory.title', 'Climate history')}
               data={sortedHistory}
-              keyExtractor={(row) => String(row.id ?? 0)}
+              keyExtractor={(row) => row.timestamp ?? row.created_at ?? `sample:${row.id}`}
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={onSort}

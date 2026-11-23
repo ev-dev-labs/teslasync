@@ -61,7 +61,7 @@ function ScheduleDetails({ scope, vehicleId, identityPending }: PrivateVehicleRe
   const option = schedules.find(schedule => String(schedule.id) === selected);
   const active = schedules.find(schedule => schedule.id === plan?.automation_id);
   const evidence = plan?.current && plan.evidence && Date.parse(plan.evidence.expires_at) > Date.now() ? plan.evidence : null;
-  const formatRun = (time: string) => formatDateTime(time, active?.time_zone ? { tz: active.time_zone } : undefined);
+  const formatRun = (time: string) => formatDateTime(time);
   const done = () => {
     restore.current = true;
     setEdit(false);

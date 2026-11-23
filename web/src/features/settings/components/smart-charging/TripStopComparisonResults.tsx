@@ -13,7 +13,7 @@ interface Props {
 
 export function TripStopComparisonResults({ result, capacityWh }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const { fmtNumber } = useNumberFormatting()
   const { formatDistance } = useUnits()
   const minutes = (seconds: number) => fmtNumber(Math.ceil(convertDurationFromSI(seconds, 'min')))

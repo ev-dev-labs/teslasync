@@ -16,7 +16,7 @@ const session = {
 };
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const width of [320, 390, 768, 1024, 1440, 1920, 2560]) {
+  for (const width of [320, 390, 427, 768, 1024, 1440, 1920, 2560]) {
     test(`charging adopts responsive evidence at ${width}px in ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
       await seedBrowserState(page, theme, route);
@@ -119,10 +119,22 @@ for (const theme of ['light', 'dark'] as const) {
           .getByRole('button', { name: 'Done', exact: true }).click();
       } else {
         await expect(table).toHaveCount(0);
-        await expect(history.locator('a[href="/charging/201"]').first()).toBeVisible();
+        const cards = history.locator('[data-mobile-table]');
+        await expect(cards.locator('[data-card]')).toHaveCount(2);
+        await expect(cards.locator('[data-mobile-group]')).toHaveCount(2);
+        const firstCard = cards.locator('[data-card][data-row-key="201"]');
+        await expect(firstCard).toHaveAttribute('href', '/charging/201');
+        await expect(firstCard.locator('[data-card-label]')).toHaveText('Synthetic home charger');
+        await expect(firstCard.locator('[data-card-primary]')).toHaveText(/18(?:\.00)? kWh/);
+        await expect(firstCard.locator('[data-field-key="cost"]')).toContainText('Free');
+        await expect(cards.locator('a[data-row-key="202"] [data-field-key="cost"]')).toContainText('—');
+        await expect(history.locator('[data-history-primary]')).toHaveCount(0);
       }
       await expectNoHorizontalOverflow(page);
       await page.screenshot({ path: test.info().outputPath(`charging-evidence-${width}-${theme}.png`), fullPage: true });
+      if (width === 427) {
+        await history.screenshot({ path: test.info().outputPath(`charging-phone-grid-${theme}.png`) });
+      }
       const preview = history.getByRole('button', { name: 'Quick view charging session', exact: true }).first();
       const target = await preview.boundingBox();
       expect(target?.height).toBeGreaterThanOrEqual(44);
@@ -137,13 +149,38 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(drawer.getByRole('button', { name: 'Open session details', exact: true })).toBeVisible();
       await expect(drawer.getByRole('link', { name: 'Vehicle', exact: true })).toHaveAttribute('href', '/vehicles/7');
       await expect(drawer.getByRole('link', { name: 'Drive history', exact: true })).toHaveAttribute('href', /\/drives\?/);
+      if (width === 427) {
+        await expect(drawer.getByText('Average power', { exact: true })).toBeVisible();
+        await expect(drawer.getByText('Battery-friendly score', { exact: true })).toBeVisible();
+      }
       await expectNoHorizontalOverflow(page);
       if (width === 320 || width === 1440) {
         await page.screenshot({ path: test.info().outputPath(`charging-preview-${width}-${theme}.png`) });
       }
       await page.keyboard.press('Escape');
       await expect(drawer).not.toBeVisible();
-      if (width >= 1024) {
+      if (width === 427) {
+        const cards = history.locator('[data-mobile-table]');
+        await cards.getByRole('button', { name: 'Select', exact: true }).click();
+        await expect(cards.getByRole('checkbox', { name: /^Select .*Synthetic home charger/ })).toHaveCount(2);
+        await cards.getByRole('checkbox', { name: /^Select .*Synthetic home charger/ }).first().locator('..').click();
+        await expect(cards.getByRole('checkbox', { name: /^Deselect .*Synthetic home charger/ })).toBeChecked();
+        await cards.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await history.getByRole('button', { name: 'Filter & sort', exact: true }).click();
+        const tools = page.getByRole('dialog', { name: 'Filter & sort', exact: true });
+        await tools.getByRole('combobox', { name: 'Column', exact: true }).selectOption('cost');
+        await tools.getByText('Free', { exact: true }).click();
+        await expect(page).toHaveURL(/grid_values=/);
+        expect(new URL(page.url()).searchParams.get('from')).toBe('2026-08-01');
+        expect(new URL(page.url()).searchParams.get('to')).toBe('2026-08-31');
+        await page.screenshot({ path: test.info().outputPath(`charging-mobile-filter-${theme}.png`) });
+        await tools.getByRole('button', { name: 'Done', exact: true }).click();
+        await expect(cards.locator('[data-card]')).toHaveCount(1);
+        await expect(cards.locator('[data-card]')).toHaveAttribute('data-row-key', '202');
+        await page.reload();
+        await waitForHarnessReady(page, mocks);
+        await expect(cards.locator('[data-card]')).toHaveCount(1);
+      } else if (width >= 1024) {
         const filterButton = table.getByRole('button', { name: 'Cost filter', exact: true });
         await filterButton.click();
         const filter = page.getByRole('dialog', { name: 'Cost filter', exact: true });

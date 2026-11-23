@@ -78,6 +78,7 @@ import { navRouteIcons } from '@/lib/navRouteIcons';
 import { HelixMark } from '@/components/branding/HelixMark';
 import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 
@@ -1060,6 +1061,7 @@ export default function Layout() {
       {presentation.mode === 'standard' && <SkipToContent />}
       <BreadcrumbOverridesProvider>
       <WorkspaceScopeProvider scope={workspaceScope}>
+      <WorkspaceDateFormatProvider>
       <div
         data-app-part="shell"
         data-presentation-mode={presentation.mode}
@@ -1335,6 +1337,7 @@ export default function Layout() {
           dialogs the user is interacting with. */}
       <CookieConsentBannerHost />
       </div>
+      </WorkspaceDateFormatProvider>
       </WorkspaceScopeProvider>
       </BreadcrumbOverridesProvider>
     </>

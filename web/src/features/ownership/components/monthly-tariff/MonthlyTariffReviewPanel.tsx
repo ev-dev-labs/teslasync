@@ -31,7 +31,8 @@ export function MonthlyTariffReviewPanel({ vehicleId, onReviewTariffs }: { vehic
 
 function Details({ scope, vehicleId, identityPending, onReviewTariffs }: PrivateVehicleReviewScope & TariffReviewActions) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useMonthlyTariffReview(scope, vehicleId);
   const source = useDataState(query);
@@ -84,7 +85,7 @@ function Details({ scope, vehicleId, identityPending, onReviewTariffs }: Private
     <Text as="p" role="status" variant="bodySm">{status}</Text>
     {settings && review.last_checked_at && <Text as="p" variant="caption">
       {t('ownership.tariff.monthly.lastChecked', 'Last checked: {{date}}.', {
-        date: formatDateTime(review.last_checked_at, { tz: settings.time_zone }),
+        date: formatDateTime(review.last_checked_at),
       })}
     </Text>}
     {digest && settings && !settings.paused && <div className="space-y-3">

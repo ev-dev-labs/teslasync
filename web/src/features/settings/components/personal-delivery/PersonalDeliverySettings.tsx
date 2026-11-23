@@ -41,16 +41,17 @@ export function PersonalDeliverySettings({ active, family }: Props) {
   const lookupKnown = browser.status === 'unsupported' || (browser.status === 'ready' &&
     (browser.subscription == null || (current.isSuccess && !current.isFetching)))
   const currentDevice = browser.subscription && current.isSuccess ? current.data : null
+  const publicKey = state.data?.available ? state.data.public_key : undefined
   const available = family === 'commute' ? state.data?.commute_available : state.data?.available
   const rows = (state.data?.devices ?? []).map((device) =>
     currentDevice?.id === device.id ? currentDevice : device)
 
   const connect = async () => {
-    if (blocked || !available || !state.data?.public_key || !personalPushSupported()) return
+    if (blocked || !lookupKnown || !publicKey || !personalPushSupported()) return
     setBusy(true)
     setError(null)
     try {
-      const subscription = await browser.subscribe(state.data.public_key)
+      const subscription = await browser.subscribe(publicKey)
       const json = subscription.toJSON()
       if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth || !personalPushSupported()) {
         throw new Error('Personal browser subscription is unavailable')
@@ -76,7 +77,7 @@ export function PersonalDeliverySettings({ active, family }: Props) {
 
   const updatePreference = async (id: number, enabled: boolean) => {
     const needsRefresh = family === 'commute' && enabled
-    if (blocked || (needsRefresh && currentDevice?.id !== id)) return
+    if (blocked || (enabled && !available) || (needsRefresh && currentDevice?.id !== id)) return
     if (needsRefresh) setBusy(true)
     setError(null)
     try {
@@ -173,7 +174,7 @@ export function PersonalDeliverySettings({ active, family }: Props) {
           {current.isError && <QueryError error={current.error} onRetry={() => void current.refetch()} />}
           {error && removing == null && <ErrorText role="alert">{error}</ErrorText>}
           {browser.status === 'ready' && !currentDevice?.verified && (
-            <Button wrapLabel variant="primary" disabled={blocked || !lookupKnown || !available}
+            <Button wrapLabel variant="primary" disabled={blocked || !lookupKnown || !publicKey}
               onClick={() => void connect()}>
               {currentDevice
                 ? t('smartCharging.delivery.retryConfirmation', 'Retry confirmation')

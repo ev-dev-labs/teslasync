@@ -8,7 +8,7 @@ import { DateTime, FormattedNumber } from '@/components/data-display';
 import type { APICallLog } from '@/api/types';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -114,7 +114,7 @@ function ApiLogDetails({ log, serviceLabel, installation }: {
       </GlassPanel>
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <Text as="span" variant="bodySm">
-          {t('apiLogs.time', 'Time')}: <DateTime value={log.ts} in="utc" />
+          {t('apiLogs.time', 'Time')}: <DateTime value={log.ts} />
         </Text>
         <Text as="span" variant="bodySm">{t('apiLogs.service', 'Service')}: {serviceLabel}</Text>
         <Text as="span" variant="bodySm">{t('apiLogs.status', 'Status')}: {log.status_code ?? t('apiLogs.na', 'N/A')}</Text>
@@ -170,6 +170,7 @@ export function ApiLogsEvidenceTable({
   filters, onFilterChange, onFiltersClear, methodOptions, statusOptions, serviceOptions,
 }: ApiLogsEvidenceTableProps) {
   const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
   const columns = useMemo<Column<APICallLog>[]>(() => {
@@ -206,7 +207,7 @@ export function ApiLogsEvidenceTable({
       header: t('apiLogs.time', 'Time'),
       defaultWidth: 185,
       minWidth: 150,
-      render: (log) => <DateTime value={log.ts} in="utc" className="whitespace-nowrap text-xs tabular-nums" />,
+      render: (log) => <DateTime value={log.ts} className="whitespace-nowrap text-xs tabular-nums" />,
     },
     {
       key: 'method',
@@ -232,7 +233,7 @@ export function ApiLogsEvidenceTable({
             <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">{log.http_method}</Badge>
             <Caption>{serviceConfig(log.service).label}</Caption>
             <Caption className="tabular-nums">
-              <DateTime value={log.ts} in="utc" />
+              <DateTime value={log.ts} />
             </Caption>
             <Caption className="tabular-nums">
               {log.duration_ms != null
@@ -344,14 +345,14 @@ export function ApiLogsEvidenceTable({
           log.status_code ?? t('apiLogs.na', 'N/A'),
           log.rate_limited ? t('apiLogs.rateLimited', 'Rate limited') : null,
         ].filter(value => value != null).join(' · ');
-        case 'time': return formatDateTime(log.ts, { tz: 'UTC', locale: displayLocale });
+        case 'time': return formatDateTime(log.ts);
         case 'service': return serviceConfig(log.service).label;
         case 'duration': return log.duration_ms == null || !Number.isFinite(log.duration_ms)
           ? '—' : fmtNumber(log.duration_ms, displayPrecision, displayLocale);
         default: return null;
       }
     },
-  }), [t, serviceConfig, displayPrecision, displayLocale]);
+  }), [t, serviceConfig, displayPrecision, displayLocale, formatDateTime]);
 
   return (
     <DataTable

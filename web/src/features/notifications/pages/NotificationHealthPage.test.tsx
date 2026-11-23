@@ -272,11 +272,13 @@ describe('Notification health — qualified native jump controls', () => {
         const link = links[index];
         expect(link).toHaveFocus();
         await user.keyboard('{Enter}');
-        await waitFor(() => expect(link).toHaveAttribute('aria-current', 'location'));
         const target = document.getElementById(id);
         expect(target).toBe(screen.getByRole('region', { name: link.getAttribute('aria-label') ?? '' }));
-        expect(scrollIntoView.mock.contexts.at(-1)).toBe(target);
-        expect(window.location.hash).toBe(`#${id}`);
+        await waitFor(() => {
+          expect(link).toHaveAttribute('aria-current', 'location');
+          expect(scrollIntoView.mock.contexts.at(-1)).toBe(target);
+          expect(window.location.hash).toBe(`#${id}`);
+        });
         if (index < links.length - 1) await user.tab();
       }
       expect(screen.getAllByRole('region', { name: /metrics/i })).toHaveLength(3);

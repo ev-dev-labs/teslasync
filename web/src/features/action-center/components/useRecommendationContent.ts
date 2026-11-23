@@ -16,7 +16,7 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
   const { t } = useTranslation();
   const weekdays = useCommuteWeekdays();
   const displayEnergy = useCommuteRouteEnergyDisplay();
-  const { formatDateTime, formatDate } = useDateFormat('user');
+  const { formatDateTime, formatDate } = useDateFormat();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { formatPower, formatDistance } = useUnits();
   const displayProjection = useTripProjectionDisplay();
@@ -424,8 +424,8 @@ export function useRecommendationContent(recommendation: ActionCenterRecommendat
     const energyOnly = traffic.route_energy_only ? energy : null;
     const deadline = traffic.arrival_deadline_at && traffic.latest_departure_at
       ? t('smartCommute.traffic.deadline.recommendation', 'Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.', {
-        latest: formatDateTime(traffic.latest_departure_at, { tz: traffic.time_zone }),
-        deadline: formatDateTime(traffic.arrival_deadline_at, { tz: traffic.time_zone }),
+        latest: formatDateTime(traffic.latest_departure_at),
+        deadline: formatDateTime(traffic.arrival_deadline_at),
       })
       : null;
     const timing = t('smartCommute.traffic.actionSummary', 'HERE estimates {{usual}} min on the usual route and {{alternative}} min on an alternative.', {

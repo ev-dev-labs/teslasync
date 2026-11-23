@@ -15,7 +15,7 @@ interface Props {
 
 export function TripPacketEvidence({ packet, zone, vehicleId }: Props) {
   const { t } = useTranslation();
-  const { formatDateTime, formatDayKey } = useDateFormat('user');
+  const { formatDateTime, formatDayKey } = useDateFormat();
   const { formatDistance, unitPrefs: { locale = 'en-US' } } = useUnits();
   const drives = packet.business_drives ?? [];
   const receipts = packet.matched_receipts ?? [];
@@ -40,7 +40,7 @@ export function TripPacketEvidence({ packet, zone, vehicleId }: Props) {
       keyExtractor={row => row.drive_id} mobileColumns={['drive_id', 'started_at', 'distance_m']}
       columns={[
         { key: 'drive_id', header: t('logbook.packet.drive', 'Drive'), render: row => driveLink(row.drive_id) },
-        { key: 'started_at', header: t('logbook.date', 'Date'), render: row => formatDateTime(row.started_at, { tz: zone }) },
+        { key: 'started_at', header: t('logbook.date', 'Date'), render: row => formatDateTime(row.started_at) },
         { key: 'distance_m', header: t('logbook.distance', 'Distance'), render: row => row.distance_m == null ? '—' : formatDistance(row.distance_m) },
       ]} />
     <PanelTitle>{t('logbook.packet.matchedReceipts', 'Matched receipts')}</PanelTitle>

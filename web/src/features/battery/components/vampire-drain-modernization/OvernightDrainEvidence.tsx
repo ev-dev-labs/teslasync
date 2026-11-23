@@ -31,7 +31,7 @@ export function OvernightDrainEvidence({ review, zone, writable, dismiss }: {
         high: fmtNumber(review.typical_loss_high_pct, 1),
       })}</Text>
       <Text as="p" variant="bodySm">{t(`${ns}.window`, 'Measured from {{start}} to {{end}} ({{zone}}). This review expires at {{expiry}}.', {
-        start: formatAt(review.start_at), end: formatAt(review.end_at), zone, expiry: formatAt(review.expires_at),
+        start: formatAt(review.start_at), end: formatAt(review.end_at), zone, expiry: formatDateTime(review.expires_at),
       })}</Text>
       <Text as="p" variant="bodySm">{t(`${ns}.why`, 'Why this? Similar nights had comparable starting charge and outside temperatures. These observations coincided with the loss; they do not prove what caused it. No report does not mean a feature was off.')}</Text>
       <ul className="list-disc space-y-1 ps-5">

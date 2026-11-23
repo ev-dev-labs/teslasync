@@ -23,6 +23,7 @@ import {
   FALLBACK,
   type FormatOptions,
   getFormatter,
+  instantDisplayTimezone,
   intlLocale,
   safeTimeZone,
   toLocalDatetimeStr,
@@ -332,7 +333,7 @@ export function formatChartInstant(
   if (value == null || value === '') return FALLBACK
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return FALLBACK
-  const timeZone = safeTimeZone(opts?.tz)
+  const timeZone = instantDisplayTimezone(opts)
   const fields: Intl.DateTimeFormatOptions = {
     ...(timeZone ? { timeZone } : {}),
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -415,7 +416,7 @@ export function formatMonthYear(
   }
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return FALLBACK
-  return render(d, safeTimeZone(opts?.tz))
+  return render(d, instantDisplayTimezone(opts))
 }
 
 /**
@@ -478,7 +479,7 @@ export function formatWeekdayName(
   if (value == null || value === '') return FALLBACK
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return FALLBACK
-  const timeZone = safeTimeZone(opts?.tz)
+  const timeZone = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'UTC' : instantDisplayTimezone(opts)
   const fields: Intl.DateTimeFormatOptions = {
     ...(timeZone ? { timeZone } : {}), weekday: opts?.weekdayStyle ?? 'short',
   }
@@ -509,7 +510,7 @@ export function formatMonthDayHour(
   if (value == null || value === '') return FALLBACK
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return FALLBACK
-  const timeZone = safeTimeZone(opts?.tz)
+  const timeZone = instantDisplayTimezone(opts)
   const fields: Intl.DateTimeFormatOptions = {
     ...(timeZone ? { timeZone } : {}),
     month: 'short', day: 'numeric', hour: '2-digit',
@@ -596,8 +597,8 @@ export function useConversionTimezone(): string {
  * "2w ago", "5mo ago", "1y ago"). Pair it with a separate absolute
  * date label (e.g. group header showing "Apr 24, 2026 · 18d ago").
  *
- * Day deltas are computed in the *target* timezone (defaults to the
- * browser's local zone). Pass `tz` to anchor day boundaries to a
+ * Day deltas are computed in the workspace display timezone by default.
+ * Pass `tz` to anchor day boundaries to a
  * specific zone — e.g. the active vehicle's IANA zone — so a drive
  * recorded at 11pm vehicle-local doesn't get reported as "Yesterday"
  * just because the user's browser already rolled to the next day.
@@ -609,9 +610,10 @@ export function formatRelativeDays(
   if (value == null || value === '') return '—'
   const d = value instanceof Date ? value : new Date(value)
   if (isNaN(d.getTime())) return '—'
-  const targetKey = ymdInTz(d, opts?.tz)
+  const tz = instantDisplayTimezone(opts)
+  const targetKey = ymdInTz(d, tz)
   if (!targetKey) return '—'
-  return formatRelativeDayKey(targetKey, opts)
+  return formatRelativeDayKey(targetKey, { ...opts, tz })
 }
 /**
  * Relative day label for an existing `YYYY-MM-DD` calendar key.

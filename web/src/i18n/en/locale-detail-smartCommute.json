@@ -94,6 +94,7 @@
     "timeZone": "IANA time zone",
     "timeZoneHint": "For example, America/Los_Angeles.",
     "saveTimeZone": "Save time zone",
+    "scheduleZone": "This recurring time follows {{zone}}.",
     "enable": "Enable Smart Commute for this vehicle",
     "enableHint": "Enable this vehicle’s commute settings and routines.",
     "localAnalysis": "Allow local analysis of completed drives",
@@ -147,6 +148,7 @@
     "destinationLatitude": "Destination latitude",
     "destinationLongitude": "Destination longitude",
     "invalidForm": "Enter a name, valid local time, time zone and coordinates.",
+    "invalidRoutine": "Enter a name, valid local time and coordinates.",
     "saveRoutine": "Save routine",
     "states": {
       "off": "Off",

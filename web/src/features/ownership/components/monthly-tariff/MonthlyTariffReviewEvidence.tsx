@@ -17,7 +17,7 @@ interface Props {
 
 export function MonthlyTariffReviewEvidence({ digest, zone, currency, site, current, alternative }: Props) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { unitPrefs, formatEnergy } = useUnits();
   const { comparison } = digest;
   const money = (minor: number) => formatCurrencyMinor(minor, currency, unitPrefs.locale);
@@ -30,7 +30,7 @@ export function MonthlyTariffReviewEvidence({ digest, zone, currency, site, curr
     <PanelTitle>{t('ownership.tariff.monthly.findings', 'Estimated savings at the same charging times')}</PanelTitle>
     <Text as="p" variant="caption">{t('ownership.tariff.monthly.window', '{{site}}: {{from}} up to {{through}} ({{zone}}). Expires {{expires}}.', {
       site, from: formatDateTime(digest.from, { tz: zone }), through: formatDateTime(digest.through, { tz: zone }),
-      zone, expires: formatDateTime(digest.expires_at, { tz: zone }),
+      zone, expires: formatDateTime(digest.expires_at),
     })}</Text>
     <KVList layout="responsive" items={[
       { id: 'net', label: t('ownership.tariff.monthly.net', 'Estimated saving after switch fee'), value: interval(comparison.net_savings) },

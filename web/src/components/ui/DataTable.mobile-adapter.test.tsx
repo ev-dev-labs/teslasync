@@ -53,6 +53,52 @@ function mount(extra: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) {
 }
 
 describe('real DataTable mobile bridge', () => {
+  it('uses cards by default on phones without flattening cell links or row actions', () => {
+    const action = vi.fn()
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(width < 640px)', media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }))
+    mount({
+      mobilePresentation: undefined,
+      mobileColumns: ['name', 'amount'],
+      columns: [
+        { ...columns[0], render: row => <a href={`/records/${row.id}`}>{row.name}</a> },
+        columns[1],
+        { ...columns[2], defaultVisible: true, render: row => `Detail ${row.name}` },
+        { key: 'actions', header: 'Actions', render: row => <Button onClick={() => action(row.id)}>Review {row.name}</Button> },
+      ],
+    })
+    const grid = screen.getByRole('group', { name: 'test:mobile' })
+    const link = within(grid).getByRole('link', { name: 'Zero', exact: true })
+    expect(link).toHaveAttribute('href', '/records/0')
+    const card = link.closest('[data-card]') as HTMLElement
+    expect(card).not.toHaveAttribute('role', 'button')
+    expect(card.querySelector('[data-card-primary]')).toHaveTextContent('0')
+    expect(within(grid).queryByText('Detail Zero')).not.toBeInTheDocument()
+    fireEvent.click(within(grid).getByRole('button', { name: 'Review Zero', exact: true }))
+    expect(action).toHaveBeenCalledWith(0)
+    fireEvent.click(within(grid).getAllByRole('button', { name: 'Quick view' })[0])
+    expect(within(screen.getByRole('dialog', { name: 'Zero', exact: true })).getByText('Detail Zero')).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('reveals virtualized rows in batches rather than mounting the full list on a phone', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(width < 640px)', media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }))
+    mount({
+      mobilePresentation: undefined,
+      virtualized: true,
+      data: Array.from({ length: 28 }, (_, id) => ({ id, name: `Row ${id}`, amount: id, secret: '' })),
+    })
+    expect(screen.queryByText('Row 27')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Load 3 more' }))
+    expect(screen.getByText('Row 27')).toBeVisible()
+    expect(screen.queryByRole('button', { name: /load .* more/i })).not.toBeInTheDocument()
+  })
+
   it('honors compact and comfortable density for opted-in mobile rows', () => {
     const view = mount({ density: 'compact', mobilePresentation: { ...presentation, compactRows: true } })
     resize(390)

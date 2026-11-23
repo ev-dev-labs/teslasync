@@ -21,7 +21,7 @@ interface Props {
 
 export function TripMaintenance({ scope, plan, disabled }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const { formatDistance } = useUnits()
   const title = t('smartCharging.tripMaintenance.title', 'Maintenance before this trip')
   const id = useId()

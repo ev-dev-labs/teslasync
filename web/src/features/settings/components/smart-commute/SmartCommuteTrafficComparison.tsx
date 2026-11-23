@@ -10,11 +10,12 @@ interface Props {
   decisions: SmartCommuteTrafficDecision[]
   requestedOccurrence: string | null
   scope: PersonalScope
+  displayZone: string
   navigationAvailable: boolean
   navigationDisabled: boolean
 }
 
-export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, scope, navigationAvailable, navigationDisabled }: Props) {
+export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, scope, displayZone, navigationAvailable, navigationDisabled }: Props) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
   const displayEnergy = useCommuteRouteEnergyDisplay()
@@ -71,14 +72,15 @@ export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, 
           {decision.arrival_deadline_at && decision.latest_departure_at && (
             <>
               <Text as="p" weight="semibold">{t('smartCommute.traffic.deadline.recommendation', 'Estimated latest departure: {{latest}}. Your arrival deadline: {{deadline}}.', {
-                latest: formatDateTime(decision.latest_departure_at, { tz: decision.time_zone }),
-                deadline: formatDateTime(decision.arrival_deadline_at, { tz: decision.time_zone }),
+                latest: formatDateTime(decision.latest_departure_at, { tz: displayZone }),
+                deadline: formatDateTime(decision.arrival_deadline_at, { tz: displayZone }),
               })}</Text>
               <Text as="p" variant="bodySm">{t('smartCommute.traffic.deadline.limitations', 'TeslaSync works backward from the fastest qualifying estimate and adds a three-minute buffer. Traffic at an earlier departure may differ.')}</Text>
             </>
           )}
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.evidence', 'HERE traffic observed {{observed}} for departure at {{departure}}.', {
-            observed: formatDateTime(decision.observed_at), departure: formatDateTime(decision.departure_at),
+            observed: formatDateTime(decision.observed_at, { tz: displayZone }),
+            departure: formatDateTime(decision.departure_at, { tz: displayZone }),
           })}</Text>
           <Text as="p" variant="bodySm">{t('smartCommute.traffic.teslaRoute', 'These are estimates, not measured trip times. Tesla calculates its own route.')}</Text>
           {scope.mode === 'forward_auth' && !decision.route_energy_only && !decision.arrival_deadline_at &&

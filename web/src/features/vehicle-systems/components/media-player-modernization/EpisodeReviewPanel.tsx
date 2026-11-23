@@ -35,7 +35,7 @@ function EpisodeReview({ scope, vehicleId, identityPending }: PrivateVehicleRevi
   const { t } = useTranslation();
   const { search } = useLocation();
   const { formatDuration } = useUnits();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useEpisodeReview(scope, vehicleId);
   const source = useDataState(query);

@@ -18,7 +18,7 @@ type Editor = { kind: 'create' } | { kind: 'revise'; trip: SharedTrip }
 
 export function SharedTripManagement({ trips, disabled, pending, onChange }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const [editor, setEditor] = useState<Editor | null>(null)
   const [cancelling, setCancelling] = useState<SharedTrip | null>(null)
   const currentEditor = editor?.kind === 'revise'

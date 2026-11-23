@@ -49,7 +49,7 @@ export function SharedChargerPlanning({ active, scope, ...choices }: Props) {
 
 function ScopedPlanning({ scope, vehicles, places, disabled, choicesUnavailable }: PlanningChoices & { scope: SharedChargerScope }) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const [offset, setOffset] = useState(0)
   const list = useSharedChargerPlanning(scope, offset)
   const change = useSharedChargerChange(scope)

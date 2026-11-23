@@ -30,7 +30,8 @@ export function ChargingCostDigestPanel({ vehicleId }: { vehicleId: number | nul
 
 function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useChargingCostDigest(scope, vehicleId);
   const source = useDataState(query);
@@ -83,7 +84,7 @@ function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScop
           ? t('tco.costDigest.active', 'Active. A private monthly comparison is ready.')
           : t('tco.costDigest.waiting', 'Active. There is no current comparison. Insufficient coverage, small changes and dismissed reviews stay quiet.')}</Text>
     {settings && review.last_checked_at && <Text as="p" variant="caption">
-      {t('tco.costDigest.checked', 'Last checked: {{date}}.', { date: formatDateTime(review.last_checked_at, { tz: settings.time_zone }) })}
+      {t('tco.costDigest.checked', 'Last checked: {{date}}.', { date: formatDateTime(review.last_checked_at) })}
     </Text>}
     {digest && settings && !settings.paused && <div className="space-y-3">
       <DigestEvidence digest={digest} zone={settings.time_zone} />
@@ -131,7 +132,7 @@ function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScop
 
 function DigestEvidence({ digest, zone }: { digest: ChargingCostDigest; zone: string }) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { unitPrefs, formatDistance } = useUnits();
   const data = digest.attribution;
   const locale = unitPrefs.locale ?? 'en-US';

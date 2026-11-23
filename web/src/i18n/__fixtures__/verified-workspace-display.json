@@ -1,0 +1,2899 @@
+{
+  "sources": [
+    {
+      "file": "web/src/api/hooks/useSmartCommute.ts",
+      "before": "85d696488b4f91664b751b4626bda8b3771d619ffb348155c6c2d0ba3c52ade6",
+      "after": "09bb92cd2d4d5db3783fe0921f74fbf6efd1ca51c816863f5ca0997e35a932b4",
+      "hunks": [
+        {
+          "start": 92,
+          "current": [
+            "  | { kind: 'analyze'; timeZone: string }"
+          ],
+          "previous": [
+            "  | { kind: 'analyze' }"
+          ]
+        },
+        {
+          "start": 120,
+          "current": [
+            "            ...options, method: 'POST', body: JSON.stringify({ vehicle_id: vehicleId, time_zone: change.timeZone }),"
+          ],
+          "previous": [
+            "            ...options, method: 'POST', body: JSON.stringify({ vehicle_id: vehicleId }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "before": "3f198e8a6514dc86ab1081520b915bcfd5906d7da1bc3dafd4b97e31c95081d4",
+      "after": "4c4cd207e25f3bd5ddd6e7971d9bb15ab476d6423f4020c21cc755ad9a85e295",
+      "hunks": [
+        {
+          "start": 80,
+          "current": [
+            "import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1063,
+          "current": [
+            "      <WorkspaceDateFormatProvider>"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1339,
+          "current": [
+            "      </WorkspaceDateFormatProvider>"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceContextControl.tsx",
+      "before": "73561f633f504e2ad3d2b78331337f667b2dbfa79ed2fc50a6956fabade1e84f",
+      "after": "f32ddd74670e7abfc1cfb5295e25ec79077aecfef6bc79b4969690b545eb8388",
+      "hunks": [
+        {
+          "start": 19,
+          "current": [
+            "import { formatDayKey } from '@/lib/dateFormat'"
+          ],
+          "previous": [
+            "import { formatDate, formatDateShort } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 289,
+          "current": [
+            "                  { start: formatDayKey(range.start, { style: 'short' }), end: formatDayKey(range.end) },"
+          ],
+          "previous": [
+            "                  { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "before": "dea9edf7530ba935d478baf276f1441f2638edc526a4b0bfa35b893b52159b24",
+      "after": "19caf42b6a277d0f2718a2b85eb030670bf36d5736c9dd9e69be0c671b289c26",
+      "hunks": [
+        {
+          "start": 1,
+          "current": [
+            "import type { DataTableRowGrouping } from './DataTable'"
+          ],
+          "previous": []
+        },
+        {
+          "start": 29,
+          "current": [
+            "  /** Group cards without changing the native table's row order or layout. */",
+            "  grouping?: DataTableRowGrouping<T>"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/components/ui/mobile-grid-reference/MobileReferenceRow.tsx",
+      "before": "69bf66c41223060d7518328c9e52130eb04897a370571e1218ac1f02e9708824",
+      "after": "b9f4a7f243fc7c8e238816d2fe038d832c52fe80eebcf8cdd3da7e60aab6483c",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "import type { MobileField, MobileRow, MobileVariant } from './types';"
+          ],
+          "previous": [
+            "import type { MobileRow, MobileVariant } from './types';"
+          ]
+        },
+        {
+          "start": 23,
+          "current": [
+            "  cells?: {",
+            "    title?: ReactNode;",
+            "    primary?: ReactNode;",
+            "    meta: readonly (Omit<MobileField, 'value'> & { value: ReactNode })[];",
+            "  };"
+          ],
+          "previous": []
+        },
+        {
+          "start": 29,
+          "current": [
+            "export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, href, actions, onSelectionEvent, selectionLabel, compact = false, cells }: Props) {"
+          ],
+          "previous": [
+            "export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, href, actions, onSelectionEvent, selectionLabel, compact = false }: Props) {"
+          ]
+        },
+        {
+          "start": 33,
+          "current": [
+            "  const cardClass = cn('mgr-row min-w-0 flex-1',",
+            "    cells ? '[overflow-wrap:anywhere] [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center'",
+            "      : 'cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',"
+          ],
+          "previous": [
+            "  const cardClass = cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',"
+          ]
+        },
+        {
+          "start": 52,
+          "current": [
+            "          {cells",
+            "            ? <div data-card-label=\"\" className=\"mgr-title\">{cells.title ?? row.title}</div>",
+            "            : <Text data-card-label=\"\" title={row.title} className=\"mgr-title block truncate\">{row.title}</Text>}"
+          ],
+          "previous": [
+            "          <Text data-card-label=\"\" title={row.title} className=\"mgr-title block truncate\">{row.title}</Text>"
+          ]
+        },
+        {
+          "start": 58,
+          "current": [
+            "        {cells",
+            "          ? cells.primary != null && <div data-card-primary=\"\" className=\"mgr-primary max-w-[45%] text-end\">{cells.primary}</div>",
+            "          : <Text data-card-primary=\"\" title={row.primary} className=\"mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap\">{row.primary}</Text>}"
+          ],
+          "previous": [
+            "        <Text data-card-primary=\"\" title={row.primary} className=\"mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap\">{row.primary}</Text>"
+          ]
+        },
+        {
+          "start": 64,
+          "current": [
+            "          {(cells?.meta ?? row.meta).map(field => ("
+          ],
+          "previous": [
+            "          {row.meta.map(field => ("
+          ]
+        },
+        {
+          "start": 67,
+          "current": [
+            "              {cells",
+            "                ? <div className=\"mgr-meta-value\">{field.value}</div>",
+            "                : <Text title={typeof field.value === 'string' ? field.value : undefined} className=\"mgr-meta-value block truncate\">{field.value}</Text>}"
+          ],
+          "previous": [
+            "              <Text title={field.value} className=\"mgr-meta-value block truncate\">{field.value}</Text>"
+          ]
+        },
+        {
+          "start": 99,
+          "current": [
+            "      {cells ? <div {...cardData}>{contents}</div> : href && !selecting ? <Link {...cardData} to={href}>{contents}</Link> : ("
+          ],
+          "previous": [
+            "      {href && !selecting ? <Link {...cardData} to={href}>{contents}</Link> : ("
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/action-center/components/useRecommendationContent.ts",
+      "before": "e2f1bb3f4a25b815fb3521fca37f4a0f76fae00a29402c84b33801a501497dcf",
+      "after": "9e6118c72941ae12805704f7a7f4240c52301623e90860442f6dbb06c901704f",
+      "hunks": [
+        {
+          "start": 18,
+          "current": [
+            "  const { formatDateTime, formatDate } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime, formatDate } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 426,
+          "current": [
+            "        latest: formatDateTime(traffic.latest_departure_at),",
+            "        deadline: formatDateTime(traffic.arrival_deadline_at),"
+          ],
+          "previous": [
+            "        latest: formatDateTime(traffic.latest_departure_at, { tz: traffic.time_zone }),",
+            "        deadline: formatDateTime(traffic.arrival_deadline_at, { tz: traffic.time_zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/AlertDetailTimeline.tsx",
+      "before": "79ed69e5c389e79644fbf46cb74593740b447217a438eb1820fdad96aec748d9",
+      "after": "0505c6260ca0778bc42261f860d4edde51cfd5ca4c5ee224509e750b711d108b",
+      "hunks": [
+        {
+          "start": 33,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/ApiLogsBackendErrors.tsx",
+      "before": "e336924229808b14358d05acc856bb0bf66e85458c45b48926aab91034edcff2",
+      "after": "53bcb8c8ba8bc99720bafd020641d44f8319350a00aebe977fc18faa3f451e36",
+      "hunks": [
+        {
+          "start": 77,
+          "current": [
+            "                  {entry.last_seen ? <DateTime value={entry.last_seen} /> : '—'}"
+          ],
+          "previous": [
+            "                  {entry.last_seen ? <DateTime value={entry.last_seen} in=\"utc\" /> : '—'}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/ApiLogsEvidenceTable.tsx",
+      "before": "3afc1e4a533af7af2c4ea71efb22e9538edf950186098b6b049dd989126e4cb8",
+      "after": "a88f201a6f98eb34acd4a4697f7aee7ddac4eb1c205a24eec3f11bf064c5ec85",
+      "hunks": [
+        {
+          "start": 10,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat';"
+          ],
+          "previous": [
+            "import { formatDateTime } from '@/lib/dateFormat';"
+          ]
+        },
+        {
+          "start": 116,
+          "current": [
+            "          {t('apiLogs.time', 'Time')}: <DateTime value={log.ts} />"
+          ],
+          "previous": [
+            "          {t('apiLogs.time', 'Time')}: <DateTime value={log.ts} in=\"utc\" />"
+          ]
+        },
+        {
+          "start": 172,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": []
+        },
+        {
+          "start": 209,
+          "current": [
+            "      render: (log) => <DateTime value={log.ts} className=\"whitespace-nowrap text-xs tabular-nums\" />,"
+          ],
+          "previous": [
+            "      render: (log) => <DateTime value={log.ts} in=\"utc\" className=\"whitespace-nowrap text-xs tabular-nums\" />,"
+          ]
+        },
+        {
+          "start": 235,
+          "current": [
+            "              <DateTime value={log.ts} />"
+          ],
+          "previous": [
+            "              <DateTime value={log.ts} in=\"utc\" />"
+          ]
+        },
+        {
+          "start": 347,
+          "current": [
+            "        case 'time': return formatDateTime(log.ts);"
+          ],
+          "previous": [
+            "        case 'time': return formatDateTime(log.ts, { tz: 'UTC', locale: displayLocale });"
+          ]
+        },
+        {
+          "start": 354,
+          "current": [
+            "  }), [t, serviceConfig, displayPrecision, displayLocale, formatDateTime]);"
+          ],
+          "previous": [
+            "  }), [t, serviceConfig, displayPrecision, displayLocale]);"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/admin/components/ApiLogsFrontendErrors.tsx",
+      "before": "201214fc0ace5696b743e28d1dd48cd7e3e08562e2e7e0d826888a2cec67f472",
+      "after": "cceb012b61060f74f6b76ddfc771d30622dafddd4e386f5fda1e518f5f174807",
+      "hunks": [
+        {
+          "start": 37,
+          "current": [
+            "            {data?.as_of ? <DateTime value={data.as_of} /> : '—'}"
+          ],
+          "previous": [
+            "            {data?.as_of ? <DateTime value={data.as_of} in=\"utc\" /> : '—'}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/analytics/components/mileage-term/MileageTermReviewPanel.tsx",
+      "before": "61ce2fbaf432210b986e28e23934aea47c266f03d9a0b0504a3e1aa4840bb380",
+      "after": "a508129807077fbe8ebe7999c5f5347a7132b8b8c57af870d465d6be377caf6f",
+      "hunks": [
+        {
+          "start": 29,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 82,
+          "current": [
+            "        date: formatDateTime(review.next_check_at),"
+          ],
+          "previous": [
+            "        date: formatDateTime(review.next_check_at, { tz: settings.time_zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/analytics/components/true-cost/ChargingCostDigestPanel.tsx",
+      "before": "7f18d2ab92982ef62d21731a15bbaa6c0adfee9213b27c86e258052d0083506d",
+      "after": "fce2d84b9656418625dedb4f921d23a46dbd24a288296410505f23f163c6f225",
+      "hunks": [
+        {
+          "start": 32,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 86,
+          "current": [
+            "      {t('tco.costDigest.checked', 'Last checked: {{date}}.', { date: formatDateTime(review.last_checked_at) })}"
+          ],
+          "previous": [
+            "      {t('tco.costDigest.checked', 'Last checked: {{date}}.', { date: formatDateTime(review.last_checked_at, { tz: settings.time_zone }) })}"
+          ]
+        },
+        {
+          "start": 134,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/automations/components/AutomationExecutionDetail.tsx",
+      "before": "21e583c83628fef6fd5aadc5c57a29aba9fba00ebfa3488a47747f756bfe74dc",
+      "after": "e2d4508c7fdc2d5ad140b2189aef5b27797f53533d7b952486140549ac610a8d",
+      "hunks": [
+        {
+          "start": 66,
+          "current": [
+            "              <DateTime value={detail.triggered_at} />"
+          ],
+          "previous": [
+            "              <DateTime value={detail.triggered_at} in=\"user\" />"
+          ]
+        },
+        {
+          "start": 106,
+          "current": [
+            "                      <DateTime value={transition.ts} />"
+          ],
+          "previous": [
+            "                      <DateTime value={transition.ts} in=\"user\" />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/automations/components/AutomationHistoryTable.tsx",
+      "before": "0e4263720e5e88e9ae70979773787076949aa590dfa59c291951b330b38bc582",
+      "after": "095f4a7c2e82c5c4d288d19d41860c1f9fc05ceabb428297447192c60e70fbc3",
+      "hunks": [
+        {
+          "start": 18,
+          "current": [
+            "    { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} /> },"
+          ],
+          "previous": [
+            "    { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} in=\"user\" /> },"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/battery/components/vampire-drain-modernization/OvernightDrainEvidence.tsx",
+      "before": "b5a9a41018d222cee09d69d03fe18033fc020cdbe75938979d1ccb0711139096",
+      "after": "02cb5d1a1cb2ec9004f1d36dc44b0b9f1b565c0e6f2f276cdcf154143c58a5d5",
+      "hunks": [
+        {
+          "start": 33,
+          "current": [
+            "        start: formatAt(review.start_at), end: formatAt(review.end_at), zone, expiry: formatDateTime(review.expires_at),"
+          ],
+          "previous": [
+            "        start: formatAt(review.start_at), end: formatAt(review.end_at), zone, expiry: formatAt(review.expires_at),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "before": "afd90fef1f04829bc18b86bcbc216bc7256998614336fea9af254ff33c13aaba",
+      "after": "185284ccb137eef1ba4d5afa81cd0336ec85cfeef3e7d513984be3d2a33a868f",
+      "hunks": [
+        {
+          "start": 4,
+          "current": [
+            "  AlertTriangle,"
+          ],
+          "previous": [
+            "  AlertTriangle, Plug,"
+          ]
+        },
+        {
+          "start": 9,
+          "current": [
+            "import { Badge, Button, GlassPanel, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';",
+            "import { FadeIn } from '@/components/motion';"
+          ],
+          "previous": [
+            "import { Badge, Button, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';",
+            "import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';"
+          ]
+        },
+        {
+          "start": 15,
+          "current": [
+            "import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';"
+          ],
+          "previous": [
+            "import {",
+            "  FilterBar, ActiveFilterChips, type FilterChipDescriptor, ListExportMenu,",
+            "} from '@/components/forms';",
+            "import { DensityToggle, type Density } from '@/components/forms/DensityToggle';",
+            "import { SortControl, type SortDirection } from '@/components/forms/SortControl';"
+          ]
+        },
+        {
+          "start": 18,
+          "current": [],
+          "previous": [
+            "  DateGroupedList, type DateGroupedListGroup,"
+          ]
+        },
+        {
+          "start": 39,
+          "current": [
+            "import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';"
+          ],
+          "previous": [
+            "import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';"
+          ]
+        },
+        {
+          "start": 41,
+          "current": [],
+          "previous": [
+            "import {formatRelativeDayKey} from '@/lib/dateConvert'"
+          ]
+        },
+        {
+          "start": 47,
+          "current": [],
+          "previous": [
+            "import { ChargingSessionCard } from '../components/ChargingSessionCard';"
+          ]
+        },
+        {
+          "start": 50,
+          "current": [],
+          "previous": [
+            "import { ChargingSearchControl } from '../components/charging-list/ChargingSearchControl';"
+          ]
+        },
+        {
+          "start": 55,
+          "current": [
+            "  durationMinutes, avgPowerW, sessionAveragePowerW, sessionDisplayPowerW, blendedRecordedCostPerKwh, localDayKey, isEstimatedChargingCost,"
+          ],
+          "previous": [
+            "  durationMinutes, avgPowerW, sessionAveragePowerW, blendedRecordedCostPerKwh, localDayKey, isEstimatedChargingCost,"
+          ]
+        },
+        {
+          "start": 95,
+          "current": [
+            "  const { unitPrefs, formatEnergy, formatPower, formatDistance } = useUnits();"
+          ],
+          "previous": [
+            "  const { unitPrefs, formatEnergy } = useUnits();",
+            "  const distanceUnit = unitPrefs.distance;",
+            "  const toDistanceDisplay = useCallback(",
+            "    (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),",
+            "    [unitPrefs.distance],",
+            "  );"
+          ]
+        },
+        {
+          "start": 108,
+          "current": [
+            "  const [sortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');"
+          ],
+          "previous": [
+            "  const [sortBy, setSortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');"
+          ]
+        },
+        {
+          "start": 110,
+          "current": [
+            "  const [density, setDensity] = useUrlEnum('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');"
+          ],
+          "previous": [
+            "  const [density, setDensity] = useUrlEnum<Density>('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');"
+          ]
+        },
+        {
+          "start": 381,
+          "current": [],
+          "previous": [
+            "  /* ── Date-grouped view of the paginated list ─────────────────── */",
+            "  const groupedSessions = useMemo<DateGroupedListGroup<ChargingSession>[]>(() => {",
+            "    const buckets = new Map<string, ChargingSession[]>();",
+            "    for (const s of paginatedSessions) {",
+            "      const key = localDayKey(s.started_at, tz);",
+            "      if (!key) continue;",
+            "      const list = buckets.get(key) ?? [];",
+            "      list.push(s);",
+            "      buckets.set(key, list);",
+            "    }",
+            "    return Array.from(buckets.entries())",
+            "      .sort(([a], [b]) => (sortDesc ? b.localeCompare(a) : a.localeCompare(b)))",
+            "      .map(([dateKey, items]) => {",
+            "        const totalEnergy = convertEnergyFromSI(",
+            "          items.reduce((acc, s) => acc + s.total_energy_added_wh, 0),",
+            "          'kWh',",
+            "        );",
+            "        const noun = items.length === 1",
+            "          ? t('bulk.noun.session_one', 'session')",
+            "          : t('bulk.noun.session_other', 'sessions');",
+            "        return {",
+            "          dateKey,",
+            "          dateLabel: formatDayKey(dateKey, { style: 'long' }),",
+            "          relativeLabel: formatRelativeDayKey(dateKey, { tz }),",
+            "          summary: `${items.length} ${noun} · ${fmtNumber(totalEnergy)} kWh`,",
+            "          items,",
+            "        };",
+            "      });",
+            "  }, [paginatedSessions, t, tz, sortDesc, fmtNumber]);",
+            ""
+          ]
+        },
+        {
+          "start": 416,
+          "current": [],
+          "previous": [
+            "  const toggleSessionSelected = useCallback((id: number, on: boolean) => {",
+            "    setBulkSelected(prev => {",
+            "      const n = new Set(prev);",
+            "      if (on) n.add(id); else n.delete(id);",
+            "      return n;",
+            "    });",
+            "  }, []);"
+          ]
+        },
+        {
+          "start": 600,
+          "current": [],
+          "previous": [
+            "  /* ── Sort options ────────────────────────────────────────────── */",
+            "  const sortOptions = useMemo(() => [",
+            "    { value: 'date' as const,     label: t('charging.sort.date', 'Date') },",
+            "    { value: 'energy' as const,   label: t('charging.sort.energy', 'Energy') },",
+            "    { value: 'cost' as const,     label: t('charging.sort.cost', 'Cost') },",
+            "    { value: 'duration' as const, label: t('charging.sort.duration', 'Duration') },",
+            "    { value: 'power' as const,    label: t('charging.sort.power', 'Power') },",
+            "  ], [t]);",
+            ""
+          ]
+        },
+        {
+          "start": 833,
+          "current": [
+            "  const previewRate = previewSession == null ? null : chargingColumnValue(previewSession, 'rate');",
+            "  const previewScore = previewSession == null ? null : chargingColumnValue(previewSession, 'score');",
+            "  const previewRange = previewSession == null ? null : chargingColumnValue(previewSession, 'range');"
+          ],
+          "previous": [
+            "  const renderSession = (session: ChargingSession) => (",
+            "    <StaggerItem key={session.id}>",
+            "      <ChargingSessionCard",
+            "        session={session}",
+            "        toDistanceDisplay={toDistanceDisplay}",
+            "        distanceUnit={distanceUnit}",
+            "        selected={bulkSelected.has(session.id)}",
+            "        onToggleSelect={toggleSessionSelected}",
+            "        anomaly={anomalyById.get(session.id)}",
+            "        density={density === 'compact' ? 'compact' : 'comfortable'}",
+            "        onPreview={setPreviewSession}",
+            "      />",
+            "    </StaggerItem>",
+            "  );"
+          ]
+        },
+        {
+          "start": 892,
+          "current": [
+            "        {/* Active filters for the shared evidence grid */}"
+          ],
+          "previous": [
+            "        {/* Search + active filter chips */}"
+          ]
+        },
+        {
+          "start": 895,
+          "current": [],
+          "previous": [
+            "          {!isDesktopEvidence && <FilterBar>",
+            "            <ChargingSearchControl",
+            "              value={search}",
+            "              onChange={(value) => setUrlBatch({ q: value || null, page: null })}",
+            "              pending={isSearchPending}",
+            "            />",
+            "          </FilterBar>}"
+          ]
+        },
+        {
+          "start": 981,
+          "current": [
+            "        {valueFilter.invalid && ("
+          ],
+          "previous": [
+            "        {(valueFilter.invalid || (!isDesktopEvidence && hasValueFilters)) && ("
+          ]
+        },
+        {
+          "start": 983,
+          "current": [
+            "            variant=\"warning\""
+          ],
+          "previous": [
+            "            variant={valueFilter.invalid ? 'warning' : 'info'}"
+          ]
+        },
+        {
+          "start": 986,
+          "current": [
+            "            {t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')}"
+          ],
+          "previous": [
+            "            {valueFilter.invalid",
+            "              ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')",
+            "              : t('table.filter.mobileValues', 'Column value filters are active. Open the desktop grid to edit them, or clear them here.')}"
+          ]
+        },
+        {
+          "start": 995,
+          "current": [],
+          "previous": [
+            "            {!isDesktopEvidence && sortedSessions.length > 0 && (",
+            "              <div className=\"flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center\">",
+            "                <SectionTitle className=\"flex items-center gap-2\">",
+            "                  <Icon icon={Plug} size=\"md\" className=\"text-[var(--text-secondary)]\" />",
+            "                  {t('charging.allSessions', 'All sessions')}",
+            "                  <Text as=\"span\" size=\"xs\" weight=\"regular\" color=\"muted\">",
+            "                    ({fmtCompact(sortedSessions.length)})",
+            "                  </Text>",
+            "                </SectionTitle>",
+            "                <div className=\"flex flex-wrap items-center gap-2\">",
+            "                  <SortControl<SortField>",
+            "                    field={sortBy}",
+            "                    direction={sortDesc ? 'desc' : 'asc'}",
+            "                    options={sortOptions}",
+            "                    onFieldChange={setSortBy}",
+            "                    onDirectionChange={(d: SortDirection) => setSortDesc(d === 'desc')}",
+            "                    testId=\"charging-sort\"",
+            "                  />",
+            "                  <span className=\"mx-1 h-4 w-px bg-[var(--surface-2)]\" aria-hidden=\"true\" />",
+            "                  <DensityToggle",
+            "                    value={density}",
+            "                    onChange={setDensity}",
+            "                    options={['compact', 'comfortable']}",
+            "                    testId=\"charging-density\"",
+            "                  />",
+            "                  <span className=\"mx-1 h-4 w-px bg-[var(--surface-2)]\" aria-hidden=\"true\" />",
+            "                  <ListExportMenu",
+            "                    onExportCsv={handleExportCsv}",
+            "                    onExportJson={handleExportJson}",
+            "                    selectedCount={bulkSelected.size}",
+            "                    visibleCount={sortedSessions.length}",
+            "                    testId=\"charging-export\"",
+            "                  />",
+            "                </div>",
+            "              </div>",
+            "            )}",
+            "            {!isDesktopEvidence && (",
+            "              <Text as=\"p\" variant=\"bodySm\">{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Text>",
+            "            )}",
+            ""
+          ]
+        },
+        {
+          "start": 1006,
+          "current": [
+            "            {isLoading ? (",
+            "              <div className=\"space-y-3\">",
+            "                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className=\"h-20\" />)}",
+            "              </div>",
+            "            ) : historyAvailable ? ("
+          ],
+          "previous": [
+            "            {isDesktopEvidence && !isLoading && historyAvailable && ("
+          ]
+        },
+        {
+          "start": 1051,
+          "current": [
+            "                  density: {",
+            "                    value: density,",
+            "                    onChange: value => { if (value !== 'table') setDensity(value); },",
+            "                    options: ['compact', 'comfortable'],",
+            "                    testId: 'charging-density',",
+            "                  },"
+          ],
+          "previous": [
+            "                  density: { value: density, onChange: setDensity, options: ['compact', 'comfortable'], testId: 'charging-density' },"
+          ]
+        },
+        {
+          "start": 1065,
+          "current": [
+            "                emptyContent={",
+            "                  <>",
+            "                    <EmptyState",
+            "                      icon={<Battery className=\"h-8 w-8\" />}",
+            "                      title={hasListFilters",
+            "                        ? t('charging.emptyForCollection', 'No charging sessions in this view')",
+            "                        : t('charging.emptyTitle', 'No charging sessions yet')}",
+            "                      message={hasListFilters",
+            "                        ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')",
+            "                        : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')}",
+            "                      action={{",
+            "                        label: t('charging.empty.cta', 'Reset filters'),",
+            "                        onClick: () => setUrlBatch({ q: null, from: null, to: null, coll: null, grid_values: null, sort: null, page: null }),",
+            "                      }}",
+            "                    />",
+            "                    {!hasListFilters && <EmptyStateGuidanceDetails guidanceId=\"charging.list\" className=\"mx-auto\" />}",
+            "                  </>",
+            "                }"
+          ],
+          "previous": []
+        },
+        {
+          "start": 1084,
+          "current": [],
+          "previous": [
+            "            )}",
+            "            {isLoading ? (",
+            "              <div className=\"space-y-3\">",
+            "                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className=\"h-20\" />)}",
+            "              </div>",
+            "            ) : paginatedSessions.length > 0 ? (",
+            "              <>",
+            "                {!isDesktopEvidence && <StaggerContainer>",
+            "                  {sortBy === 'date' ? <DateGroupedList",
+            "                    groups={groupedSessions}",
+            "                    itemKey={(s) => s.id}",
+            "                    renderItem={renderSession}",
+            "                  /> : <div className=\"space-y-3\">{paginatedSessions.map(renderSession)}</div>}",
+            "                </StaggerContainer>}",
+            "                {!isDesktopEvidence && <Pagination",
+            "                  page={page}",
+            "                  pageSize={pageSize}",
+            "                  total={sortedSessions.length}",
+            "                  onPageChange={setPage}",
+            "                  onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}",
+            "                />}",
+            "              </>",
+            "            ) : chargingState.fatalError != null ? (",
+            "              <QueryError error={chargingState.fatalError} onRetry={refetch} />",
+            "            ) : historyPending ? (",
+            "              <Text color=\"secondary\">{t('common.loading', 'Loading...')}</Text>"
+          ]
+        },
+        {
+          "start": 1085,
+          "current": [
+            "              <QueryError error={chargingState.fatalError} onRetry={refetch} />"
+          ],
+          "previous": [
+            "              <>",
+            "                <EmptyState",
+            "                  icon={<Battery className=\"h-8 w-8\" />}",
+            "                  title={",
+            "                    hasListFilters",
+            "                      ? t('charging.emptyForCollection', 'No charging sessions in this view')",
+            "                      : t('charging.emptyTitle', 'No charging sessions yet')",
+            "                  }",
+            "                  message={",
+            "                    hasListFilters",
+            "                      ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')",
+            "                      : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')",
+            "                  }",
+            "                  action={{",
+            "                    label: t('charging.empty.cta', 'Reset filters'),",
+            "                    onClick: () => {",
+            "                      setUrlBatch({ q: null, from: null, to: null, coll: null, grid_values: null, sort: null, page: null });",
+            "                    },",
+            "                  }}",
+            "                />",
+            "                {/* HELP-02 — governed prerequisite + likely cause. Only for",
+            "                    the unfiltered view; the filtered branch above already",
+            "                    tells the user to clear filters. */}",
+            "                {!hasListFilters && (",
+            "                  <EmptyStateGuidanceDetails guidanceId=\"charging.list\" className=\"mx-auto\" />",
+            "                )}",
+            "              </>"
+          ]
+        },
+        {
+          "start": 1376,
+          "current": [
+            "                  {",
+            "                    key: 'power',",
+            "                    label: previewSession.live",
+            "                      ? t('charging.currentPower', 'Current power') : t('charging.grid.averagePower', 'Average power'),",
+            "                    value: formatPower(sessionDisplayPowerW(previewSession)),",
+            "                  },",
+            "                  {",
+            "                    key: 'range',",
+            "                    label: t('charging.grid.rangeAdded', 'Range added'),",
+            "                    value: typeof previewRange === 'number' ? formatDistance(previewRange) : '—',",
+            "                  },",
+            "                  {",
+            "                    key: 'rate',",
+            "                    label: t('charging.grid.costPerEnergy', 'Cost per kWh'),",
+            "                    value: typeof previewRate === 'number' ? formatCurrency(previewRate) : '—',",
+            "                  },",
+            "                  {",
+            "                    key: 'battery-score',",
+            "                    label: t('charging.grid.batteryScore', 'Battery-friendly score'),",
+            "                    value: typeof previewScore === 'number' ? `${fmtInt(previewScore)}/100` : '—',",
+            "                  },"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/CostForecastWidget.tsx",
+      "before": "93b0625b8ffb43c18b5526e959555a04b59e71589e8c3dc5d6c8689c429b2f0c",
+      "after": "c77975967f0e9c149424275f7b7336b982c2d2e232bc8cecdaddeaa6fb6c6cc5",
+      "hunks": [
+        {
+          "start": 17,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat';"
+          ],
+          "previous": [
+            "import { useTimezone } from '@/lib/timezone';"
+          ]
+        },
+        {
+          "start": 52,
+          "current": [
+            "  const { tz: timezone } = useDateFormat();"
+          ],
+          "previous": [
+            "  const timezone = useTimezone('vehicle');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/MonthlyMileageWidget.tsx",
+      "before": "d80e6c3532bc723120c49832c8ba06fece68bc43928d7441b9eb6b299a955c4a",
+      "after": "c1960c54c082de7fda5e8e8d5e24ece51a16ed0c0cd0e875a221d184bfba4c00",
+      "hunks": [
+        {
+          "start": 73,
+          "current": [
+            "  const { tz, locale } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { tz, locale } = useDateFormat('vehicle');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/SpeedHeatmapWidget.tsx",
+      "before": "86854c3b0fe829d2a2d11d3a2c9f63a86c9378cc25e726a26d6d36732262a4f3",
+      "after": "89f37f2a714418cd001a6110f85cff85086597f2b2e762ae20b401554f8fc0b3",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat';"
+          ],
+          "previous": [
+            "import { useTimezone } from '@/lib/timezone';"
+          ]
+        },
+        {
+          "start": 111,
+          "current": [
+            "  const { tz: timezone } = useDateFormat();"
+          ],
+          "previous": [
+            "  const timezone = useTimezone('vehicle');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/dashboard/widgets/WallConnectorWidget.tsx",
+      "before": "593832c455fe2a50c91c944c6271eb1aaf6d72f76962c1d3d1b4e90ca30b02f3",
+      "after": "22bf6ada459f1d0fa0eace02dd3bbbd4e9b1bdc6b3c41d3492ad16d8c5ed507b",
+      "hunks": [
+        {
+          "start": 45,
+          "current": [
+            "  const { tz } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { tz } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/developer-reference/mobile-grid/ReferenceDesktopTable.tsx",
+      "before": "40b58425b91794962a50d34c8e8d318f67bc633b0f145c5f93ae35fb33106366",
+      "after": "ca0ad43f591e17543d2e4f8f58f18f6f7633fdb4bb05de59dc9fe08c3f4e0e3e",
+      "hunks": [
+        {
+          "start": 38,
+          "current": [
+            "        mobilePresentation={false}"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/diagnostics/components/service-case/PrivateServiceCaseControls.tsx",
+      "before": "61eff4b064f659244d389c7d747b5e885f9ed103d2d1cd9e9be817724178c5cf",
+      "after": "07f82b98a7d5392133b527ca7912b4056dd92b2c3febfeeb5db83f16f3b9dad3",
+      "hunks": [
+        {
+          "start": 15,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/diagnostics/components/service-case/ServiceCaseEvidenceReview.tsx",
+      "before": "365ff47eba62c3ecd205535129f307007b2183e4e52676a07e93907c10f08df9",
+      "after": "6216470aa8e2b812b2daebaaf0d86e12aa24fb01639b754a5755b9558787fe74",
+      "hunks": [
+        {
+          "start": 22,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drive-detail/DriveDetailHeader.tsx",
+      "before": "1e48e052bd9203900251a6d6e781d7e44d5d93f9e44820622ca9b9591ef79293",
+      "after": "a73b13faebc3c2c3fb8edf13ad122151d466f83571d5c161bebc028cf12216af",
+      "hunks": [
+        {
+          "start": 45,
+          "current": [
+            "            {displayVehicle} · <DateTime value={drive.startTs} variant=\"date\" />"
+          ],
+          "previous": [
+            "            {displayVehicle} · <DateTime value={drive.startTs} variant=\"date\" in=\"vehicle\" />"
+          ]
+        },
+        {
+          "start": 47,
+          "current": [
+            "            <DateTime value={drive.startTs} variant=\"time\" />"
+          ],
+          "previous": [
+            "            <DateTime value={drive.startTs} variant=\"time\" in=\"vehicle\" />"
+          ]
+        },
+        {
+          "start": 51,
+          "current": [
+            "                <DateTime value={drive.endTs} variant=\"time\" />"
+          ],
+          "previous": [
+            "                <DateTime value={drive.endTs} variant=\"time\" in=\"vehicle\" />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drive-detail/DriveTrackPanel.tsx",
+      "before": "828a2bca526a137c702ddc270af840da5ff97012cdf2b7be80b2fcb336765fbd",
+      "after": "d53552b3261a99a0b772a4603ecc4c57896e440510856746a62355264fc74149",
+      "hunks": [
+        {
+          "start": 33,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
+      "before": "96a319e6e48f9f3a069e533a60836d5d70dedca5d13eba54d67d5e585fa03ec2",
+      "after": "ffc9562e9806c1e2ebb0cd4fbdabf63872a28516fef884c2c14da3e138637376",
+      "hunks": [
+        {
+          "start": 14,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('vehicle');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/trip-packet/TripPacketEvidence.tsx",
+      "before": "c76b22e21232af1e985d1e8ac9cc46a146882f3432fb71c420f7afc64a3fd05a",
+      "after": "a4aaca768c34161987581732fb7d1eefc533165be0cba9d46c3326142ff0a1ed",
+      "hunks": [
+        {
+          "start": 17,
+          "current": [
+            "  const { formatDateTime, formatDayKey } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime, formatDayKey } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 42,
+          "current": [
+            "        { key: 'started_at', header: t('logbook.date', 'Date'), render: row => formatDateTime(row.started_at) },"
+          ],
+          "previous": [
+            "        { key: 'started_at', header: t('logbook.date', 'Date'), render: row => formatDateTime(row.started_at, { tz: zone }) },"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/trip-packet/TripPacketPanel.tsx",
+      "before": "0247c315c595437ad973ecaf8e000828b4da124d45b3e0dd743e376f315b2fd2",
+      "after": "51e2c145bccc8583d258d9eb4a6bec013851c82466f4dde967c9fd4e5f1bc65f",
+      "hunks": [
+        {
+          "start": 53,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 100,
+          "current": [
+            "        id: row.id, date: formatDateTime(row.startTs),"
+          ],
+          "previous": [
+            "        id: row.id, date: formatDateTime(row.startTs, { tz: plan?.time_zone }),"
+          ]
+        },
+        {
+          "start": 115,
+          "current": [
+            "      date: formatDateTime(plan.next_check_at),"
+          ],
+          "previous": [
+            "      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/weekly-drive-efficiency/WeeklyDriveDigestEvidence.tsx",
+      "before": "70bf91ffd85b520ade91f5abeed933d744064db40c0ed0a511a3b16ba58308fc",
+      "after": "1ad380994e106cce2d5ad799e18db31f39b461cc2baea07ee33e2523a7343d77",
+      "hunks": [
+        {
+          "start": 11,
+          "current": [],
+          "previous": [
+            "  timeZone: string;"
+          ]
+        },
+        {
+          "start": 15,
+          "current": [
+            "export function WeeklyDriveDigestEvidence({ digest, canOpenDrive, onOpenDrive }: Props) {"
+          ],
+          "previous": [
+            "export function WeeklyDriveDigestEvidence({ digest, timeZone, canOpenDrive, onOpenDrive }: Props) {"
+          ]
+        },
+        {
+          "start": 17,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 30,
+          "current": [
+            "      { label: t('routeEfficiency.weekly.last', 'Latest matching drive ended'), value: formatDateTime(digest.observed_until) },"
+          ],
+          "previous": [
+            "      { label: t('routeEfficiency.weekly.last', 'Latest matching drive ended'), value: formatDateTime(digest.observed_until, { tz: timeZone }) },"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/weekly-drive-efficiency/WeeklyDriveEfficiencyPanel.tsx",
+      "before": "33d8845c90ff701dfeb1853721058fde26f5661a5466e250e2a92fc32cee5cd7",
+      "after": "5ee49da86a536d0d32c90b36ca3e2b797824ea508506d773b2d9ca5bf8f8c1e5",
+      "hunks": [
+        {
+          "start": 30,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { tz, formatDateTime } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 96,
+          "current": [
+            "      date: formatDateTime(plan.next_check_at),"
+          ],
+          "previous": [
+            "      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),"
+          ]
+        },
+        {
+          "start": 137,
+          "current": [
+            "      <WeeklyDriveDigestEvidence digest={digest} canOpenDrive={!blocked && parked}"
+          ],
+          "previous": [
+            "      <WeeklyDriveDigestEvidence digest={digest} timeZone={plan.time_zone} canOpenDrive={!blocked && parked}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "before": "a22d52cac170de85d4898cf217808fd365481d4ec16a6f18de36e8f10b518efd",
+      "after": "88dba431808fd8b3c8603a2ceec4e3760663d718a211de122fca04359e310797",
+      "hunks": [
+        {
+          "start": 72,
+          "current": [
+            "  const { formatDateTime, tz } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/ArchivedSummary.tsx",
+      "before": "70f3b239255c0adcb3f511931d72cc63bc775e0419080c4896b10d2f7b2f40e5",
+      "after": "76bdf5d11370d1be98e0a878c762b96c1fc971ff70ad6b4e779880cb5f27dd70",
+      "hunks": [
+        {
+          "start": 18,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat';"
+          ],
+          "previous": [
+            "import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';"
+          ]
+        },
+        {
+          "start": 37,
+          "current": [
+            "  const { formatRelativeTime, formatDateTime } = useDateFormat();"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/InboxSummary.tsx",
+      "before": "0667148e86ce877b9afc24ce27070550b9d54b93cc185fc73a871c7cc5ac6def",
+      "after": "d602c4311832fdf6b264914e3024801ef961d6ae3723f6ea29242c3f36f4f64c",
+      "hunks": [
+        {
+          "start": 45,
+          "current": [
+            "  const { formatRelativeTime, formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatRelativeTime, formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "before": "293df32a1fa10cd30568713e53ce9258a8267ed94ed78eb73d6924d59793147b",
+      "after": "8f67159663505e3db4cab698cbbc03f0be6d3f1575df42d9de4483dbf8b76a95",
+      "hunks": [
+        {
+          "start": 22,
+          "current": [
+            "    value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} /> : null;"
+          ],
+          "previous": [
+            "    value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} in=\"user\" /> : null;"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "before": "c6df9cd4836a1ef1d6ced51f8ff793bcebf5fc20aa675393808a95790123c690",
+      "after": "328a246a6d3629c56c5a6184ebe9269adde3cfe1ba7a72fc536d275d6e974474",
+      "hunks": [
+        {
+          "start": 53,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 78,
+          "current": [
+            "      render: log => log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} className=\"whitespace-nowrap tabular-nums\" /> : null,"
+          ],
+          "previous": [
+            "      render: log => log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in=\"user\" className=\"whitespace-nowrap tabular-nums\" /> : null,"
+          ]
+        },
+        {
+          "start": 173,
+          "current": [
+            "      render: log => log.sent_at ? <DateTime value={log.sent_at} /> : log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : null,"
+          ],
+          "previous": [
+            "      render: log => log.sent_at ? <DateTime value={log.sent_at} in=\"user\" /> : log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : null,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+      "before": "a46b56847560039fa502eb59d8f94b6cb178cbc94306d5d22ecf72d94a45f398",
+      "after": "7b4b8c03bb0b7984cacea6fb4ac54b867cdc0f850a8d49a3a571406c1bb0edbf",
+      "hunks": [
+        {
+          "start": 56,
+          "current": [
+            "  const reportColumns = useMemo<Column<Breakdown[number]>[]>(() => {",
+            "    const categoryLabel = (row: Breakdown[number]) =>",
+            "      t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key));",
+            "    return [",
+            "      {",
+            "        key: 'label', header: t('notifications.report.category', 'Category'),",
+            "        required: true, filterValue: row => row.key, filterValueLabel: (_, row) => categoryLabel(row),",
+            "        sortValue: categoryLabel, exportValue: categoryLabel,",
+            "        render: row => <Text title={row.key} color=\"secondary\" className=\"break-words\">{categoryLabel(row)}</Text>,",
+            "      },",
+            "      {",
+            "        key: 'count', header: t('notifications.report.count', 'Count'),",
+            "        align: 'right', sortValue: row => row.count, exportValue: row => row.count,",
+            "        render: row => fmtInt(row.count),",
+            "      },",
+            "    ];",
+            "  }, [t, fmtInt]);"
+          ],
+          "previous": [
+            "  const reportColumns = useMemo<Column<Breakdown[number]>[]>(() => [",
+            "    {",
+            "      key: 'label', header: t('notifications.report.category', 'Category'),",
+            "      defaultWidth: 200, minWidth: 100,",
+            "      render: (row) => <span title={row.key} className=\"min-w-0 break-all text-[var(--text-secondary)]\">{t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key))}</span>,",
+            "    },",
+            "    {",
+            "      key: 'count', header: t('notifications.report.count', 'Count'),",
+            "      defaultWidth: 85, minWidth: 65, align: 'right',",
+            "      render: (row) => fmtInt(row.count),",
+            "    },",
+            "  ], [t, fmtInt]);"
+          ]
+        },
+        {
+          "start": 151,
+          "current": [
+            "      <div className=\"grid items-start gap-3 md:grid-cols-2 2xl:grid-cols-3\">"
+          ],
+          "previous": [
+            "      <div className=\"grid gap-3 sm:grid-cols-2 xl:grid-cols-3\">"
+          ]
+        },
+        {
+          "start": 164,
+          "current": [
+            "                  caption={group.title}"
+          ],
+          "previous": [
+            "                  name={group.title}"
+          ]
+        },
+        {
+          "start": 169,
+          "current": [
+            "                  variant=\"embedded\""
+          ],
+          "previous": []
+        },
+        {
+          "start": 171,
+          "current": [
+            "                  showDensityControl={false}"
+          ],
+          "previous": []
+        },
+        {
+          "start": 174,
+          "current": [
+            "                  enableValueFilters",
+            "                  pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}"
+          ],
+          "previous": []
+        },
+        {
+          "start": 177,
+          "current": [],
+          "previous": [
+            "                  maxHeight={256}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "before": "155d8ce27b7fc18b51836fc47bde0e587aff562a5827cde8b24d2c0cc7380291",
+      "after": "35c09a18e1cd7988026934a6da027b81334a516dc31eedc2580f4732e1405781",
+      "hunks": [
+        {
+          "start": 130,
+          "current": [],
+          "previous": [
+            "            in=\"user\""
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/ownership/components/monthly-tariff/MonthlyTariffReviewEvidence.tsx",
+      "before": "0e6c1d50d04337f790ce29674a5cd501c63ac387b1652299f7bc6c40092fa795",
+      "after": "025a76c9c23c7fba2411cae65528d20873fab8ce07b71b6c0e61fff5dd45715a",
+      "hunks": [
+        {
+          "start": 19,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 32,
+          "current": [
+            "      zone, expires: formatDateTime(digest.expires_at),"
+          ],
+          "previous": [
+            "      zone, expires: formatDateTime(digest.expires_at, { tz: zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/ownership/components/monthly-tariff/MonthlyTariffReviewPanel.tsx",
+      "before": "602d36d0d1015625d2d080d4d5e3c5fb920178d233fdb19f5eb3ad0d65d60b7c",
+      "after": "83591d75e8e2fc4e16f4751ff0049b257a74be912df3b634b7bde4aacb801e00",
+      "hunks": [
+        {
+          "start": 33,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 87,
+          "current": [
+            "        date: formatDateTime(review.last_checked_at),"
+          ],
+          "previous": [
+            "        date: formatDateTime(review.last_checked_at, { tz: settings.time_zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/ownership/components/subscription-renewal/SubscriptionRenewalEvidence.tsx",
+      "before": "5498d29668304da0157b13a976792042c93a5836665da9adf7089f286824c255",
+      "after": "f3877e2886f9700606ea30bb58b05f4341b1d0c54b123b292bb5984b7cabe359",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "export function SubscriptionRenewalEvidence({ review }: { review: RenewalReview }) {"
+          ],
+          "previous": [
+            "export function SubscriptionRenewalEvidence({ review, timeZone }: { review: RenewalReview; timeZone: string }) {"
+          ]
+        },
+        {
+          "start": 11,
+          "current": [
+            "  const { formatDayKey, formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDayKey, formatDateTime } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 32,
+          "current": [
+            "        days: fmtInt(e.observed_days), from: formatDateTime(e.from), through: formatDateTime(e.through),"
+          ],
+          "previous": [
+            "        days: fmtInt(e.observed_days), from: formatDateTime(e.from, { tz: timeZone }), through: formatDateTime(e.through, { tz: timeZone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/ownership/components/subscription-renewal/SubscriptionRenewalPanel.tsx",
+      "before": "4262d3c2e147ad362e9c5513c88b7287b948909ffb4e8d49c209418536c13de1",
+      "after": "d07191dcbe70b8aad0b021f72841eed92bcec936bccfccf2cd46eef86aaba8c5",
+      "hunks": [
+        {
+          "start": 68,
+          "current": [
+            "  const { formatDateTime, locale } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz, locale } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 117,
+          "current": [
+            "      date: formatDateTime(plan.next_check_at),"
+          ],
+          "previous": [
+            "      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),"
+          ]
+        },
+        {
+          "start": 160,
+          "current": [
+            "      <SubscriptionRenewalEvidence review={review} />"
+          ],
+          "previous": [
+            "      <SubscriptionRenewalEvidence review={review} timeZone={plan.time_zone} />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/AIFeatureSpendPanel.tsx",
+      "before": "e2240a4e23853e505e0bb83daf74bfa85974d73dbf4b99c21dc9a1749ac0bc28",
+      "after": "1a140215029e968fa9d7dea4011e4aa3895ce1a716458edbda39dd0578ebc53e",
+      "hunks": [
+        {
+          "start": 20,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('utc')"
+          ]
+        },
+        {
+          "start": 112,
+          "current": [
+            "                          {t('ai.settings.featureSpend.callsTokensLocalized', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}}', {"
+          ],
+          "previous": [
+            "                          {t('ai.settings.featureSpend.callsTokens', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC', {"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/FeatureToggles.tsx",
+      "before": "57014ecabb98014b125c0a45fbb649b6d726271234d322f88adb2b902a4798af",
+      "after": "37a3d63c822aa92b58773a5f239c944f2d5a88ccd1ed6c624956d77665db64eb",
+      "hunks": [
+        {
+          "start": 8,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat'"
+          ],
+          "previous": [
+            "import { formatDateTime } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 13,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/RegionSettings.tsx",
+      "before": "341d944eb5fd5f26b54b655b60a80952d27b3012db16929243f3319d6ba8131e",
+      "after": "bf025f5d2ff65288e28bf06c6b9057d8f47be7193e8e62f452c1bafc153c2842",
+      "hunks": [
+        {
+          "start": 8,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat'"
+          ],
+          "previous": [
+            "import { formatDateTime } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 13,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": []
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/personal-delivery/PersonalDeliveryDeviceRow.tsx",
+      "before": "f348115a8587df0c0bca675d5bb865c0d378d648c3877c2b069cbff2f896e987",
+      "after": "3f8622dd82e7dd78db43571d810d866a6ab95ab982d131ccf722e2dfd1124c0a",
+      "hunks": [
+        {
+          "start": 20,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/personal-delivery/PersonalDeliverySettings.tsx",
+      "before": "b5db1f0cbe12421bf41c1bf5cc2e6f2ff26e7d442d2c154e66fed60f90b38156",
+      "after": "a43012f3584727f9c8827f4ec58db02f28efeb98fce431b109545a4c9ad007cc",
+      "hunks": [
+        {
+          "start": 43,
+          "current": [
+            "  const publicKey = state.data?.available ? state.data.public_key : undefined"
+          ],
+          "previous": []
+        },
+        {
+          "start": 49,
+          "current": [
+            "    if (blocked || !lookupKnown || !publicKey || !personalPushSupported()) return"
+          ],
+          "previous": [
+            "    if (blocked || !available || !state.data?.public_key || !personalPushSupported()) return"
+          ]
+        },
+        {
+          "start": 53,
+          "current": [
+            "      const subscription = await browser.subscribe(publicKey)"
+          ],
+          "previous": [
+            "      const subscription = await browser.subscribe(state.data.public_key)"
+          ]
+        },
+        {
+          "start": 79,
+          "current": [
+            "    if (blocked || (enabled && !available) || (needsRefresh && currentDevice?.id !== id)) return"
+          ],
+          "previous": [
+            "    if (blocked || (needsRefresh && currentDevice?.id !== id)) return"
+          ]
+        },
+        {
+          "start": 176,
+          "current": [
+            "            <Button wrapLabel variant=\"primary\" disabled={blocked || !lookupKnown || !publicKey}"
+          ],
+          "previous": [
+            "            <Button wrapLabel variant=\"primary\" disabled={blocked || !lookupKnown || !available}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedChargerPlanCard.tsx",
+      "before": "5b80d4610921871e131dad2f7994aab28c0bda3c67ad390a32c37a24cc21c4c9",
+      "after": "dc76bc820691cef6302e45665441cb5010594553f6fe59abdbf0b0bc9effa037",
+      "hunks": [
+        {
+          "start": 30,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedChargerPlanning.tsx",
+      "before": "43d3a1c18e66724d16ede0020ab47ba30cdb84a00934c1b2ef75afecba6456b2",
+      "after": "12105e9d9614a182a4ba58c9d68fe8c53b742089716b75e5174b63257c6eb401",
+      "hunks": [
+        {
+          "start": 51,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedTripComparisonCard.tsx",
+      "before": "0f21ad64d2d124b42baf5727b5bec1df50dc4c542b6512ef586bd058d8250a25",
+      "after": "da66d71bcd175eaf66da500ed327532b6d91dcaa2ca33dc7300e3bafaa7f4f31",
+      "hunks": [
+        {
+          "start": 17,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedTripConfirmationForm.tsx",
+      "before": "11cc1ec24a952e0265faf20a66f9bbbab2cdff7e09ce4d12011966d77e569e32",
+      "after": "8a704137f3b2258a8e1792ae11b3154cf545a41afa867d98b68dfa89b91e1610",
+      "hunks": [
+        {
+          "start": 22,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedTripInvitationRow.tsx",
+      "before": "4e3d52379c241e327067793b053c21125acf6cf86b5e3acabd8909c609da2269",
+      "after": "12dcf7361d45601d11744920e8792916aefee971966e46304467153f81e31c4b",
+      "hunks": [
+        {
+          "start": 16,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SharedTripManagement.tsx",
+      "before": "0cda0938ef1ff7ea4d6768f7b9499cd115344ec612cd785ce5a5cc43887270c7",
+      "after": "5ae31045101ac9a773f0dd7685504388c0a70e0c38c65600e4ba125de172d1db",
+      "hunks": [
+        {
+          "start": 20,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SmartBackupCharging.tsx",
+      "before": "941acfe2f2528df73ec311f619a6c24a6d8cf495277d29c1056d9b4db3c065e7",
+      "after": "7b96c2039893f2ec048dd5ae1b857e9f030ddc249a3453f02ffd5cf8bf22a4e8",
+      "hunks": [
+        {
+          "start": 24,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/SmartChargingPlans.tsx",
+      "before": "52c0f433006138a77241e8c2235cd1fc6234a47601848e6a4a94b323d47eac6b",
+      "after": "5147094b0c290b51e05ae24ebe54cf44084d60e9055e90a31fd67bc234d8a74e",
+      "hunks": [
+        {
+          "start": 63,
+          "current": [
+            "  const { formatDateTime, tz } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/TripMaintenance.tsx",
+      "before": "428eed1dc37906ba7310d7a95c7db995f6a87cd4d3740f51ef39289421394678",
+      "after": "7ff4bae80fb93ee03ba223e40d785489b37f519e6f934f1062480f2b8edf489c",
+      "hunks": [
+        {
+          "start": 23,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/TripPlanReview.tsx",
+      "before": "0e153122affac3b724a10c46616ac266e223fe4b88d3738262cc51a457eca6a0",
+      "after": "63aff9b21e5c2979280b5a1ae6dd8a708a8f414a31349b07469e47c8af95d0ff",
+      "hunks": [
+        {
+          "start": 28,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/TripStopComparison.tsx",
+      "before": "5130d8fe8c1b0047ba01873204fbf10f792b168716e112f34770f6dba181cc1a",
+      "after": "53e230546f6ae7c6d8b68fc69d0c41aceb03bed114e8ce309af1fc0feefb2a0f",
+      "hunks": [
+        {
+          "start": 27,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-charging/TripStopComparisonResults.tsx",
+      "before": "56efc215cafb2ae980efdf22a5fa5ef1d2b545c2110351c99d7da8ac7478367b",
+      "after": "41c21921cfd81da7437d3fe6ef08d6bec599b97268fbe8b1dc855a5b41d4aab8",
+      "hunks": [
+        {
+          "start": 15,
+          "current": [
+            "  const { formatDateTime } = useDateFormat()"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-commute/SmartCommuteControls.tsx",
+      "before": "72f6374de89c30462817099da996f5711eae364be091873fa68fbd59b0c65ec7",
+      "after": "0ff76b7b95e458e3f6e96b1896013aa6b237e17d006f22e5ff2f5eb0676d8e87",
+      "hunks": [
+        {
+          "start": 2,
+          "current": [
+            "import { Button, ConfirmDialog, PanelTitle, Text } from '@/components/ui'"
+          ],
+          "previous": [
+            "import { Button, ConfirmDialog, Input, PanelTitle, Text } from '@/components/ui'"
+          ]
+        },
+        {
+          "start": 4,
+          "current": [],
+          "previous": [
+            "import { browserTimeZone } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 9,
+          "current": [
+            "  timeZone: string"
+          ],
+          "previous": []
+        },
+        {
+          "start": 17,
+          "current": [
+            "export function SmartCommuteControls({ settings, timeZone, stateLabel, disabled, busy, trafficAvailable, onChange }: Props) {"
+          ],
+          "previous": [
+            "export function SmartCommuteControls({ settings, stateLabel, disabled, busy, trafficAvailable, onChange }: Props) {"
+          ]
+        },
+        {
+          "start": 19,
+          "current": [],
+          "previous": [
+            "  const [zoneDraft, setZoneDraft] = useState<string | null>(null)"
+          ]
+        },
+        {
+          "start": 20,
+          "current": [],
+          "previous": [
+            "  const timeZone = zoneDraft ?? (settings.time_zone || browserTimeZone())"
+          ]
+        },
+        {
+          "start": 22,
+          "current": [
+            "    await onChange({"
+          ],
+          "previous": [
+            "    const saved = await onChange({"
+          ]
+        },
+        {
+          "start": 24,
+          "current": [
+            "      settings: { ...settings, ...next, time_zone: timeZone },"
+          ],
+          "previous": [
+            "      settings: { ...settings, time_zone: timeZone.trim(), ...next },"
+          ]
+        },
+        {
+          "start": 26,
+          "current": [],
+          "previous": [
+            "    if (saved) setZoneDraft(null)"
+          ]
+        },
+        {
+          "start": 44,
+          "current": [],
+          "previous": [
+            "      <Input label={t('smartCommute.analysisTimeZone', 'Time zone for local analysis')} maxLength={128}",
+            "        value={timeZone} onChange={(event) => setZoneDraft(event.target.value)} disabled={disabled}",
+            "        hint={t('smartCommute.timeZoneHint', 'For example, America/Los_Angeles.')} />",
+            "      {settings.enabled && zoneDraft != null && zoneDraft.trim() !== settings.time_zone && (",
+            "        <Button type=\"button\" variant=\"secondary\" className=\"min-h-11\" disabled={disabled || !timeZone.trim()}",
+            "          onClick={() => void save({})}>",
+            "          {t('smartCommute.saveTimeZone', 'Save time zone')}",
+            "        </Button>",
+            "      )}"
+          ]
+        },
+        {
+          "start": 47,
+          "current": [
+            "          checked={settings.enabled} disabled={disabled}"
+          ],
+          "previous": [
+            "          checked={settings.enabled} disabled={disabled || !timeZone.trim()}"
+          ]
+        },
+        {
+          "start": 55,
+          "current": [
+            "          checked={settings.local_analysis_enabled} disabled={disabled || !settings.enabled}"
+          ],
+          "previous": [
+            "          checked={settings.local_analysis_enabled} disabled={disabled || !settings.enabled || !timeZone.trim()}"
+          ]
+        },
+        {
+          "start": 59,
+          "current": [
+            "          checked={settings.paused} disabled={disabled || !settings.enabled}"
+          ],
+          "previous": [
+            "          checked={settings.paused} disabled={disabled || !settings.enabled || !timeZone.trim()}"
+          ]
+        },
+        {
+          "start": 65,
+          "current": [
+            "          onClick={() => void onChange({ kind: 'analyze', timeZone })}>"
+          ],
+          "previous": [
+            "          onClick={() => void onChange({ kind: 'analyze' })}>"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-commute/SmartCommuteRoutines.tsx",
+      "before": "133183a53d5d5120ec4f75127c7a606e36fd47d54f260a17e8dc7cc2865c2edd",
+      "after": "3cb7fa76f01561719d1265a5b893a48c5fa6e7bf1ceb10b1ccce02f82fed29ef",
+      "hunks": [
+        {
+          "start": 72,
+          "current": [
+            "                last: formatDate(routine.evidence.last_observed_at, { tz: timeZone }),"
+          ],
+          "previous": [
+            "                last: formatDate(routine.evidence.last_observed_at, { tz: routine.time_zone }),"
+          ]
+        },
+        {
+          "start": 79,
+          "current": [
+            "                until: formatDateTime(routine.snoozed_until, { tz: timeZone }),"
+          ],
+          "previous": [
+            "                until: formatDateTime(routine.snoozed_until, { tz: routine.time_zone }),"
+          ]
+        },
+        {
+          "start": 143,
+          "current": [
+            "            <SmartCommuteTrafficReview key={`${routine.id}:${routine.updated_at}`} scope={scope} displayZone={timeZone}"
+          ],
+          "previous": [
+            "            <SmartCommuteTrafficReview key={`${routine.id}:${routine.updated_at}`} scope={scope}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-commute/SmartCommuteSettings.tsx",
+      "before": "2899cafbd8c379f61c0c02e299dbf0d8065a4bfa6186f5a8b83452ea5a1ffa90",
+      "after": "5c4a41d7e10d1a8c70c91872e61ee5a925a7abf9e2e0f9c7a90c54ac2fc3ec9a",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "import { useDateFormat } from '@/hooks/useDateFormat'"
+          ],
+          "previous": []
+        },
+        {
+          "start": 11,
+          "current": [],
+          "previous": [
+            "import { browserTimeZone } from '@/lib/dateFormat'"
+          ]
+        },
+        {
+          "start": 35,
+          "current": [
+            "  const { tz } = useDateFormat(undefined, vehicle?.timezone ?? null)"
+          ],
+          "previous": []
+        },
+        {
+          "start": 117,
+          "current": [
+            "              <SmartCommuteControls settings={settings} timeZone={tz} stateLabel={status} disabled={disabled}"
+          ],
+          "previous": [
+            "              <SmartCommuteControls settings={settings} stateLabel={status} disabled={disabled}"
+          ]
+        },
+        {
+          "start": 120,
+          "current": [
+            "                requestedOccurrence={requestedOccurrence} scope={scope} displayZone={tz}"
+          ],
+          "previous": [
+            "                requestedOccurrence={requestedOccurrence} scope={scope}"
+          ]
+        },
+        {
+          "start": 123,
+          "current": [
+            "              <SmartCommuteRoutines vehicleId={vehicleId} timeZone={tz}"
+          ],
+          "previous": [
+            "              <SmartCommuteRoutines vehicleId={vehicleId} timeZone={settings.time_zone || browserTimeZone()}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-commute/SmartCommuteTrafficComparison.tsx",
+      "before": "a3404e7510c4763f42610b4d90574e1c9e4ad0fb22e4a941b42ec0d06d3894c4",
+      "after": "90dc125d3d4bde457de5ed4ba05b2bda00a60a0496e832d919de9552624e7866",
+      "hunks": [
+        {
+          "start": 12,
+          "current": [
+            "  displayZone: string"
+          ],
+          "previous": []
+        },
+        {
+          "start": 17,
+          "current": [
+            "export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, scope, displayZone, navigationAvailable, navigationDisabled }: Props) {"
+          ],
+          "previous": [
+            "export function SmartCommuteTrafficComparison({ decisions, requestedOccurrence, scope, navigationAvailable, navigationDisabled }: Props) {"
+          ]
+        },
+        {
+          "start": 74,
+          "current": [
+            "                latest: formatDateTime(decision.latest_departure_at, { tz: displayZone }),",
+            "                deadline: formatDateTime(decision.arrival_deadline_at, { tz: displayZone }),"
+          ],
+          "previous": [
+            "                latest: formatDateTime(decision.latest_departure_at, { tz: decision.time_zone }),",
+            "                deadline: formatDateTime(decision.arrival_deadline_at, { tz: decision.time_zone }),"
+          ]
+        },
+        {
+          "start": 81,
+          "current": [
+            "            observed: formatDateTime(decision.observed_at, { tz: displayZone }),",
+            "            departure: formatDateTime(decision.departure_at, { tz: displayZone }),"
+          ],
+          "previous": [
+            "            observed: formatDateTime(decision.observed_at), departure: formatDateTime(decision.departure_at),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/settings/components/smart-commute/SmartCommuteTrafficReview.tsx",
+      "before": "c9db4f69a3a12a2b6267d9586413626b06f7ab6ad1ecd4a94e7adf1719f7fb46",
+      "after": "4b216fe5df2633c9e9a4b4e486bee08fb05fa5c87c220e9d2d0d8870e237a1b6",
+      "hunks": [
+        {
+          "start": 15,
+          "current": [
+            "  displayZone: string"
+          ],
+          "previous": []
+        },
+        {
+          "start": 23,
+          "current": [
+            "export function SmartCommuteTrafficReview({ scope, routine, displayZone, disabled, onChange, onClose }: Props) {"
+          ],
+          "previous": [
+            "export function SmartCommuteTrafficReview({ scope, routine, disabled, onChange, onClose }: Props) {"
+          ]
+        },
+        {
+          "start": 46,
+          "current": [
+            "        time: formatDateTime(row.startTs, { tz: displayZone }), id: row.id,"
+          ],
+          "previous": [
+            "        time: formatDateTime(row.startTs, { tz: routine.time_zone }), id: row.id,"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/smart-commute/components/SmartCommuteRoutineForm.tsx",
+      "before": "b5118fc7aa074c192a4dd6e3ea26d0c1557bd3549d8f2bac677d0efb9b426e48",
+      "after": "2c9a762d5a01a7feb21c7660937199276d52fd86ce4cad89ec6a3dfab40f01c5",
+      "hunks": [
+        {
+          "start": 22,
+          "current": [],
+          "previous": [
+            "    timeZone: routine?.time_zone ?? timeZone,"
+          ]
+        },
+        {
+          "start": 28,
+          "current": [
+            "  const scheduleZone = routine?.time_zone ?? timeZone"
+          ],
+          "previous": []
+        },
+        {
+          "start": 36,
+          "current": [
+            "    if (departure == null || !draft.name.trim() ||"
+          ],
+          "previous": [
+            "    if (departure == null || !draft.name.trim() || !draft.timeZone.trim() ||"
+          ]
+        },
+        {
+          "start": 47,
+          "current": [
+            "      time_zone: scheduleZone,"
+          ],
+          "previous": [
+            "      time_zone: draft.timeZone.trim(),"
+          ]
+        },
+        {
+          "start": 72,
+          "current": [
+            "          value={draft.departure} onChange={(event) => setDraft({ ...draft, departure: event.target.value })}",
+            "          hint={t('smartCommute.scheduleZone', 'This recurring time follows {{zone}}.', { zone: scheduleZone })} />"
+          ],
+          "previous": [
+            "          value={draft.departure} onChange={(event) => setDraft({ ...draft, departure: event.target.value })} />",
+            "        <Input label={t('smartCommute.timeZone', 'IANA time zone')} required maxLength={128}",
+            "          value={draft.timeZone} onChange={(event) => setDraft({ ...draft, timeZone: event.target.value })}",
+            "          hint={t('smartCommute.timeZoneHint', 'For example, America/Los_Angeles.')} />"
+          ]
+        },
+        {
+          "start": 87,
+          "current": [
+            "      {invalid && <ErrorText role=\"alert\">{t('smartCommute.invalidRoutine', 'Enter a name, valid local time and coordinates.')}</ErrorText>}"
+          ],
+          "previous": [
+            "      {invalid && <ErrorText role=\"alert\">{t('smartCommute.invalidForm', 'Enter a name, valid local time, time zone and coordinates.')}</ErrorText>}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/system/components/activity-timeline/ActivityFeed.tsx",
+      "before": "49186f26966df17548fdf0b9b9657581180e06511f00fa59a099cf18ff767ece",
+      "after": "d85a69b30c4f05bdc89b3e3a66d148de084a8d3ba284c085383100d3a1c4de4e",
+      "hunks": [
+        {
+          "start": 74,
+          "current": [
+            "  const { formatTime, locale } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatTime, locale } = useDateFormat('vehicle');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/system/components/status/IncidentHistory.tsx",
+      "before": "7fbb663fce011494153f046db8f11b3bc7bf2500a4e7b6cd7e6ebfd9f0e5dbad",
+      "after": "47c9b83d25f1c79ce9b02164ffcad04965b1189c9efcddfeb689696ce866c352",
+      "hunks": [
+        {
+          "start": 50,
+          "current": [
+            "                    <DateTime value={incident.started_at} />"
+          ],
+          "previous": [
+            "                    <DateTime value={incident.started_at} in=\"utc\" />"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/trips/components/JourneySoundtrackPanel.tsx",
+      "before": "2db6c42ca902ee2db4acb7583aadcef50f88ec16182deb2750c863870e9d9e23",
+      "after": "e0f9d83bf2b7f5f355d409a74df35b0f0c9b661f20062dcb4bdffa38402b0e80",
+      "hunks": [
+        {
+          "start": 31,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/RecallCampaignEvidence.tsx",
+      "before": "5d8c6e2044b089694d6de04a7b5bd144d4db517ff9fcf56778dccfb9c3f7c9a2",
+      "after": "374276f8cece59152ef3dc641ba918fe3c3cd910af5432818908e87dfbd92127",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "  const { formatDate } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDate } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/RecallWatchControls.tsx",
+      "before": "f4e29b4bc901e0f13b16a871512382e57fe7764d7a21c3799c3eb574b851483d",
+      "after": "1282f7597e32f89f8ea464d9d3a8008fe9c64b4f0dcf3891f734e30cfc83aff4",
+      "hunks": [
+        {
+          "start": 15,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCoverageCadence.tsx",
+      "before": "6f6ac8e1cdfa9a992d857cb0ff0d9e35cab4a15b7ad5f432479064efb2b472a5",
+      "after": "0e382158f615402be8ce50aba54f3df5fb435a106a63ce4bcf3e60979c05d1f7",
+      "hunks": [
+        {
+          "start": 27,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('utc');"
+          ]
+        },
+        {
+          "start": 30,
+          "current": [
+            "    formatDateTime(ms != null ? new Date(ms) : null);"
+          ],
+          "previous": [
+            "    formatDateTime(ms != null ? new Date(ms) : null, { tz: summary.timeZone });"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "before": "4a7a80ebdac08ee71ae6fdfe801330f91fe155ecad7778ea18c3b70d157694d1",
+      "after": "0d874fe9a602237e66e28d38f2ed748acab31e05d9bcc65c55fd6f45c206957c",
+      "hunks": [
+        {
+          "start": 42,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const date = (ms: number) => formatDateTime(ms);"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('utc');",
+            "  const date = (ms: number) => formatDateTime(new Date(ms), { tz: summary.timeZone });"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/EpisodeReviewPanel.tsx",
+      "before": "04ed38d8ccf92c5bdc89a1d24d7c4c2ae3d5e927f1c8d08041fc5ca053cc5ca7",
+      "after": "151e7630fa16645554f0f4fd9c8656fa9656d985b121d72aca14dce5aad88fef",
+      "hunks": [
+        {
+          "start": 37,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/FavoriteDigestPanel.tsx",
+      "before": "9e470ddf07fe1d3eee731957273b49f34b9229e2b304c82ff9966a5795f31d61",
+      "after": "832ed77a3019028758ddf8d800aef37623f4cd17de2e0d1bc076b648d9caf722",
+      "hunks": [
+        {
+          "start": 27,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();",
+            "  const { tz } = useDateFormat('user');"
+          ],
+          "previous": [
+            "  const { formatDateTime, tz } = useDateFormat('user');"
+          ]
+        },
+        {
+          "start": 97,
+          "current": [
+            "        expiry: formatDateTime(digest.expires_at),"
+          ],
+          "previous": [
+            "        expiry: formatDateTime(digest.expires_at, { tz: zone }),"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/PlaylistEditor.tsx",
+      "before": "c021b2c6ce018cfbd31127684fda323e97ef0cf42fc37543e38e46859cc95685",
+      "after": "abcefdeb1804ef1e641ab6b9c82f0f2a7e279a129a183bc17c4276482ac1a635",
+      "hunks": [
+        {
+          "start": 26,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/media-player-modernization/PrivatePlaylistPanel.tsx",
+      "before": "516789b061a09c0538abedec392cc3078f9f85898cb91dd5872e4f81f885cc25",
+      "after": "c9172194e1a7962350b76830f15e0e859034ed112c36474c1ebd92cb97f43328",
+      "hunks": [
+        {
+          "start": 36,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/preconditioning-effectiveness/ScheduledClimateReview.tsx",
+      "before": "40e0d9d241b41ec24f2c95f792992c2f937cef0f9da4abd7e7cfc7c2bb673db4",
+      "after": "c5af9e2a8237156836d6d509154a06352432fc4c5a14b19d5d9323bf4b93da0c",
+      "hunks": [
+        {
+          "start": 63,
+          "current": [
+            "  const formatRun = (time: string) => formatDateTime(time);"
+          ],
+          "previous": [
+            "  const formatRun = (time: string) => formatDateTime(time, active?.time_zone ? { tz: active.time_zone } : undefined);"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareWindowPanel.tsx",
+      "before": "71e8b995ff52a89e7c337afddea160a6bd983429cd480de7e6a0dfb32de39593",
+      "after": "518d4e62aa6b727064e3293b0cec5cb2305c77cd42ee1c90528a9d4a0e783cac",
+      "hunks": [
+        {
+          "start": 29,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicles/components/daylog/DayLogTimeline.tsx",
+      "before": "75f907977b0a3f38b887a3efb154d4fcaae6a0337562b351946e04d62ad3f534",
+      "after": "7e1811b84be3dd1dd781f32677d5cb02c5c4e1119453b6a686f4b4b38f09d662",
+      "hunks": [
+        {
+          "start": 12,
+          "current": [
+            "import { useSettings } from '@/hooks/useSettings';"
+          ],
+          "previous": []
+        },
+        {
+          "start": 19,
+          "current": [
+            "  dayLogHour,"
+          ],
+          "previous": []
+        },
+        {
+          "start": 23,
+          "current": [
+            "  formatDayLogHour,"
+          ],
+          "previous": []
+        },
+        {
+          "start": 25,
+          "current": [],
+          "previous": [
+            "  hourKeyInTz,"
+          ]
+        },
+        {
+          "start": 40,
+          "current": [
+            "type Row = { kind: 'hour'; key: string; label: string } | { kind: 'event'; key: string; event: DayLogEvent; position: number; repeated: boolean };"
+          ],
+          "previous": [
+            "type Row = { kind: 'hour'; key: string; hour: string } | { kind: 'event'; key: string; event: DayLogEvent; position: number };"
+          ]
+        },
+        {
+          "start": 60,
+          "current": [
+            "  const { locale } = useSettings();"
+          ],
+          "previous": []
+        },
+        {
+          "start": 70,
+          "current": [
+            "  const { hours, repeatedHours } = useMemo(() => {",
+            "    const hours = new Map<string, NonNullable<ReturnType<typeof dayLogHour>>>();",
+            "    const firstOffsets = new Map<string, number>();",
+            "    const repeatedHours = new Set<string>();",
+            "    for (const { ts } of all) {",
+            "      if (hours.has(ts)) continue;",
+            "      const hour = dayLogHour(ts, timezone);",
+            "      if (!hour) continue;",
+            "      hours.set(ts, hour);",
+            "      const first = firstOffsets.get(hour.key);",
+            "      if (first == null) firstOffsets.set(hour.key, hour.offset);",
+            "      else if (first !== hour.offset) repeatedHours.add(hour.key);",
+            "    }",
+            "    return { hours, repeatedHours };",
+            "  }, [all, timezone]);"
+          ],
+          "previous": []
+        },
+        {
+          "start": 102,
+          "current": [
+            "        formatTimeSeconds(e.ts, timezone, locale, repeatedHours.has(hours.get(e.ts)?.key ?? '')),"
+          ],
+          "previous": [
+            "        formatTimeSeconds(e.ts, timezone),"
+          ]
+        },
+        {
+          "start": 109,
+          "current": [
+            "  }, [all, hidden, query, t, timezone, locale, hours, repeatedHours, formatDistance, formatEnergy]);"
+          ],
+          "previous": [
+            "  }, [all, hidden, query, t, timezone, formatDistance, formatEnergy]);"
+          ]
+        },
+        {
+          "start": 117,
+          "current": [
+            "      const hour = hours.get(e.ts);",
+            "      const repeated = repeatedHours.has(hour?.key ?? '');",
+            "      if (hour && `${hour.key}-${hour.offset}` !== lastHour) {",
+            "        lastHour = `${hour.key}-${hour.offset}`;",
+            "        out.push({ kind: 'hour', key: `hour-${lastHour}-${e.id}`, label: formatDayLogHour(hour.hour, e.ts, timezone, locale, repeated) });"
+          ],
+          "previous": [
+            "      const hour = hourKeyInTz(e.ts, timezone);",
+            "      if (hour !== '' && hour !== lastHour) {",
+            "        lastHour = hour;",
+            "        out.push({ kind: 'hour', key: `hour-${hour}-${out.length}`, hour });"
+          ]
+        },
+        {
+          "start": 123,
+          "current": [
+            "      out.push({ kind: 'event', key: e.id, event: e, position, repeated });"
+          ],
+          "previous": [
+            "      out.push({ kind: 'event', key: e.id, event: e, position });"
+          ]
+        },
+        {
+          "start": 126,
+          "current": [
+            "  }, [filtered, hours, repeatedHours, timezone, locale]);"
+          ],
+          "previous": [
+            "  }, [filtered, timezone]);"
+          ]
+        },
+        {
+          "start": 311,
+          "current": [
+            "                            <HourSeparator label={row.label} />"
+          ],
+          "previous": [
+            "                            <HourSeparator hour={row.hour} />"
+          ]
+        },
+        {
+          "start": 317,
+          "current": [
+            "                              time={formatTimeSeconds(row.event.ts, timezone, locale, row.repeated)}"
+          ],
+          "previous": [
+            "                              timezone={timezone}"
+          ]
+        },
+        {
+          "start": 340,
+          "current": [
+            "function HourSeparator({ label }: { label: string }) {"
+          ],
+          "previous": [
+            "function HourSeparator({ hour }: { hour: string }) {"
+          ]
+        },
+        {
+          "start": 345,
+          "current": [
+            "        {label}"
+          ],
+          "previous": [
+            "        {hour}:00"
+          ]
+        },
+        {
+          "start": 356,
+          "current": [
+            "  time: string;"
+          ],
+          "previous": [
+            "  timezone: string;"
+          ]
+        },
+        {
+          "start": 365,
+          "current": [
+            "function EventRow({ event, position, total, time, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {"
+          ],
+          "previous": [
+            "function EventRow({ event, position, total, timezone, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {"
+          ]
+        },
+        {
+          "start": 386,
+          "current": [
+            "        <Text id={timeId} title={event.ts} variant=\"caption\" className=\"w-24 shrink-0 tabular-nums\">",
+            "          {time}"
+          ],
+          "previous": [
+            "        <Text id={timeId} variant=\"caption\" className=\"w-16 shrink-0 tabular-nums\">",
+            "          {formatTimeSeconds(event.ts, timezone)}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicles/lib/daylog.ts",
+      "before": "c68ff793eb6c777127afa4805fc7875a5898f16ceec86c667da88623f08f56a2",
+      "after": "ba5f1b8d049b6b256ab62f2012a203344b7712bbd7007820e7178bae285b2455",
+      "hunks": [
+        {
+          "start": 2,
+          "current": [
+            "import { formatTime, isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';",
+            "import { formatGmtOffset, formatHourName, ymdInTz } from '@/lib/dateConvert';"
+          ],
+          "previous": [
+            "import {browserTimeZone, formatTime, isValidTimeZone, zonedDateParts} from '@/lib/dateFormat'",
+            "import {ymdInTz} from '@/lib/dateConvert'",
+            "import {formatGmtOffset} from '@/lib/dateConvert';"
+          ]
+        },
+        {
+          "start": 234,
+          "current": [
+            " * Saved-locale clock with seconds. Offsets distinguish repeated hours",
+            " * without adding noise to ordinary event times."
+          ],
+          "previous": [
+            " * Saved-locale clock with seconds and an offset identifying repeated DST",
+            " * hours. The caller retains the original ISO timestamp as provenance."
+          ]
+        },
+        {
+          "start": 238,
+          "current": [
+            "export function formatTimeSeconds(iso: string | null | undefined, tz?: string, locale = getGlobalLocale(), repeated = false): string {"
+          ],
+          "previous": [
+            "export function formatTimeSeconds(iso: string | null | undefined, tz?: string): string {"
+          ]
+        },
+        {
+          "start": 244,
+          "current": [],
+          "previous": [
+            "    const locale = getGlobalLocale();"
+          ]
+        },
+        {
+          "start": 249,
+          "current": [
+            "    return repeated ? `${time} ${formatGmtOffset(d, { locale, tz })}` : time;"
+          ],
+          "previous": [
+            "    const offset = formatGmtOffset(d, { locale, tz: tz || undefined });",
+            "    return `${time} ${offset}`;"
+          ]
+        },
+        {
+          "start": 256,
+          "current": [
+            "export function dayLogHour(iso: string, tz: string) {"
+          ],
+          "previous": [
+            "/** Hour bucket key (`HH`) in the given timezone for time separators. */",
+            "export function hourKeyInTz(iso: string, tz?: string): string {"
+          ]
+        },
+        {
+          "start": 258,
+          "current": [
+            "  const parts = zonedDateParts(d, tz);",
+            "  if (!parts) return null;",
+            "  const { year, month, day, hour, minute, second } = parts;",
+            "  const wall = Date.UTC(year, month - 1, day, hour, minute, second);",
+            "  return { key: `${year}-${month}-${day}-${hour}`, hour, offset: wall - (d.getTime() - d.getUTCMilliseconds()) };",
+            "}",
+            "",
+            "export function formatDayLogHour(hour: number, iso: string, tz: string, locale: string, repeated: boolean): string {",
+            "  const label = formatHourName(hour, { locale, showMinutes: true });",
+            "  return repeated ? `${label} ${formatGmtOffset(iso, { locale, tz })}` : label;"
+          ],
+          "previous": [
+            "  if (Number.isNaN(d.getTime())) return '';",
+            "  const zone = tz || browserTimeZone();",
+            "  const parts = zonedDateParts(d, zone);",
+            "  if (!parts) return String(d.getUTCHours()).padStart(2, '0');",
+            "  return String(parts.hour).padStart(2, '0');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/vehicles/pages/DayLogPage.tsx",
+      "before": "99597b1b9a1548e8b6a8ca091bd2e69efeed9b3725cca18787f9d6e1834c90d2",
+      "after": "94b488743b127d0fc6572846f476a22dc02dc17393b781723505f47893297a40",
+      "hunks": [
+        {
+          "start": 129,
+          "current": [
+            "              timezone={timezone}"
+          ],
+          "previous": [
+            "              timezone={data?.timezone ?? timezone}"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "before": "2db2c4fd92dbb6c7eee33a82791402a23adaa6cca77023950641b6e1f8df9821",
+      "after": "ad76a8c6b305af6018b1c9f884fa4bc5f1b0619fc2696e98d5ceca6fbe3007dc",
+      "hunks": [
+        {
+          "start": 92,
+          "current": [
+            "export function useDateFormat(mode?: TzMode, ...vehicle: [timezone?: string | null]): UseDateFormatResult {"
+          ],
+          "previous": [
+            "export function useDateFormat(mode?: TzMode): UseDateFormatResult {"
+          ]
+        },
+        {
+          "start": 102,
+          "current": [
+            "  const tz = useTimezone(effectiveMode, ...vehicle)"
+          ],
+          "previous": [
+            "  const tz = useTimezone(effectiveMode)"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/coldTireDisplay.ts",
+      "before": "9dc4177276c844d7fa16bf464391efd0a595737c462b17c2cfdae0364346d5ee",
+      "after": "707debf8d1f2358a780734425ff6e1f323b24136ac1be367eb5a96d7bdbdcfca",
+      "hunks": [
+        {
+          "start": 19,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user');"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/solarChargingDisplay.ts",
+      "before": "d4b5f91b9801ecef0fb8863988311ee333bbd8d58cdc3ed127e20b13028fc621",
+      "after": "154bda08e63a5d8dcb1511933f40c3b8805953beb717787acd7964aeff26b652",
+      "hunks": [
+        {
+          "start": 8,
+          "current": [
+            "  const { formatDateTime } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDateTime } = useDateFormat('user')"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "before": "f0705bb15327b9b1b90d4e18483efa48a5d1a2e111ccd87d1519fec6619b87c2",
+      "after": "c17a1e6ab4f80fd5a36722b075b2f2a2660675474650330007787b7c44107d46",
+      "hunks": [
+        {
+          "start": 79,
+          "current": [
+            "export function useTimezone(mode: TzMode = 'vehicle', vehicleTimezone?: string | null): string {"
+          ],
+          "previous": [
+            "export function useTimezone(mode: TzMode = 'vehicle'): string {"
+          ]
+        },
+        {
+          "start": 82,
+          "current": [
+            "  return resolveTimezone(mode, vehicleTimezone === undefined ? vehicle?.timezone : vehicleTimezone, settings.timezone_user);"
+          ],
+          "previous": [
+            "  return resolveTimezone(mode, vehicle?.timezone, settings.timezone_user);"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "web/src/lib/warrantyReminderDisplay.ts",
+      "before": "480fb6a27fd29b50db1f71a044952d2a671f30fd12e19a32ca97ac3afd99d1f8",
+      "after": "67a8e762ed434fcd165298134a8b9db675712bcb10be66d2b8afbed86765dec3",
+      "hunks": [
+        {
+          "start": 9,
+          "current": [
+            "  const { formatDate } = useDateFormat();"
+          ],
+          "previous": [
+            "  const { formatDate } = useDateFormat('user');"
+          ]
+        }
+      ]
+    }
+  ],
+  "copy": [
+    {
+      "path": [
+        "ai",
+        "settings",
+        "featureSpend",
+        "callsTokensLocalized"
+      ],
+      "value": "{{calls}} calls · {{input}} in / {{output}} out · last call {{last}}"
+    },
+    {
+      "path": [
+        "smartCommute",
+        "scheduleZone"
+      ],
+      "value": "This recurring time follows {{zone}}."
+    },
+    {
+      "path": [
+        "smartCommute",
+        "invalidRoutine"
+      ],
+      "value": "Enter a name, valid local time and coordinates."
+    }
+  ]
+}

@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, ConfirmDialog, Input, PanelTitle, Text } from '@/components/ui'
+import { Button, ConfirmDialog, PanelTitle, Text } from '@/components/ui'
 import type { SmartCommuteChange } from '@/api/hooks/useSmartCommute'
-import { browserTimeZone } from '@/lib/dateFormat'
 import type { SmartCommuteSettings } from '@/types/smartCommute'
 import { SmartCommuteToggleRow } from './SmartCommuteToggleRow'
 
 interface Props {
   settings: SmartCommuteSettings
+  timeZone: string
   stateLabel: string
   disabled: boolean
   busy: boolean
@@ -15,18 +15,15 @@ interface Props {
   onChange: (change: SmartCommuteChange) => Promise<boolean>
 }
 
-export function SmartCommuteControls({ settings, stateLabel, disabled, busy, trafficAvailable, onChange }: Props) {
+export function SmartCommuteControls({ settings, timeZone, stateLabel, disabled, busy, trafficAvailable, onChange }: Props) {
   const { t } = useTranslation()
-  const [zoneDraft, setZoneDraft] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const timeZone = zoneDraft ?? (settings.time_zone || browserTimeZone())
 
   const save = async (next: Partial<SmartCommuteSettings>) => {
-    const saved = await onChange({
+    await onChange({
       kind: 'settings',
-      settings: { ...settings, time_zone: timeZone.trim(), ...next },
+      settings: { ...settings, ...next, time_zone: timeZone },
     })
-    if (saved) setZoneDraft(null)
   }
 
   return (
@@ -45,19 +42,10 @@ export function SmartCommuteControls({ settings, stateLabel, disabled, busy, tra
           ? t('smartCommute.traffic.optional', 'Traffic checks are optional for each confirmed routine. A check never wakes or operates your vehicle.')
           : t('smartCommute.traffic.notConfigured', 'HERE traffic checks are not configured on this server. Your routines still work locally.')}
       </Text>
-      <Input label={t('smartCommute.analysisTimeZone', 'Time zone for local analysis')} maxLength={128}
-        value={timeZone} onChange={(event) => setZoneDraft(event.target.value)} disabled={disabled}
-        hint={t('smartCommute.timeZoneHint', 'For example, America/Los_Angeles.')} />
-      {settings.enabled && zoneDraft != null && zoneDraft.trim() !== settings.time_zone && (
-        <Button type="button" variant="secondary" className="min-h-11" disabled={disabled || !timeZone.trim()}
-          onClick={() => void save({})}>
-          {t('smartCommute.saveTimeZone', 'Save time zone')}
-        </Button>
-      )}
       <div className="divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)]">
         <SmartCommuteToggleRow label={t('smartCommute.enable', 'Enable Smart Commute for this vehicle')}
           description={t('smartCommute.enableHint', 'Enable this vehicle’s commute settings and routines.')}
-          checked={settings.enabled} disabled={disabled || !timeZone.trim()}
+          checked={settings.enabled} disabled={disabled}
           onChange={(enabled) => void save({
             enabled,
             local_analysis_enabled: enabled ? settings.local_analysis_enabled : false,
@@ -65,17 +53,17 @@ export function SmartCommuteControls({ settings, stateLabel, disabled, busy, tra
           })} />
         <SmartCommuteToggleRow label={t('smartCommute.localAnalysis', 'Allow local analysis of completed drives')}
           description={t('smartCommute.localAnalysisHint', 'Use this vehicle’s completed drives on this server to suggest routines.')}
-          checked={settings.local_analysis_enabled} disabled={disabled || !settings.enabled || !timeZone.trim()}
+          checked={settings.local_analysis_enabled} disabled={disabled || !settings.enabled}
           onChange={(local_analysis_enabled) => void save({ local_analysis_enabled })} />
         <SmartCommuteToggleRow label={t('smartCommute.pause', 'Pause Smart Commute')}
           description={t('smartCommute.pauseHint', 'Temporarily pause Smart Commute without deleting your routines.')}
-          checked={settings.paused} disabled={disabled || !settings.enabled || !timeZone.trim()}
+          checked={settings.paused} disabled={disabled || !settings.enabled}
           onChange={(paused) => void save({ paused })} />
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="secondary" className="min-h-11" disabled={disabled ||
           !settings.enabled || !settings.local_analysis_enabled || settings.paused}
-          onClick={() => void onChange({ kind: 'analyze' })}>
+          onClick={() => void onChange({ kind: 'analyze', timeZone })}>
           {t('smartCommute.analyzeAgain', 'Analyze completed drives again')}
         </Button>
         <Button type="button" variant="danger" className="min-h-11" disabled={disabled}

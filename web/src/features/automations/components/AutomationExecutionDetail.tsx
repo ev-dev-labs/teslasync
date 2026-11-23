@@ -64,7 +64,7 @@ export function AutomationExecutionDetail({ id, onClose }: {
             </div>
             <div>
               <Text variant="caption">{t('automations.historyPage.time', 'Triggered')}</Text>
-              <DateTime value={detail.triggered_at} in="user" />
+              <DateTime value={detail.triggered_at} />
             </div>
             <div>
               <Text variant="caption">{t('automations.historyPage.durationColumn', 'Duration')}</Text>
@@ -104,7 +104,7 @@ export function AutomationExecutionDetail({ id, onClose }: {
                 {transitions.map((transition) => (
                   <li key={transition.id} data-app-part="card list-row" data-app-card-kind="record" data-surface-variant="standalone" className="rounded-lg bg-[var(--surface-2)] p-3">
                     <div data-app-part="record-header">
-                      <DateTime value={transition.ts} in="user" />
+                      <DateTime value={transition.ts} />
                     </div>
                     <Text data-app-part="record-body" variant="bodySm" className="break-words">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
                   </li>

@@ -25,10 +25,10 @@ export function HvacCyclingCoverageCadence({
 }: HvacCyclingCoverageCadenceProps) {
   const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('utc');
+  const { formatDateTime } = useDateFormat();
   const coverage = summary.coverage;
   const date = (ms: number | null) =>
-    formatDateTime(ms != null ? new Date(ms) : null, { tz: summary.timeZone });
+    formatDateTime(ms != null ? new Date(ms) : null);
 
   return (
     <section data-testid="hvac-cycling-coverage-cadence">

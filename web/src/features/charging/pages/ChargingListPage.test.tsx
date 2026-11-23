@@ -8,16 +8,13 @@
  * list from them. The four data hooks and `useSelectedVehicle` are mocked at
  * the hook boundary so every branch — no-vehicle, loading, error, empty, and
  * the fully-populated happy path — is exercised deterministically. The heavy
- * chart/panel children and each `ChargingSessionCard` render for real. The
+ * chart/panel children and the shared mobile grid render for real. The
  * assertions target the shared stats, semantic chart/grid surfaces, threshold
  * gating, bulk-selection wiring, and the SI→display distance conversion.
  *
  * The display hooks (`useUnits`/`useFormatting` → `useSettings`) render for real
  * with a mutable unit preference so the SI→display distance conversion at the
- * render boundary is exercised for BOTH metric (km) and imperial (mi). The
- * `toDistanceDisplay` callback captured off a card carries a regression guard
- * for the SI boundary: it accepts canonical metres directly, so a 50 km charge
- * reads "50 km" / "31 mi" without a compensating unit round trip.
+ * render boundary is exercised for BOTH metric (km) and imperial (mi).
  *
  * Network never touches the real backend — the charging hooks are stubbed and
  * `@/api/client`'s `request` seam is neutralised so no stray query (VehicleSelect,
@@ -165,10 +162,7 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// Observe the page-owned conversion callback while rendering the real card.
 const captured = vi.hoisted(() => ({
-  toDistanceDisplay: null as null | ((meters: number) => number),
-  distanceUnit: '' as string,
   trendMetrics: [] as Array<{ key: string; color?: string }>,
 }));
 
@@ -179,18 +173,6 @@ vi.mock('@/components/charts', async (importActual) => {
     MetricSwitcherChart: (props: ComponentProps<typeof actual.MetricSwitcherChart>) => {
       captured.trendMetrics = props.metrics.map(({ key, color }) => ({ key, color }));
       return <actual.MetricSwitcherChart {...props} />;
-    },
-  };
-});
-
-vi.mock('../components/ChargingSessionCard', async (importActual) => {
-  const actual = await importActual<typeof import('../components/ChargingSessionCard')>();
-  return {
-    ...actual,
-    ChargingSessionCard: (props: ComponentProps<typeof actual.ChargingSessionCard>) => {
-      captured.toDistanceDisplay = props.toDistanceDisplay;
-      captured.distanceUnit = props.distanceUnit;
-      return <actual.ChargingSessionCard {...props} />;
     },
   };
 });
@@ -409,9 +391,7 @@ function briefMetric(label: string): HTMLElement {
 }
 
 function sessionCard(id: number) {
-  const link = Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href="/charging/${id}"]`))
-    .find((candidate) => candidate.closest('table') == null);
-  return link?.parentElement ?? null;
+  return document.querySelector<HTMLElement>(`[data-tour="charging-list"] [data-mobile-row-key="${id}"]`);
 }
 
 async function findSessionCard(id: number) {
@@ -425,12 +405,19 @@ async function findSessionCard(id: number) {
 function sessionCheckbox(id: number) {
   const card = sessionCard(id);
   if (!card) throw new Error(`No charging session row for ${id}`);
-  return within(card).getByRole('checkbox', { name: 'Select charging session' });
+  return within(card).getByRole('checkbox', { name: /^(?:Select|Deselect) / });
+}
+
+function enterSessionSelection() {
+  fireEvent.click(within(screen.getByRole('group', { name: 'All charging sessions' }))
+    .getByRole('button', { name: 'Select', exact: true }));
 }
 
 function trendChart() {
   return screen.queryByRole('region', { name: 'Charging over time' })?.querySelector('figure') ?? null;
 }
+
+setupMeasuredChartContainers(800, 320);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -441,8 +428,14 @@ beforeEach(() => {
   timeDisplayState.locale = 'en-US';
   timeDisplayState.timezone = '';
   chartPreference.palette = 'cb_safe';
-  captured.toDistanceDisplay = null;
-  captured.distanceUnit = '';
+  const measurement = vi.mocked(HTMLElement.prototype.getBoundingClientRect);
+  const original = measurement.getMockImplementation() ?? Element.prototype.getBoundingClientRect;
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute('data-grid-frame') && this.closest('[data-tour="charging-list"]')) {
+      return new DOMRect(0, 0, mediaState.desktop ? 1200 : 390, 400);
+    }
+    return original.call(this);
+  });
   installHappyPath();
 });
 
@@ -450,7 +443,6 @@ afterEach(() => vi.unstubAllGlobals());
 
 /* ─────────────────────────── Pure helper unit tests ─────────────────────── */
 
-setupMeasuredChartContainers(800, 320);
 
 describe('formatHour', () => {
   it('formats the midnight and noon boundaries with the shared clock formatter', () => {
@@ -567,7 +559,6 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     expect(table.compareDocumentPosition(screen.getByTestId('charging-operational-brief')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sessionCard(1)).not.toBeInTheDocument();
     expect(table.querySelector('a[href="/charging/1"]')).toBeInTheDocument();
-    expect(captured.toDistanceDisplay).toBeNull();
     expect(table.querySelector('th[data-column-key="energy"]')).toBeInTheDocument();
     expect(table.querySelector('th[data-column-key="batteryEnd"]')).toBeInTheDocument();
     expect(screen.getByTestId('charging-export')).toBeInTheDocument();
@@ -688,7 +679,12 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     renderPage([`/charging?from=2000-01-01&to=2100-01-01&grid_values=${values}`]);
     expect(await findSessionCard(10)).toBeInTheDocument();
     expect(sessionCard(11)).not.toBeInTheDocument();
-    expect(screen.getByText(/Column value filters are active/)).toBeInTheDocument();
+    const list = screen.getByRole('region', { name: 'All charging sessions' });
+    fireEvent.click(within(list).getByRole('button', { name: 'Filter & sort' }));
+    const filters = screen.getByRole('dialog', { name: 'Filter & sort' });
+    fireEvent.change(within(filters).getByRole('combobox', { name: 'Column' }), { target: { value: 'cost' } });
+    expect(within(filters).getByRole('checkbox', { name: '(Not recorded)' })).toBeChecked();
+    expect(within(filters).getByRole('checkbox', { name: 'Free' })).not.toBeChecked();
   });
 
   it('reports invalid saved value filters explicitly and resets them', async () => {
@@ -1130,6 +1126,7 @@ describe('ChargingListPage — happy path', () => {
       mockBulkDelete.mockReturnValue({ mutateAsync, isPending: false } as ReturnType<typeof useBulkDeleteCharging>);
       renderPage();
       await findSessionCard(1);
+      enterSessionSelection();
       fireEvent.click(sessionCheckbox(1));
       fireEvent.click(sessionCheckbox(2));
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
@@ -1179,11 +1176,12 @@ describe('ChargingListPage — happy path', () => {
     expect(within(await findSessionCard(1)).queryByText('0 kWh added in 1h — telemetry gap?')).not.toBeInTheDocument();
   });
 
-  it('exposes labelled landmark regions and an accessible name on the icon-only card toggle', async () => {
+  it('exposes labelled landmarks and a session-specific name in mobile selection mode', async () => {
     renderPage();
     expect(await screen.findByRole('region', { name: 'Charging summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'All charging sessions' })).toBeInTheDocument();
-    expect(sessionCheckbox(1)).toHaveAccessibleName('Select charging session');
+    enterSessionSelection();
+    expect(sessionCheckbox(1)).toHaveAccessibleName(/Select .*Home Garage/);
   });
 });
 
@@ -1191,6 +1189,7 @@ describe('ChargingListPage — bulk selection', () => {
   it('toggles a session into and out of the bulk selection when its checkbox is clicked', async () => {
     renderPage();
     await findSessionCard(1);
+    enterSessionSelection();
     const toggle = sessionCheckbox(1);
     expect(toggle).not.toBeChecked();
 
@@ -1207,24 +1206,11 @@ describe('ChargingListPage — bulk selection', () => {
 });
 
 describe('ChargingListPage — distance conversion (SI regression guard)', () => {
-  it('converts canonical metres directly at the display boundary', async () => {
+  it.each([['km', /^50(?:\.00)? km$/], ['mi', /^31(?:\.07)? mi$/]] as const)('formats canonical range in %s in the mobile quick view', async (unit, label) => {
+    unitState.length = unit;
     renderPage();
-    await findSessionCard(1);
-    expect(captured.toDistanceDisplay).toBeTypeOf('function');
-    expect(captured.toDistanceDisplay!(50_000)).toBe(50);
-    expect(captured.toDistanceDisplay!(0)).toBe(0);
-    expect(captured.distanceUnit).toBe('km');
-    expect(within(await findSessionCard(1)).getByText('+50 km')).toBeInTheDocument();
-  });
-
-  it('converts canonical metres to miles when the unit preference is imperial', async () => {
-    unitState.length = 'mi';
-    renderPage();
-    await findSessionCard(1);
-    // 50 km ⇒ 50_000 m / 1609.344 ≈ 31.07 mi.
-    expect(captured.toDistanceDisplay!(50_000)).toBeCloseTo(31.07, 1);
-    expect(captured.distanceUnit).toBe('mi');
-    expect(within(await findSessionCard(1)).getByText('+31 mi')).toBeInTheDocument();
+    fireEvent.click(within(await findSessionCard(1)).getByRole('button', { name: 'Quick view charging session' }));
+    expect(within(await screen.findByRole('dialog', { name: 'Home Garage' })).getByText(label)).toBeInTheDocument();
   });
 });
 

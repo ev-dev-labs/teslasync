@@ -7,9 +7,9 @@ import { useUnits } from '@/hooks/useUnits';
 import type { RenewalReview } from '@/types/subscriptionRenewal';
 import { formatCurrencyMinor } from '../../formatters';
 
-export function SubscriptionRenewalEvidence({ review, timeZone }: { review: RenewalReview; timeZone: string }) {
+export function SubscriptionRenewalEvidence({ review }: { review: RenewalReview }) {
   const { t } = useTranslation();
-  const { formatDayKey, formatDateTime } = useDateFormat('user');
+  const { formatDayKey, formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const units = useUnits();
   const e = review.evidence;
@@ -30,7 +30,7 @@ export function SubscriptionRenewalEvidence({ review, timeZone }: { review: Rene
     ]} />
     {observed
       ? <Text as="p" variant="caption">{t('ownership.subscription.renewal.coverage', 'Recorded on {{days}} days from {{from}} up to {{through}}. Missing records are not zero usage.', {
-        days: fmtInt(e.observed_days), from: formatDateTime(e.from, { tz: timeZone }), through: formatDateTime(e.through, { tz: timeZone }),
+        days: fmtInt(e.observed_days), from: formatDateTime(e.from), through: formatDateTime(e.through),
       })}</Text>
       : <Text as="p" variant="caption">{e.coverage === 'not_measured'
         ? t('ownership.subscription.renewal.unsupported', 'This subscription’s usage is not measured by the available records.')

@@ -10,17 +10,19 @@ import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
 import { neonColorMap, normalizeSeverity, severityTokens } from '@/lib/tokens';
 import { useUnits } from '@/hooks/useUnits';
+import { useSettings } from '@/hooks/useSettings';
 import type { DayLogEvent } from '@/api/types';
 import { humanizeManagementLabel } from '../vehicle-management/managementData';
 import {
   DAY_LOG_CATEGORIES,
   DAY_LOG_EVENT_TITLE,
   categoryOf,
+  dayLogHour,
   eventHref,
   eventIcon,
   eventKeywords,
+  formatDayLogHour,
   formatTimeSeconds,
-  hourKeyInTz,
   payloadNumber,
   payloadString,
   type DayLogCategory,
@@ -36,7 +38,7 @@ export interface DayLogTimelineProps {
   onRetry: () => void;
 }
 
-type Row = { kind: 'hour'; key: string; hour: string } | { kind: 'event'; key: string; event: DayLogEvent; position: number };
+type Row = { kind: 'hour'; key: string; label: string } | { kind: 'event'; key: string; event: DayLogEvent; position: number; repeated: boolean };
 
 /**
  * Section 3 — the complete-history list. Every recorded event renders
@@ -56,6 +58,7 @@ export function DayLogTimeline({
   onRetry,
 }: DayLogTimelineProps) {
   const { t } = useTranslation();
+  const { locale } = useSettings();
   const { formatDistance, formatEnergy, formatDuration } = useUnits();
   const [search, setSearch] = useState('');
   const [hidden, setHidden] = useState<ReadonlySet<DayLogCategory>>(new Set());
@@ -65,6 +68,21 @@ export function DayLogTimeline({
   const pendingFocus = useRef<{ key: string; rows: Row[] } | null>(null);
 
   const all = events ?? [];
+  const { hours, repeatedHours } = useMemo(() => {
+    const hours = new Map<string, NonNullable<ReturnType<typeof dayLogHour>>>();
+    const firstOffsets = new Map<string, number>();
+    const repeatedHours = new Set<string>();
+    for (const { ts } of all) {
+      if (hours.has(ts)) continue;
+      const hour = dayLogHour(ts, timezone);
+      if (!hour) continue;
+      hours.set(ts, hour);
+      const first = firstOffsets.get(hour.key);
+      if (first == null) firstOffsets.set(hour.key, hour.offset);
+      else if (first !== hour.offset) repeatedHours.add(hour.key);
+    }
+    return { hours, repeatedHours };
+  }, [all, timezone]);
   const counts = useMemo(() => {
     const m = new Map<DayLogCategory, number>();
     for (const e of all) m.set(categoryOf(e.type), (m.get(categoryOf(e.type)) ?? 0) + 1);
@@ -82,14 +100,14 @@ export function DayLogTimeline({
         title,
         detail,
         t(`dayLog.categories.${categoryOf(e.type)}`, categoryOf(e.type)),
-        formatTimeSeconds(e.ts, timezone),
+        formatTimeSeconds(e.ts, timezone, locale, repeatedHours.has(hours.get(e.ts)?.key ?? '')),
         e.ts,
         e.id,
         eventKeywords(e),
       ].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
       return haystack.includes(query);
     });
-  }, [all, hidden, query, t, timezone, formatDistance, formatEnergy]);
+  }, [all, hidden, query, t, timezone, locale, hours, repeatedHours, formatDistance, formatEnergy]);
   const isFiltered = query !== '' || hidden.size > 0;
   const allCategoriesHidden = counts.size > 0 && [...counts.keys()].every((category) => hidden.has(category));
 
@@ -97,15 +115,16 @@ export function DayLogTimeline({
     const out: Row[] = [];
     let lastHour = '';
     for (const [position, e] of filtered.entries()) {
-      const hour = hourKeyInTz(e.ts, timezone);
-      if (hour !== '' && hour !== lastHour) {
-        lastHour = hour;
-        out.push({ kind: 'hour', key: `hour-${hour}-${out.length}`, hour });
+      const hour = hours.get(e.ts);
+      const repeated = repeatedHours.has(hour?.key ?? '');
+      if (hour && `${hour.key}-${hour.offset}` !== lastHour) {
+        lastHour = `${hour.key}-${hour.offset}`;
+        out.push({ kind: 'hour', key: `hour-${lastHour}-${e.id}`, label: formatDayLogHour(hour.hour, e.ts, timezone, locale, repeated) });
       }
-      out.push({ kind: 'event', key: e.id, event: e, position });
+      out.push({ kind: 'event', key: e.id, event: e, position, repeated });
     }
     return out;
-  }, [filtered, timezone]);
+  }, [filtered, hours, repeatedHours, timezone, locale]);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -290,13 +309,13 @@ export function DayLogTimeline({
                           }}
                         >
                           {row.kind === 'hour' ? (
-                            <HourSeparator hour={row.hour} />
+                            <HourSeparator label={row.label} />
                           ) : (
                             <EventRow
                               event={row.event}
                               position={row.position}
                               total={filtered.length}
-                              timezone={timezone}
+                              time={formatTimeSeconds(row.event.ts, timezone, locale, row.repeated)}
                               expanded={expanded.has(row.event.id)}
                               onToggle={() => toggleExpanded(row.event.id)}
                               t={t}
@@ -319,12 +338,12 @@ export function DayLogTimeline({
   );
 }
 
-function HourSeparator({ hour }: { hour: string }) {
+function HourSeparator({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 py-1.5" aria-hidden="true">
       <div className="h-px flex-1 bg-[var(--border-subtle)]" />
       <Text variant="caption" className="tabular-nums">
-        {hour}:00
+        {label}
       </Text>
       <div className="h-px flex-1 bg-[var(--border-subtle)]" />
     </div>
@@ -335,7 +354,7 @@ interface EventRowProps {
   event: DayLogEvent;
   position: number;
   total: number;
-  timezone: string;
+  time: string;
   expanded: boolean;
   onToggle: () => void;
   t: TFunction;
@@ -344,7 +363,7 @@ interface EventRowProps {
   formatDuration: (v: number | null | undefined) => string;
 }
 
-function EventRow({ event, position, total, timezone, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {
+function EventRow({ event, position, total, time, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {
   const Icon = eventIcon(event.type);
   const href = eventHref(event);
   const { title, detail } = describeEvent(t, event, { formatDistance, formatEnergy });
@@ -365,8 +384,8 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
   return (
     <div data-app-part="timeline-row" role="listitem" aria-labelledby={`${titleId} ${timeId} ${identityId}`} aria-posinset={position + 1} aria-setsize={total} data-event-position={position} className="min-w-0 border-b border-[var(--border-subtle)] py-1.5" data-testid={`daylog-event-${event.id}`}>
       <div data-app-part="timeline-content" className="flex items-center gap-2.5">
-        <Text id={timeId} variant="caption" className="w-16 shrink-0 tabular-nums">
-          {formatTimeSeconds(event.ts, timezone)}
+        <Text id={timeId} title={event.ts} variant="caption" className="w-24 shrink-0 tabular-nums">
+          {time}
         </Text>
         <span
           className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', tone ? [tone.bg, tone.fg] : [neonColorMap.neutral.bg, neonColorMap.neutral.text])}

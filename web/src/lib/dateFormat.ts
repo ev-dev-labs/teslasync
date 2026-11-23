@@ -7,11 +7,8 @@
  * Every helper accepts an optional second
  * `FormatOptions` argument carrying an IANA timezone name and a BCP-47
  * locale, plus optional explicit clock fields (including seconds). When
- * omitted the helper preserves its prior behavior (browser
- * locale + browser timezone) so existing callers stay byte-for-byte
- * identical. When `tz` is supplied the timestamp is rendered in that
- * zone via `Intl.DateTimeFormat`, which is what `<DateTime in="vehicle">`
- * relies on to render drive/charge times in the car's local time.
+ * omitted, instants use the workspace display timezone, or the browser
+ * timezone outside the signed-in workspace. An explicit `tz` wins.
  *
  * Formatter contract:
  * Every formatter in this file accepts `null | undefined` and any garbage
@@ -35,7 +32,7 @@ export const FALLBACK = '—'
 
 /** Optional locale + timezone overrides for the shared formatters. */
 export interface FormatOptions {
-  /** IANA timezone name, e.g. 'America/Los_Angeles'. Defaults to browser. */
+  /** IANA timezone name, e.g. 'America/Los_Angeles'. Defaults to the workspace display zone for instants. */
   tz?: string
   /** BCP-47 locale, e.g. 'en-US'. Defaults to browser locale. */
   locale?: string
@@ -58,6 +55,7 @@ export interface FormatOptions {
  * every formatter total per the contract above.
  */
 const timeZoneValidityCache = new Map<string, boolean>()
+let workspaceDisplayTimezone: string | undefined
 
 export function safeTimeZone(tz: unknown): string | undefined {
   if (typeof tz !== 'string' || tz.trim() === '') return undefined
@@ -73,13 +71,28 @@ export function safeTimeZone(tz: unknown): string | undefined {
   }
 }
 
-function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {
+export function setWorkspaceDisplayTimezone(timezone?: string): void {
+  workspaceDisplayTimezone = safeTimeZone(timezone)
+}
+
+export function instantDisplayTimezone(opts?: FormatOptions): string | undefined {
+  return safeTimeZone(opts?.tz) ?? workspaceDisplayTimezone
+}
+
+function intlOpts(
+  base: Intl.DateTimeFormatOptions,
+  opts?: FormatOptions,
+  timeZone = instantDisplayTimezone(opts),
+): Intl.DateTimeFormatOptions {
   const fields = base.hour ? { ...base, ...opts?.clock } : base
-  const timeZone = safeTimeZone(opts?.tz)
   if (timeZone) {
     return { ...fields, timeZone }
   }
   return fields
+}
+
+function dateDisplayTimezone(value: string | number | Date, opts?: FormatOptions): string | undefined {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'UTC' : instantDisplayTimezone(opts)
 }
 
 export function intlLocale(opts?: FormatOptions): string | undefined {
@@ -206,7 +219,7 @@ export function formatDate(value: string | number | Date | null | undefined, opt
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     year: opts?.yearStyle ?? 'numeric', month: 'short', day: 'numeric',
-  }, opts))
+  }, opts, dateDisplayTimezone(value, opts)))
 }
 
 /** Short date: "Apr 4" */
@@ -216,7 +229,7 @@ export function formatDateShort(value: string | number | Date | null | undefined
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     month: 'short', day: 'numeric',
-  }, opts))
+  }, opts, dateDisplayTimezone(value, opts)))
 }
 
 /**
@@ -234,12 +247,13 @@ const timeFormatterCache = new Map<string, Intl.DateTimeFormat>()
 
 function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {
   const locale = intlLocale(opts)
-  const key = `${locale ?? ''}|${opts?.tz ?? ''}|${JSON.stringify(opts?.clock ?? {})}`
+  const timeZone = instantDisplayTimezone(opts)
+  const key = `${locale ?? ''}|${timeZone ?? ''}|${JSON.stringify(opts?.clock ?? {})}`
   let formatter = timeFormatterCache.get(key)
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(
       locale === undefined ? [] : locale,
-      intlOpts({ hour: '2-digit', minute: '2-digit' }, opts),
+      intlOpts({ hour: '2-digit', minute: '2-digit' }, opts, timeZone),
     )
     timeFormatterCache.set(key, formatter)
   }
@@ -387,7 +401,7 @@ export function formatDateWithDay(value: string | number | Date | null | undefin
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(intlLocale(opts), intlOpts({
     weekday: 'short', month: 'short', day: 'numeric',
-  }, opts))
+  }, opts, dateDisplayTimezone(value, opts)))
 }
 
 /**
@@ -414,7 +428,7 @@ export function formatDateRange(
   // ends carry millisecond precision, so minus 1ms is exactly the final
   // included millisecond; a DST transition inside the day cannot move it.
   const inclusiveEnd = new Date(Math.max(0, until - 1))
-  const timeZone = safeTimeZone(opts?.tz)
+  const timeZone = instantDisplayTimezone(opts)
   try {
     const fmt = new Intl.DateTimeFormat(intlLocale(opts), {
       ...(timeZone ? { timeZone } : {}),

@@ -17,7 +17,7 @@ export function useColdTireLabels(): Record<ColdTireCorner, string> {
 export function useColdTireDisplay(drift: ColdTireDrift | null | undefined) {
   const { t } = useTranslation();
   const labels = useColdTireLabels();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const { formatPressureValue } = usePressureFormat();
   if (!drift || !labels[drift.corner]) return null;

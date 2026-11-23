@@ -83,7 +83,7 @@ interface PositionRecord {
 function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
     <div data-app-part="list-row" className="flex min-w-0 flex-wrap items-center gap-3">
-      <Text as="dt" data-app-part="metric-label" variant="bodySm" className="flex min-w-0 flex-1 items-center gap-3 [overflow-wrap:anywhere]">
+      <Text as="dt" data-app-part="metric-label" variant="bodySm" className="flex min-w-0 flex-auto items-center gap-3 [overflow-wrap:anywhere]">
         <span className="shrink-0" aria-hidden="true">{icon}</span>
         {label}
       </Text>

@@ -25,7 +25,8 @@ export function FavoriteDigestPanel({ vehicleId }: { vehicleId: number | null })
 
 function FavoriteDigestDetails({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { formatDuration } = useUnits();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useFavoriteDigest(scope, vehicleId);
@@ -94,7 +95,7 @@ function FavoriteDigestDetails({ scope, vehicleId, identityPending }: PrivateVeh
       <Text as="p" variant="bodySm">{t('media.favorites.why', 'Why this? Repeated playback was observed on separate completed drives. The vehicle cannot identify who chose or heard it. Only confirm recordings you want to keep.')}</Text>
       <Text as="p" variant="caption">{t('media.favorites.coverage', 'Playback observations from {{from}} up to {{until}}. This shortlist expires {{expiry}}.', {
         from: formatDateTime(digest.from, { tz: zone }), until: formatDateTime(digest.until, { tz: zone }),
-        expiry: formatDateTime(digest.expires_at, { tz: zone }),
+        expiry: formatDateTime(digest.expires_at),
       })}</Text>
       <ul className="space-y-2">
         {(digest.candidates ?? []).map(recording => <li key={recording.key} className="flex flex-wrap items-center justify-between gap-2">

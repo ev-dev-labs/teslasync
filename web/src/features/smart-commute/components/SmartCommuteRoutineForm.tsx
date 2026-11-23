@@ -20,13 +20,13 @@ export function SmartCommuteRoutineForm({ vehicleId, timeZone, routine, disabled
     name: routine?.name ?? '',
     weekday: String(routine?.weekday ?? 1),
     departure: formatCommuteClock(routine?.departure_s ?? 8 * 3600),
-    timeZone: routine?.time_zone ?? timeZone,
     originLatitude: routine ? String(routine.origin.latitude) : '',
     originLongitude: routine ? String(routine.origin.longitude) : '',
     destinationLatitude: routine ? String(routine.destination.latitude) : '',
     destinationLongitude: routine ? String(routine.destination.longitude) : '',
   })
   const [invalid, setInvalid] = useState(false)
+  const scheduleZone = routine?.time_zone ?? timeZone
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -34,7 +34,7 @@ export function SmartCommuteRoutineForm({ vehicleId, timeZone, routine, disabled
     const coordinates = [
       draft.originLatitude, draft.originLongitude, draft.destinationLatitude, draft.destinationLongitude,
     ]
-    if (departure == null || !draft.name.trim() || !draft.timeZone.trim() ||
+    if (departure == null || !draft.name.trim() ||
       coordinates.some((value) => value.trim() === '' || !Number.isFinite(Number(value)))) {
       setInvalid(true)
       return
@@ -45,7 +45,7 @@ export function SmartCommuteRoutineForm({ vehicleId, timeZone, routine, disabled
       name: draft.name.trim(),
       weekday: Number(draft.weekday),
       departure_s: departure,
-      time_zone: draft.timeZone.trim(),
+      time_zone: scheduleZone,
       origin: { latitude: Number(draft.originLatitude), longitude: Number(draft.originLongitude) },
       destination: {
         latitude: Number(draft.destinationLatitude),
@@ -70,10 +70,8 @@ export function SmartCommuteRoutineForm({ vehicleId, timeZone, routine, disabled
           options={weekdays.map((label, value) => ({ label, value: String(value) }))}
           onChange={(event) => setDraft({ ...draft, weekday: event.target.value })} />
         <Input type="time" step={1} required label={t('smartCommute.departure', 'Local departure time')}
-          value={draft.departure} onChange={(event) => setDraft({ ...draft, departure: event.target.value })} />
-        <Input label={t('smartCommute.timeZone', 'IANA time zone')} required maxLength={128}
-          value={draft.timeZone} onChange={(event) => setDraft({ ...draft, timeZone: event.target.value })}
-          hint={t('smartCommute.timeZoneHint', 'For example, America/Los_Angeles.')} />
+          value={draft.departure} onChange={(event) => setDraft({ ...draft, departure: event.target.value })}
+          hint={t('smartCommute.scheduleZone', 'This recurring time follows {{zone}}.', { zone: scheduleZone })} />
         <Input type="number" step="any" min={-90} max={90} required
           label={t('smartCommute.originLatitude', 'Origin latitude')}
           value={draft.originLatitude} onChange={(event) => setDraft({ ...draft, originLatitude: event.target.value })} />
@@ -87,7 +85,7 @@ export function SmartCommuteRoutineForm({ vehicleId, timeZone, routine, disabled
           label={t('smartCommute.destinationLongitude', 'Destination longitude')}
           value={draft.destinationLongitude} onChange={(event) => setDraft({ ...draft, destinationLongitude: event.target.value })} />
       </div>
-      {invalid && <ErrorText role="alert">{t('smartCommute.invalidForm', 'Enter a name, valid local time, time zone and coordinates.')}</ErrorText>}
+      {invalid && <ErrorText role="alert">{t('smartCommute.invalidRoutine', 'Enter a name, valid local time and coordinates.')}</ErrorText>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" className="min-h-11" disabled={disabled}>
           {t('smartCommute.saveRoutine', 'Save routine')}

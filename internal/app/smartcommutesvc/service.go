@@ -74,11 +74,14 @@ func (s *Service) SaveSettings(ctx context.Context, subject string, settings dom
 	return s.repository.SaveSettings(ctx, subject, settings, s.now(), analyze)
 }
 
-func (s *Service) Analyze(ctx context.Context, subject string, vehicleID int64) error {
+func (s *Service) Analyze(ctx context.Context, subject string, vehicleID int64, timeZone string) error {
 	if err := validateScope(subject, vehicleID); err != nil {
 		return err
 	}
-	return s.repository.Analyze(ctx, subject, vehicleID, s.now(), analyze)
+	if timeZone != "" && !validTimeZone(timeZone) {
+		return fmt.Errorf("%w: invalid analysis time zone", ErrInvalidInput)
+	}
+	return s.repository.Analyze(ctx, subject, vehicleID, timeZone, s.now(), analyze)
 }
 
 func (s *Service) CreateRoutine(ctx context.Context, subject string, input domain.RoutineInput) (*domain.Routine, error) {

@@ -16,7 +16,7 @@ import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import type { NotificationLog } from '@/api/types';
-import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export interface ArchivedSummaryProps {
   /** The archived-notifications query (TanStack result) from the page. */
@@ -35,6 +35,7 @@ interface ArchivedStats {
 /** Responsive KPI grid summarising the archived notification backlog. */
 export function ArchivedSummary({ query }: ArchivedSummaryProps) {
   const { t } = useTranslation();
+  const { formatRelativeTime, formatDateTime } = useDateFormat();
 
   const stats = useMemo<ArchivedStats>(() => {
     const rows = query.data ?? [];

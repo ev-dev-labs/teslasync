@@ -18,7 +18,7 @@ export function PersonalDeliveryDeviceRow({
   device, index, current, disabled, available, family, onChange, onRemove,
 }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const name = current
     ? t('smartCharging.delivery.thisDevice', 'This browser')
     : t('smartCharging.delivery.deviceNumber', 'Device {{number}}', { number: index + 1 })

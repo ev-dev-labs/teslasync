@@ -28,7 +28,7 @@ function useExpiryRefresh(endsAt: string | undefined, reminderEndsAt: string | u
 
 export function SharedChargerPlanCard({ scope, plan, confirmed, vehicleName }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const query = useSharedChargerCard(scope, plan)
   const result = query.data
   useExpiryRefresh(result?.card?.expires_at, result?.reminder?.expires_at)

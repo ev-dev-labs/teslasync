@@ -42,6 +42,8 @@ let devices: Record<string, StoredDevice[]>
 let browserSubscription: PushSubscription | null
 let deleteFailure: boolean
 let holdLookup: Promise<void> | null
+let commuteAvailable: boolean
+let enrollmentAvailable: boolean
 
 function stored(id: number, verified: boolean, pushEndpoint = endpoint): StoredDevice {
   return {
@@ -65,6 +67,8 @@ beforeEach(() => {
   browserSubscription = null
   deleteFailure = false
   holdLookup = null
+  commuteAvailable = true
+  enrollmentAvailable = true
   mocks.request.mockReset()
   mocks.supported.mockReset().mockReturnValue(true)
   mocks.getSubscription.mockReset().mockImplementation(async () => browserSubscription)
@@ -79,7 +83,8 @@ beforeEach(() => {
     const header = (options?.headers as Record<string, string> | undefined)?.['X-TeslaSync-Expected-Principal']
     if (header !== `subject:${subject}`) throw new ApiError('Identity changed', 409, 'IDENTITY_CHANGED')
     if (path === '/smart-delivery/devices' && !options?.method) {
-      return { data: { available: true, commute_available: true, public_key: 'vapid-key', devices: devices[subject].map((item) => item.device) } }
+      return { data: { available: enrollmentAvailable, commute_available: commuteAvailable,
+        public_key: enrollmentAvailable ? 'vapid-key' : '', devices: devices[subject].map((item) => item.device) } }
     }
     if (path === '/smart-delivery/devices/lookup') {
       const requestSubject = subject
@@ -116,6 +121,28 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('personal delivery settings', () => {
+  it('connects a browser without HERE but does not allow commute traffic delivery', async () => {
+    commuteAvailable = false
+    const { client } = renderSettings('commute')
+    const connect = await screen.findByRole('button', { name: 'Connect this browser' })
+    await waitFor(() => expect(connect).toBeEnabled())
+    fireEvent.click(connect)
+    expect(await screen.findByRole('button', { name: 'Retry confirmation' })).toBeInTheDocument()
+    expect(mocks.subscribe).toHaveBeenCalledWith('vapid-key')
+    devices[subject][0].device.verified = true
+    await act(async () => { await client.invalidateQueries({ queryKey: personalDeliveryKeys.all }) })
+    const toggle = await screen.findByRole('switch', { name: 'Allow commute traffic notifications on This browser' })
+    expect(toggle).toBeDisabled()
+    expect(toggle).not.toBeChecked()
+  })
+
+  it('cannot connect without server-side push credentials', async () => {
+    enrollmentAvailable = false
+    commuteAvailable = false
+    renderSettings('commute')
+    expect(await screen.findByRole('button', { name: 'Connect this browser' })).toBeDisabled()
+    expect(mocks.subscribe).not.toHaveBeenCalled()
+  })
   it('opts into commute traffic separately on a verified browser', async () => {
     browserSubscription = subscription
     devices[subject] = [stored(1, true)]

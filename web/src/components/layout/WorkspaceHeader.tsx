@@ -52,10 +52,10 @@ export function WorkspaceHeader({
       aria-label={t('nav.workspaceHeader', 'Workspace command bar')}
       data-layout={compact ? undefined : 'balanced-three-track'}
       className={cn('relative z-20 shrink-0 items-center border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 shadow-e1',
-        compact ? 'flex min-h-14 flex-wrap gap-1 pb-1 pt-[calc(0.25rem+env(safe-area-inset-top,0px))]' : 'grid h-workspace-header grid-cols-workspace-header gap-4 2xl:px-6')}
+        compact ? 'flex min-h-14 flex-wrap gap-1 pb-1 pt-[calc(0.25rem+env(safe-area-inset-top,0px))] max-sm:justify-between' : 'grid h-workspace-header grid-cols-workspace-header gap-4 2xl:px-6')}
     >
       {browseControl}
-      <div data-app-header-slot="context" className={cn('min-w-0 overflow-hidden justify-self-start', compact && 'flex-1')}>
+      <div data-app-header-slot="context" className={cn('min-w-0 overflow-hidden justify-self-start', compact && 'hidden flex-1 sm:block')}>
         <Caption className="mb-1 hidden 3xl:block">
           {t('nav.workspaceContext', 'Fleet operations')}
         </Caption>

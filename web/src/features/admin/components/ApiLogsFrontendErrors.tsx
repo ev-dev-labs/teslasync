@@ -35,7 +35,7 @@ export function ApiLogsFrontendErrors() {
         <>
           <Caption className="block">{t('apiLogs.runtime.asOf', 'Summary as of')}</Caption>
           <Text as="p" variant="bodySm" className="mt-1">
-            {data?.as_of ? <DateTime value={data.as_of} in="utc" /> : '—'}
+            {data?.as_of ? <DateTime value={data.as_of} /> : '—'}
           </Text>
         </>
       }

@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import postcss from 'postcss';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes, APP_DESIGN_PACK_FILES } from '@/components/ui/app-designs/designs';
 import { expectAppDesignDataMode } from '@/components/feedback/appDesignCss.test-utils';
+import { WorkspaceDateFormatProvider } from '@/components/data-display/format/WorkspaceDateFormatProvider';
 import { PACK_IDS } from '@/features/dashboard/widgets/designPacks/types';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { AutomationExecutionDetail as Detail } from '@/api/types';
@@ -53,7 +54,13 @@ function detail(): Detail {
 
 function renderDetail() {
   const onClose = vi.fn();
-  render(<MemoryRouter><AutomationExecutionDetail id={91} onClose={onClose} /></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <WorkspaceDateFormatProvider>
+        <AutomationExecutionDetail id={91} onClose={onClose} />
+      </WorkspaceDateFormatProvider>
+    </MemoryRouter>,
+  );
   return onClose;
 }
 

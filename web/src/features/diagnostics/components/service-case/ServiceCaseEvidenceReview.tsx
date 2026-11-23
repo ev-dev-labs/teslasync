@@ -20,7 +20,7 @@ interface Props {
 
 export function ServiceCaseEvidenceReview({ caseKey, entries, scope, vehicleId, disabled, onRemove }: Props) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const labels = useServiceCaseKinds();
   const request = useServiceCaseReview(scope, vehicleId);
   const [picked, setPicked] = useState<Record<number, ServiceCaseSelection>>({});

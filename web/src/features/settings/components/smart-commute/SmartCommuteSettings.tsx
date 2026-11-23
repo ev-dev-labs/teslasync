@@ -7,8 +7,8 @@ import { useVehicles } from '@/api/hooks/useVehicles'
 import { DataStateNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { ErrorText, GlassPanel, Select, Text } from '@/components/ui'
 import { useDataState } from '@/hooks/useDataState'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { useOperationalMode } from '@/hooks/useOperationalMode'
-import { browserTimeZone } from '@/lib/dateFormat'
 import { SmartCommuteControls } from './SmartCommuteControls'
 import { SmartCommuteRoutines } from './SmartCommuteRoutines'
 import { SmartCommuteTrafficComparison } from './SmartCommuteTrafficComparison'
@@ -33,6 +33,7 @@ export function SmartCommuteSettings({ active }: Props) {
   const requestedId = number != null && Number.isSafeInteger(number) && number > 0 ? number : null
   const vehicle = (vehicles.data ?? []).find((item) => item.id === requestedId)
   const vehicleId = vehicle?.id ?? null
+  const { tz } = useDateFormat(undefined, vehicle?.timezone ?? null)
   const query = useSmartCommute(scope, vehicleId, active && !identity.isFetching && !identity.isError)
   const state = useDataState(query)
   const change = useSmartCommuteChange(scope, vehicleId)
@@ -114,13 +115,13 @@ export function SmartCommuteSettings({ active }: Props) {
               {!operationalMode.canWrite && operationalMode.writeBlockReason && (
                 <Text as="p" variant="bodySm">{operationalMode.writeBlockReason}</Text>
               )}
-              <SmartCommuteControls settings={settings} stateLabel={status} disabled={disabled}
+              <SmartCommuteControls settings={settings} timeZone={tz} stateLabel={status} disabled={disabled}
                 busy={change.isPending} trafficAvailable={state.data?.traffic_available === true} onChange={apply} />
               <SmartCommuteTrafficComparison decisions={state.data?.traffic_decisions ?? []}
-                requestedOccurrence={requestedOccurrence} scope={scope}
+                requestedOccurrence={requestedOccurrence} scope={scope} displayZone={tz}
                 navigationAvailable={state.data?.navigation_available === true}
                 navigationDisabled={disabled || state.isRefreshBlocked || vehicleState.isRefreshBlocked} />
-              <SmartCommuteRoutines vehicleId={vehicleId} timeZone={settings.time_zone || browserTimeZone()}
+              <SmartCommuteRoutines vehicleId={vehicleId} timeZone={tz}
                 scope={scope} canSetUpTraffic={Boolean(state.data?.traffic_available && settings.enabled && settings.local_analysis_enabled && !settings.paused)}
                 enabled={settings.enabled} disabled={disabled} routines={routines} onChange={apply} />
             </div>

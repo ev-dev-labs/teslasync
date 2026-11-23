@@ -48,7 +48,7 @@ export function IncidentHistory() {
                     {incident.title || t('systemStatus.incidentHistory.untitled', 'Untitled incident')}
                   </Text>
                   <Caption className="block">
-                    <DateTime value={incident.started_at} in="utc" />
+                    <DateTime value={incident.started_at} />
                     {' · '}{(incident.affected_components ?? []).join(', ') || t('systemStatus.incidentHistory.unspecified', 'Component not specified')}
                   </Caption>
                 </div>

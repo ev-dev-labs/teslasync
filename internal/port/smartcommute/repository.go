@@ -33,7 +33,7 @@ type Repository interface {
 	TrafficRepository
 	Read(ctx context.Context, subject string, vehicleID int64, now time.Time) (*domain.Snapshot, error)
 	SaveSettings(ctx context.Context, subject string, settings domain.Settings, now time.Time, learner Learner) error
-	Analyze(ctx context.Context, subject string, vehicleID int64, now time.Time, learner Learner) error
+	Analyze(ctx context.Context, subject string, vehicleID int64, timeZone string, now time.Time, learner Learner) error
 	CreateRoutine(ctx context.Context, subject string, input domain.RoutineInput, now time.Time) (*domain.Routine, error)
 	ConfirmRoutine(ctx context.Context, subject string, routineID int64, input domain.RoutineInput, now time.Time) (*domain.Routine, error)
 	DeclineRoutine(ctx context.Context, subject string, vehicleID, routineID int64, now time.Time) error

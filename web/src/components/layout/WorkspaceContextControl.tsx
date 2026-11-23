@@ -17,7 +17,7 @@ import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
 import { civilDateInTimeZone } from '@/lib/dateRange'
 import { getWorkspaceQuickRangePresets, isWorkspaceRangePresetAvailable, type WorkspaceQuickRangePreset } from '@/lib/workspaceScope'
-import { formatDate, formatDateShort } from '@/lib/dateFormat'
+import { formatDayKey } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import { Icons } from '@/lib/icons'
@@ -287,7 +287,7 @@ export function WorkspaceContextControl({
                 {t(
                   'workspace.analysis.activeRange',
                   '{{start}} to {{end}}',
-                  { start: formatDateShort(`${range.start}T00:00:00`), end: formatDate(`${range.end}T00:00:00`) },
+                  { start: formatDayKey(range.start, { style: 'short' }), end: formatDayKey(range.end) },
                 )}
               </Caption>
             </div>

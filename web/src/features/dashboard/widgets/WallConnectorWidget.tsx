@@ -43,7 +43,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
-  const { tz } = useDateFormat('user');
+  const { tz } = useDateFormat();
   const packId = usePackPresentation();
 
   // Discover energy sites

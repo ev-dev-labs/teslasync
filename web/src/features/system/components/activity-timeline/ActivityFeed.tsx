@@ -72,7 +72,7 @@ export function ActivityFeed({
 }: ActivityFeedProps) {
   const { t } = useTranslation();
   const { formatDuration, formatEnergy } = useUnits();
-  const { formatTime, locale } = useDateFormat('vehicle');
+  const { formatTime, locale } = useDateFormat();
 
   if (isLoading) {
     return (

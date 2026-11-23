@@ -7,11 +7,38 @@ import {
   expectNoHorizontalOverflow, expectNoRuntimeFailures, monitorPage,
 } from './qualityAssertions';
 import { fsdObservatoryGridFixture } from './fsdObservatoryGridFixtures';
-import { closeTableToolbarControls, openTableToolbarControls } from './tableToolbarControls';
+import { closeTableToolbarControls, openTableColumnLayout, openTableToolbarControls } from './tableToolbarControls';
 
 test.skip(process.env.E2E_MOCKS === '0', 'Requires isolated observatory evidence fixtures');
 const path = '/fsd?from=2026-07-28&to=2026-08-26';
-const frameOf = (table: Locator) => table.locator('xpath=ancestor::*[@data-grid-frame][1]');
+const frameOf = (grid: Locator) => grid.locator('xpath=ancestor::*[@data-grid-frame][1]');
+const gridNames = ['Stitched journal', 'Commute stories'] as const;
+const chapterValues = [
+  ['Home → Office', '12', '2026.26.1', '3', '0.00 km', '0.00%', '0', '1', '0'],
+  ['Home → Office', '12', '2026.30.2', '9', '1.61 km', '50.25%', '2', '2', '1'],
+  ['Unknown chapter', '7', 'Unknown firmware', '9', 'Not measured', '—', '2', '2', '1'],
+  ['Empty chapters', '1,234', 'Unknown firmware', '—', 'Not measured', '—', '—', '—', '—'],
+];
+
+function observatoryGrids(panel: Locator, width: number) {
+  const cards = width === 390;
+  const [journal, commute] = gridNames.map(name => panel.getByRole(cards ? 'group' : 'table', { name, exact: true }));
+  const rows = (grid: Locator) => grid.locator(cards ? '[data-mobile-row-key]' : 'tbody tr');
+  return { journal, commute, rows };
+}
+
+async function expectObservatoryRows(panel: Locator, width: number, loaded: boolean) {
+  const { journal, commute, rows } = observatoryGrids(panel, width);
+  if (!loaded) {
+    await expect(journal).toHaveCount(0);
+    await expect(commute).toHaveCount(0);
+    return;
+  }
+  await expect(journal).toBeVisible();
+  await expect(commute).toBeVisible();
+  await expect(rows(journal)).toHaveCount(5);
+  await expect(rows(commute)).toHaveCount(4);
+}
 
 async function expectEmbeddedGridFooter(table: Locator) {
   const frame = frameOf(table);
@@ -44,21 +71,9 @@ async function setup(page: Page, theme: 'light' | 'dark', mode: 'evidence' | 'pa
   return mocks;
 }
 
-async function expectLocalScroll(table: Locator, width: number) {
+async function expectLocalScroll(table: Locator) {
   const viewport = frameOf(table).locator('[data-grid-viewport]');
-  const geometry = await viewport.evaluate(node => {
-    node.scrollLeft = node.scrollWidth;
-    return {
-      width: node.clientWidth, scrollWidth: node.scrollWidth, scrollLeft: node.scrollLeft,
-      overflow: getComputedStyle(node).overflowX,
-    };
-  });
-  expect(['auto', 'scroll']).toContain(geometry.overflow);
-  if (width === 390) {
-    expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
-    expect(geometry.scrollLeft).toBeGreaterThan(0);
-  }
-  await viewport.evaluate(node => { node.scrollLeft = 0; });
+  expect(['auto', 'scroll']).toContain(await viewport.evaluate(node => getComputedStyle(node).overflowX));
 }
 
 async function captureGrid(page: Page, table: Locator, label: string) {
@@ -77,6 +92,63 @@ async function captureGrid(page: Page, table: Locator, label: string) {
   await viewport.evaluate(node => { node.scrollLeft = 0; });
 }
 
+async function inspectPhoneGrids(page: Page, panel: Locator, theme: string) {
+  const { journal, commute, rows } = observatoryGrids(panel, 390);
+  await expectObservatoryRows(panel, 390, true);
+  await expect(panel.getByRole('table', { name: /^(Stitched journal|Commute stories)$/ })).toHaveCount(0);
+  const journalRows = rows(journal);
+  await expect(journalRows.nth(0).getByTestId('fsd-observatory-drive-fsd')).toHaveText('0.00 km');
+  await expect(journalRows.nth(1).getByTestId('fsd-observatory-drive-fsd')).toHaveText('~1.61 km');
+  await expect(journalRows.nth(2).getByTestId('fsd-observatory-drive-fsd')).toHaveText('~1.61 km');
+  await expect(journalRows.nth(2)).toContainText('Ambiguous');
+  await expect(journalRows.nth(3)).toContainText('Not measured');
+  await expect(journalRows.nth(3)).toContainText('Unknown firmware');
+  const drive = journalRows.first().getByRole('link');
+  await expect(drive).toHaveText('Aug 26, 2026, 03:15 PM');
+  await expect(drive).toHaveAttribute('href', '/drives/9000');
+  await journalRows.last().getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
+  const details = page.getByRole('dialog');
+  await expect(details.getByTestId('fsd-observatory-reset')).toHaveText(
+    'Break in the stitch — not travelled FSD (SelfDrivingMilesSinceReset).');
+  await expect(details.locator('dd').nth(2)).toHaveText('—');
+  await expect(details).not.toContainText('999');
+  await details.getByRole('button', { name: 'Close', exact: true }).last().press('Enter');
+  await expect(details).toHaveCount(0);
+  for (const [index, chapter] of chapterValues.entries()) {
+    await rows(commute).nth(index).getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
+    await expect(details.locator('dd')).toHaveText(chapter);
+    await details.getByRole('button', { name: 'Close', exact: true }).last().press('Enter');
+    await expect(details).toHaveCount(0);
+  }
+  const journalFrame = frameOf(journal);
+  const controls = await openTableToolbarControls(journalFrame);
+  const columns = await openTableColumnLayout(controls);
+  const firmwareToggle = columns.getByRole('checkbox', { name: 'Show or hide Firmware', exact: true });
+  await firmwareToggle.press('Space');
+  await expect(firmwareToggle).not.toBeChecked();
+  const finish = async () => {
+    await columns.getByRole('button', { name: 'Done', exact: true }).click();
+    await closeTableToolbarControls(controls);
+  };
+  await finish();
+  await expect(journalRows.first().getByText('2026.26.1', { exact: true })).toHaveCount(0);
+  await openTableColumnLayout(await openTableToolbarControls(journalFrame));
+  await firmwareToggle.press('Space');
+  await expect(firmwareToggle).toBeChecked();
+  await finish();
+  await expect(journalRows.first().getByText('2026.26.1', { exact: true })).toBeVisible();
+  const search = journalFrame.getByPlaceholder('Search loaded rows', { exact: true });
+  await search.fill('Journal route 4');
+  await expect(journalRows).toHaveCount(1);
+  await expect(journalRows.first()).toContainText('Unknown');
+  await search.clear();
+  await expect(journalRows).toHaveCount(5);
+  for (const [grid, label] of [[journal, 'journal'], [commute, 'commute']] as const) {
+    await grid.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath(`${label}-390-${theme}-cards.png`) });
+  }
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [390, 1440, 1920]) {
     test(`observatory grids preserve counter evidence at ${width}px ${theme}`, async ({ page }) => {
@@ -86,6 +158,13 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(path);
       await waitForHarnessReady(page, mocks);
       const panel = page.getByTestId('fsd-observatory');
+      if (width === 390) {
+        await inspectPhoneGrids(page, panel, theme);
+        await expectNoHorizontalOverflow(page);
+        await expectNoRuntimeFailures(diagnostics);
+        await assertMockApiComplete(page, mocks);
+        return;
+      }
       const journal = panel.getByRole('table', { name: 'Stitched journal', exact: true });
       const commute = panel.getByRole('table', { name: 'Commute stories', exact: true });
       await expect(journal).toBeVisible();
@@ -115,22 +194,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(reset).not.toContainText('999');
       const chapters = commute.locator('tbody tr');
       await expect(chapters).toHaveCount(4);
-      await expect(chapters.nth(0).getByRole('cell')).toHaveText([
-        'Home → Office', '12', '2026.26.1', '3', '0.00 km', '0.00%', '0', '1', '0',
-      ]);
-      await expect(chapters.nth(1).getByRole('cell')).toHaveText([
-        'Home → Office', '12', '2026.30.2', '9', '1.61 km', '50.25%', '2', '2', '1',
-      ]);
-      await expect(chapters.nth(2).getByRole('cell')).toHaveText([
-        'Unknown chapter', '7', 'Unknown firmware', '9', 'Not measured', '—', '2', '2', '1',
-      ]);
-      await expect(chapters.nth(3).getByRole('cell')).toHaveText([
-        'Empty chapters', '1,234', 'Unknown firmware', '—', 'Not measured', '—', '—', '—', '—',
-      ]);
+      for (const [index, chapter] of chapterValues.entries()) {
+        await expect(chapters.nth(index).getByRole('cell')).toHaveText(chapter);
+      }
       await expect(panel.getByRole('navigation', { name: 'Pagination', exact: true })).toHaveCount(2);
       for (const table of [journal, commute]) {
         await expectEmbeddedGridFooter(table);
-        await expectLocalScroll(table, width);
+        await expectLocalScroll(table);
       }
       await expectNoHorizontalOverflow(page);
       await captureGrid(page, journal, `journal-${width}-${theme}`);
@@ -226,7 +296,7 @@ async function checkEmpty(page: Page, theme: 'light' | 'dark', width: number) {
   await expect(panel.getByRole('heading', { name: 'Commute stories', exact: true })).toBeVisible();
   await expect(panel).toContainText('No completed drives in this period to journal.');
   await expect(panel).toContainText('Not enough repeated routes yet for a commute story.');
-  await expect(panel.getByRole('table')).toHaveCount(0);
+  await expectObservatoryRows(panel, width, false);
   await expectNoHorizontalOverflow(page);
   await panel.getByRole('heading', { name: 'Commute stories', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath(`observatory-empty-${width}-${theme}.png`) });
@@ -269,14 +339,14 @@ async function checkLoading(page: Page, theme: 'light' | 'dark', width: number) 
   try {
     await expect(panel.getByRole('heading', { name: 'FSD observatory', exact: true })).toBeVisible();
     await expect(panel.getByRole('status', { name: 'Loading supervised self-driving telemetry' })).toBeVisible();
-    await expect(panel.getByRole('table')).toHaveCount(0);
+    await expectObservatoryRows(panel, width, false);
     await panel.scrollIntoViewIfNeeded();
     await page.screenshot({ path: test.info().outputPath(`observatory-loading-${width}-${theme}.png`) });
   } finally {
     release();
   }
   await waitForHarnessReady(page, mocks);
-  await expect(panel.getByRole('table')).toHaveCount(2);
+  await expectObservatoryRows(panel, width, true);
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, mocks);
 }
@@ -296,7 +366,7 @@ async function checkInitialError(page: Page, theme: 'light' | 'dark', width: num
   const panel = page.getByTestId('fsd-observatory');
   await expect(panel.getByRole('heading', { name: 'FSD observatory', exact: true })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
-  await expect(panel.getByRole('table')).toHaveCount(0);
+  await expectObservatoryRows(panel, width, false);
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath(`observatory-initial-error-${width}-${theme}.png`) });
   await expectNoHorizontalOverflow(page);
@@ -304,7 +374,7 @@ async function checkInitialError(page: Page, theme: 'light' | 'dark', width: num
   await panel.getByRole('button', { name: 'Retry', exact: true }).focus();
   await page.keyboard.press('Enter');
   await waitForHarnessReady(page, mocks);
-  await expect(panel.getByRole('table')).toHaveCount(2);
+  await expectObservatoryRows(panel, width, true);
   await expectNoHorizontalOverflow(page);
   await assertMockApiComplete(page, mocks);
 }
@@ -323,18 +393,24 @@ async function checkRetainedStale(page: Page, theme: 'light' | 'dark', width: nu
   await page.goto(path);
   await waitForHarnessReady(page, mocks);
   const panel = page.getByTestId('fsd-observatory');
-  await expect(panel.getByRole('table')).toHaveCount(2);
+  await expectObservatoryRows(panel, width, true);
   failing = true;
   await page.getByRole('button', { name: /Refresh data/ }).click();
   await expect(page.getByTestId('stale-refresh-warning')).toBeVisible();
-  await expect(panel.getByRole('table', { name: 'Stitched journal', exact: true }).locator('tbody tr')).toHaveCount(5);
-  await expect(panel.getByRole('table', { name: 'Commute stories', exact: true }).locator('tbody tr')).toHaveCount(4);
+  await expectObservatoryRows(panel, width, true);
   await expect(panel.getByRole('button', { name: 'Retry', exact: true })).toHaveCount(0);
   const warning = page.getByTestId('stale-refresh-warning');
   await warning.scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath(`observatory-retained-stale-${width}-${theme}.png`) });
-  await captureGrid(page, panel.getByRole('table', { name: 'Stitched journal', exact: true }), `journal-stale-${width}-${theme}`);
-  await captureGrid(page, panel.getByRole('table', { name: 'Commute stories', exact: true }), `commute-stale-${width}-${theme}`);
+  const { journal, commute } = observatoryGrids(panel, width);
+  for (const [grid, label] of [[journal, 'journal'], [commute, 'commute']] as const) {
+    if (width === 390) {
+      await grid.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: test.info().outputPath(`${label}-stale-${width}-${theme}-cards.png`) });
+    } else {
+      await captureGrid(page, grid, `${label}-stale-${width}-${theme}`);
+    }
+  }
   await expectNoHorizontalOverflow(page);
   failing = false;
   await page.getByTestId('stale-refresh-warning').getByRole('button', { name: 'Refresh', exact: true }).click();

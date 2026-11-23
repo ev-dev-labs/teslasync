@@ -1,4 +1,3 @@
-import { setGlobalLocale } from '@/lib/numberFormat';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
@@ -11,7 +10,7 @@ import { DayLogTimeline, type DayLogTimelineProps } from './DayLogTimeline';
 import { APPLICATION_DESIGNS, getAppDesignAttributes, observeAppDesignScopes } from '@/components/ui/app-designs/designs';
 
 const preferences = vi.hoisted(() => ({
-  locale: 'en-US',
+  locale: 'en-GB',
   timezone: 'America/New_York',
   translations: {} as Record<string, string>,
 }));
@@ -77,7 +76,7 @@ vi.mock('@tanstack/react-virtual', async (importActual) => {
 const retry = vi.fn();
 beforeEach(() => {
   retry.mockReset();
-  preferences.locale = 'en-US';
+  preferences.locale = 'en-GB';
   preferences.timezone = 'America/New_York';
   preferences.translations = {};
 });
@@ -120,9 +119,6 @@ function history() {
     payload: { field: `Field${index}`, from: false, to: true, future_value: index },
   }));
 }
-
-// Day-log times follow the saved locale; pin a 24-hour locale for these fixtures.
-beforeEach(() => { setGlobalLocale('en-GB'); });
 
 describe('DayLogTimeline assigned receipt correction', () => {
   it('activates real timeline content and opened definition consumers under each owned profile and releases the off state', async () => {
@@ -495,10 +491,20 @@ describe('DayLogTimeline assigned receipt correction', () => {
     ] });
     const items = screen.getAllByRole('listitem');
     expect(items.map((item) => item.getAttribute('data-testid'))).toEqual(['daylog-event-later', 'daylog-event-earlier']);
+    expect(screen.getByText('1:00 GMT-4')).toBeInTheDocument();
+    expect(screen.getByText('1:00 GMT-5')).toBeInTheDocument();
     for (const [id, timestamp] of [['later', '2026-11-01T06:30:00Z'], ['earlier', '2026-11-01T05:30:00Z']]) {
       fireEvent.click(screen.getByRole('button', { name: (name) => name.startsWith('Show details Door opened 01:30:00') && name.endsWith(` ${id}`) }));
       expect(within(screen.getByTestId(`daylog-event-${id}`)).getByText(timestamp)).toBeInTheDocument();
     }
+  });
+
+  it('renders regular hour separators and event clocks in the saved locale without GMT suffixes', () => {
+    preferences.locale = 'en-US';
+    mount({ events: [event({ ts: '2026-09-14T20:04:05Z' })] });
+    expect(screen.getByText('4:00 PM')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-event-receipt-1')).toHaveTextContent('04:04:05 PM');
+    expect(screen.getByTestId('daylog-list')).not.toHaveTextContent('GMT');
   });
 
   it('searches displayed seconds across local midnight without changing loaded scope or order', () => {

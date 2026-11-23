@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { join } from 'node:path';
 import { assertMockApiComplete, fulfillApiFixture, installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow, monitorPage } from './qualityAssertions';
 
@@ -62,22 +61,32 @@ for (const theme of ['light', 'dark'] as const) {
         const unknown = table.locator('tbody tr').filter({ hasText: 'Unidentified charger' });
         await expect(unknown.locator('[data-column-key="cost"]')).toHaveText('—');
       } else {
-        await expect(history.getByText(/kW now/)).toBeVisible();
+        const cards = history.getByRole('group', { name: 'All charging sessions', exact: true });
+        const liveRow = cards.locator('[data-mobile-row-key="303"]');
+        await expect(liveRow.locator('[data-field-key="duration"]')).toContainText('20m');
+        await expect(liveRow.getByText(/^Current power: 9(?:\.0+)? kW$/)).toBeVisible();
+        await expect(cards.locator('[data-mobile-row-key="304"] [data-field-key="cost"]')).toContainText('—');
+        await liveRow.getByRole('button', { name: 'Quick view charging session' }).click();
+        const preview = page.getByRole('dialog');
+        await expect(preview.getByText(/20(?:\.0+)?% → 50(?:\.0+)?%/)).toBeVisible();
+        await preview.press('Escape');
+        await expect(preview).toHaveCount(0);
       }
       await expectNoHorizontalOverflow(page);
       const historyHeight = await history.evaluate(node => node.scrollHeight);
       await page.setViewportSize({ width, height: Math.max(1000, historyHeight + 300) });
       await history.scrollIntoViewIfNeeded();
-      await history.screenshot({ path: join(process.cwd(), '..', 'docs', 'charging-sessions', `${width}-${theme}.png`) });
+      await history.screenshot({ path: test.info().outputPath(`${width}-${theme}.png`) });
       if (width >= 1024) {
         const liveRow = history.getByRole('table', { name: 'All charging sessions', exact: true })
           .locator('tbody tr').filter({ hasText: 'Live home session' });
         await liveRow.locator('[data-column-key="cost"]').scrollIntoViewIfNeeded();
-        await history.screenshot({ path: join(process.cwd(), '..', 'docs', 'charging-sessions', `${width}-${theme}-costs.png`) });
+        await history.screenshot({ path: test.info().outputPath(`${width}-${theme}-costs.png`) });
       }
       await page.setViewportSize({ width, height: 1000 });
       completed = true;
       await expect(history.getByText('Charging', { exact: true })).toHaveCount(0, { timeout: 30000 });
+      await expect(history.getByText(/^Current power:/)).toHaveCount(0);
       await expect(history.getByText('40m', { exact: true }).first()).toBeVisible();
       expect(diagnostics.pageErrors).toEqual([]);
       await assertMockApiComplete(page, mocks);

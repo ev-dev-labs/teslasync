@@ -81,10 +81,8 @@ const ACKNOWLEDGED_LONG_LIST_SURFACES = [
   'features/advanced-intelligence/pages/FederatedLearningStudioPage.tsx',
   'features/advanced-intelligence/pages/FirmwareCanaryPage.tsx',
   'features/advanced-intelligence/pages/RoadHazardMeshPage.tsx',
-  // Both charging renderers paginate variable-height cards. The page's mobile
-  // DateGroupedList delegates iteration, so a .map-only scan missed it.
+  // This remaining charging renderer paginates variable-height cards.
   'features/charging/components/charging-list/SessionListSection.tsx',
-  'features/charging/pages/ChargingListPage.tsx',
   // Route cards vary in height and render only the selected 12-card page.
   'features/driving/pages/RouteEfficiencyPage.tsx',
   'features/maps/pages/LocationsPage.tsx',

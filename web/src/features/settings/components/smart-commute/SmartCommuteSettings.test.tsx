@@ -4,14 +4,28 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SmartCommuteRoutine, SmartCommuteSettings as Settings, SmartCommuteSnapshot } from '@/types/smartCommute'
 
-const requestMock = vi.hoisted(() => vi.fn())
+const { requestMock, zonePreference } = vi.hoisted(() => ({
+  requestMock: vi.fn(),
+  zonePreference: { mode: 'vehicle' as 'vehicle' | 'user' | 'utc' },
+}))
 vi.mock('@/api/client', async () => ({
   ...await vi.importActual<typeof import('@/api/client')>('@/api/client'),
   request: (...args: unknown[]) => requestMock(...args),
 }))
-vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ formatDate: () => 'April 1, 2026', formatDateTime: () => 'April 2, 2026 at 8:00 AM' }),
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { tz_display_default: zonePreference.mode, timezone_user: 'America/New_York' },
+    locale: 'en-US',
+    decimals: 2,
+  }),
 }))
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>()
+  return {
+    ...actual, useTimezone: (mode: 'vehicle' | 'user' | 'utc', vehicleTimezone?: string | null) =>
+      actual.resolveTimezone(mode, vehicleTimezone === undefined ? 'Europe/Paris' : vehicleTimezone, 'America/New_York'),
+  }
+})
 
 import { ApiError } from '@/api/client'
 import { personalIdentityKey } from '@/api/hooks/usePersonalIdentity'
@@ -65,11 +79,12 @@ beforeEach(() => {
   snapshot = fresh(42)
   identityMode = 'forward_auth'
   failure = null
+  zonePreference.mode = 'vehicle'
   requestMock.mockImplementation(async (path: string, options?: RequestInit) => {
     if (path === '/system/auth-mode') return { mode: identityMode, subject: 'synthetic-a' }
     if (path === '/vehicles') return [
-      { id: 42, display_name: 'Synthetic A' },
-      { id: 43, display_name: 'Synthetic B' },
+      { id: 42, display_name: 'Synthetic A', timezone: 'Asia/Tokyo' },
+      { id: 43, display_name: 'Synthetic B', timezone: 'Europe/Paris' },
     ]
     if (path === '/smart-commute?vehicle_id=42' && !options?.method) {
       if (failure) throw failure
@@ -88,6 +103,7 @@ beforeEach(() => {
       }
       return undefined
     }
+    if (path === '/smart-commute/analyses' && options?.method === 'POST') return undefined
     if (path === '/smart-commute/routines/8' && options?.method === 'PUT') {
       const input = JSON.parse(String(options.body))
       snapshot = { ...snapshot, routines: [{ ...suggestion, ...input, status: 'confirmed', evidence: null }] }
@@ -124,6 +140,36 @@ beforeEach(() => {
 })
 
 describe('Smart Commute settings', () => {
+  it.each([
+    ['vehicle', 'Asia/Tokyo', 'Apr 2, 2026'],
+    ['user', 'America/New_York', 'Apr 1, 2026'],
+    ['utc', 'UTC', 'Apr 1, 2026'],
+  ] as const)('uses the %s preference for observations and analysis while keeping saved schedules anchored', async (mode, zone, date) => {
+    zonePreference.mode = mode
+    snapshot = {
+      settings: { ...fresh(42).settings, enabled: true, local_analysis_enabled: true, time_zone: 'America/Los_Angeles' },
+      routines: [{ ...suggestion, name: 'Saved commute', status: 'confirmed',
+        evidence: { ...suggestion.evidence!, last_observed_at: '2026-04-01T20:00:00Z' } }],
+    }
+    renderSettings()
+    expect(await screen.findByText(`Last observed ${date}.`, { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('Tuesday at 08:00:00 (America/Los_Angeles)')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Time zone for local analysis')).not.toBeInTheDocument()
+    expect(requestMock.mock.calls.some(([, options]) => options?.method)).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze completed drives again' }))
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/smart-commute/analyses', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ vehicle_id: 42, time_zone: zone }),
+    })))
+    const edit = screen.getByRole('button', { name: 'Edit', exact: true })
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    expect(screen.queryByLabelText('IANA time zone')).not.toBeInTheDocument()
+    expect(screen.getByText('This recurring time follows America/Los_Angeles.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save routine' }))
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/smart-commute/routines/8', expect.objectContaining({
+      method: 'PUT', body: expect.stringContaining('"time_zone":"America/Los_Angeles"'),
+    })))
+  })
   it('only reads history after setup and requires review and explicit traffic consent', async () => {
     snapshot = {
       settings: { ...fresh(42).settings, enabled: true, local_analysis_enabled: true, time_zone: 'UTC' },
@@ -265,7 +311,7 @@ describe('Smart Commute settings', () => {
       routines: [{ ...suggestion, snoozed_until: '2099-01-01T00:00:00Z' }],
     }
     renderSettings()
-    expect(await screen.findByText(/Snoozed until April 2/)).toBeInTheDocument()
+    expect(await screen.findByText(/Snoozed until Jan 1, 2099/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Show suggestion now' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Snooze for 24 hours' })).toBeEnabled())
     const saved = requestMock.mock.calls.find(([path]) => path === '/smart-commute/routines/8/snooze')

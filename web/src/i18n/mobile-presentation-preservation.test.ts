@@ -10,13 +10,16 @@ import { producerProjection } from './producer-projection';
 import { catalogBeforeDashboardPolish, designProfileCopy } from './verified-combined-contract';
 import { restoreVerticalNavigationStyleSource } from './verified-horizontal-navigation-contract';
 import { restoreMobilePresentationSource } from './verified-native-source-repair-contract';
+import { restoreWorkspaceDisplaySource } from './verified-workspace-display-contract';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
 describe('mobile presentation source preservation', () => {
   it.each(changes)('preserves the historical translation producer for $file', change => {
     const source = readFileSync(resolve(process.cwd(), '..', change.file), 'utf8');
-    const restore = (text: string) => restoreMobilePresentationSource(change.file, restoreVerticalNavigationStyleSource(change.file, text));
+    const restore = (text: string) => restoreMobilePresentationSource(
+      change.file, restoreVerticalNavigationStyleSource(change.file, restoreWorkspaceDisplaySource(change.file, text)),
+    );
     expect(hash(restore(source))).toBe(change.before);
     expect(() => restore(`${source}\n// unexpected`)).toThrow();
     expect(() => restore(source.slice(1))).toThrow();

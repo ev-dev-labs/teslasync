@@ -13,7 +13,7 @@ import { RecallWatchForm } from './RecallWatchForm';
 
 export function RecallWatchControls({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useRecallWatch(scope, vehicleId);
   const source = useDataState(query);

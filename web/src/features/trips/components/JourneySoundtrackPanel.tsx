@@ -29,7 +29,7 @@ export function JourneySoundtrackPanel({ journeyId, vehicleId }: { journeyId: nu
 
 function SoundtrackReview({ scope, vehicleId, identityPending, journeyId }: PrivateVehicleReviewScope & { journeyId: number }) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useJourneySoundtrack(scope, vehicleId, journeyId);
   const change = useJourneySoundtrackChange(scope, vehicleId, journeyId);
