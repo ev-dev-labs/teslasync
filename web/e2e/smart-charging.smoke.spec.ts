@@ -50,11 +50,11 @@ for (const variant of [
     const api = await installApiMocks(page, 'populated', variant.theme)
     if (!api) throw new Error('Missing isolated API fixtures')
     const owner = `synthetic-trip-stops-${variant.width}`
-    let subject = owner
-    const headers = () => ({
+    const principalHeaders = (subject: string) => ({
       'x-test-subject': subject,
       'x-teslasync-expected-principal': `subject:${subject}`,
     })
+    const ownerHeaders = principalHeaders(owner)
     const fixture = async (): Promise<{ now: string; revision: string; provider_calls: number }> => {
       const response = await page.request.get('/__fixture/trip-stops')
       expect(response.ok()).toBe(true)
@@ -63,7 +63,7 @@ for (const variant of [
     const start = await fixture()
     const departure = new Date(Date.parse(start.now) + 2 * 60 * 60_000)
     const planResponse = await page.request.post('/api/v1/smart-charging/plans', {
-      headers: headers(),
+      headers: ownerHeaders,
       data: {
         vehicle_id: 7, charging_place_id: 9, enabled: true, notify_at: start.now, departure_at: departure.toISOString(),
         trip_use_low_pct: 35, trip_use_high_pct: 45, reserve_pct: 12.5,
@@ -72,14 +72,14 @@ for (const variant of [
     })
     expect(planResponse.status(), await planResponse.text()).toBe(201)
     const { data: plan } = await planResponse.json() as { data: SmartChargingPlan }
-    await installTripFixtures(page, api, () => subject, variant.pack, start.revision)
+    await installTripFixtures(page, api, () => owner, variant.pack, start.revision)
     const comparedPath = `/api/v1/smart-charging/plans/${plan.id}/stops`
     const writes: string[] = []
     await page.route(url => url.pathname.startsWith('/api/v1/smart-charging'), route => {
       const request = route.request()
-      expect(request.headers()['x-teslasync-expected-principal']).toBe(`subject:${subject}`)
+      expect(request.headers()['x-teslasync-expected-principal']).toBe(ownerHeaders['x-teslasync-expected-principal'])
       if (request.method() !== 'GET') writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
-      return forwardLocalApiFixture(route, api, { ...request.headers(), ...headers() })
+      return forwardLocalApiFixture(route, api, { ...request.headers(), ...ownerHeaders })
     })
 
     await page.goto(url)
@@ -125,10 +125,11 @@ for (const variant of [
     expect((await fixture()).provider_calls).toBe(start.provider_calls + 3)
     expect(writes).toEqual([`PUT ${comparedPath}`, `POST ${comparedPath}`])
 
-    subject = `${owner}-foreign`
-    const foreign = await page.request.get(`${comparedPath}?vehicle_id=7`, { headers: headers() })
+    const foreign = await page.request.get(`${comparedPath}?vehicle_id=7`, {
+      headers: principalHeaders(`${owner}-foreign`),
+    })
+    expect(foreign.ok(), await foreign.text()).toBe(true)
     expect(await foreign.json()).toMatchObject({ data: { has_setup: false, result: null } })
-    subject = owner
     await panel.getByRole('button', { name: 'Disconnect and remove comparison setup' }).click()
     const confirm = page.getByRole('dialog', { name: 'Remove this comparison setup?' })
     await confirm.getByRole('button', { name: 'Cancel' }).click()
