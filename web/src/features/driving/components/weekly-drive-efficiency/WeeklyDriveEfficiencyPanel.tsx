@@ -28,7 +28,8 @@ export function WeeklyDriveEfficiencyPanel({ vehicleId }: { vehicleId: number | 
 function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { tz, formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useWeeklyDriveEfficiency(scope, vehicleId);
   const source = useDataState(query);
@@ -93,7 +94,7 @@ function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScop
           : state.dismissed ? t('routeEfficiency.weekly.dismissed', 'Dismissed for this week.')
             : t('routeEfficiency.weekly.quiet', 'Active. No qualifying weekly change is ready.')}</Text>
     {plan?.next_check_at && <Text variant="caption">{t('routeEfficiency.weekly.next', 'Next check: {{date}}.', {
-      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),
+      date: formatDateTime(plan.next_check_at),
     })}</Text>}
     {change.error && <QueryError error={change.error} />}
     {!canWrite && writeBlockReason && <Text as="p" variant="bodySm">{writeBlockReason}</Text>}
@@ -134,7 +135,7 @@ function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScop
       </Button>
     </form>}
     {plan && digest && <>
-      <WeeklyDriveDigestEvidence digest={digest} timeZone={plan.time_zone} canOpenDrive={!blocked && parked}
+      <WeeklyDriveDigestEvidence digest={digest} canOpenDrive={!blocked && parked}
         onOpenDrive={() => void withFreshPark(latest => {
           if (latest.digest?.reference_drive_id === digest.reference_drive_id && Date.parse(latest.digest.expires_at) > Date.now()) {
             navigate(`/drives/${digest.reference_drive_id}?local_evidence=1`);

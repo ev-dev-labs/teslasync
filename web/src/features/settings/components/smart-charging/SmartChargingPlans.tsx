@@ -61,7 +61,7 @@ function planInput(plan: SmartChargingPlan): SmartChargingPlanInput {
 
 export function SmartChargingPlans({ scope, vehicleId, plans, places, reviewedPlaces, disabled, formDisabled, onChange }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime, tz } = useDateFormat('user')
+  const { formatDateTime, tz } = useDateFormat()
   const { fmtNumber } = useNumberFormatting()
   const { formatEnergy, formatPower, unitPrefs } = useUnits()
   const displayProjection = useTripProjectionDisplay()

@@ -7,7 +7,7 @@ import type { RecallCampaignMatch } from '@/types/recallWatch';
 
 export function RecallCampaignEvidence({ match }: { match: RecallCampaignMatch }) {
   const { t } = useTranslation();
-  const { formatDate } = useDateFormat('user');
+  const { formatDate } = useDateFormat();
   const display = formatRecallWatchMatch(match, t, formatDate);
   return (
     <li className="min-w-0 space-y-2 rounded-lg border border-[var(--border-subtle)] p-3" data-app-part="card" data-app-card-kind="record">

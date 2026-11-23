@@ -563,6 +563,14 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           )
           if (!hasContent) throw new Error('page rendered no measurable content')
           record.finalUrl = page.url()
+          if (width < 640) {
+            const desktopGrids = await page.locator('[data-grid-viewport]:visible > table')
+              .evaluateAll(tables => tables.map(table => table.getAttribute('aria-label') ?? 'Unnamed grid'))
+            if (desktopGrids.length) {
+              record.status = 'violation'
+              violations.push(`${route} @${width}px ${theme}: desktop grid visible on a phone: ${desktopGrids.join(', ')}`)
+            }
+          }
           record.grids = await measureGridAlignment(page)
           for (const grid of record.grids) {
             if (grid.toolbarOffset <= 2 && grid.inlineFilterOffset <= 1) continue

@@ -10,6 +10,35 @@ import { expectTableDensityControls, openTableColumnLayout } from './tableToolba
 test.skip(process.env.E2E_MOCKS === '0', 'Requires synthetic notification mutation fixtures');
 
 for (const theme of ['light', 'dark'] as const) {
+  for (const width of [390, 1280]) {
+    test(`report breakdowns use shared grids at ${width}px in ${theme}`, async ({ page }, info) => {
+      const path = '/notifications/inbox';
+      await page.setViewportSize({ width, height: 900 });
+      await seedBrowserState(page, theme, path);
+      const mocks = await installApiMocks(page, 'populated', theme);
+      await page.goto(path);
+      await waitForHarnessReady(page, mocks);
+      const report = page.getByRole('region', { name: 'Notification activity', exact: true });
+      const frames = report.locator('[data-grid-variant="embedded"]');
+      await expect(frames).toHaveCount(5);
+      for (const title of ['Trigger sources', 'Event types', 'Severities', 'Delivery channels', 'Delivery outcomes']) {
+        const grid = report.getByRole(width < 640 ? 'group' : 'table', { name: title, exact: true });
+        await expect(grid).toBeVisible();
+        const frame = frames.filter({ has: grid });
+        if (width < 640) {
+          await expect(grid).toHaveAttribute('data-mobile-table', '');
+          await expect(frame.locator('[data-grid-viewport]:visible')).toHaveCount(0);
+        } else {
+          const viewport = frame.locator('[data-grid-viewport]');
+          const scroll = await viewport.evaluate(el => ({ horizontal: el.scrollWidth - el.clientWidth, vertical: el.scrollHeight - el.clientHeight }));
+          expect(scroll.horizontal).toBeLessThanOrEqual(1);
+          expect(scroll.vertical).toBeLessThanOrEqual(1);
+        }
+      }
+      await expectNoHorizontalOverflow(page);
+      await report.screenshot({ path: info.outputPath(`notification-report-${width}-${theme}.png`) });
+    });
+  }
   for (const width of [320, 390, 768, 1024, 1280, 1440]) {
     test(`notification evidence and archive actions remain usable at ${width}px in ${theme}`, async ({ page }) => {
       test.setTimeout(60_000);

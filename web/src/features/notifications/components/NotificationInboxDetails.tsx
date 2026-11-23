@@ -20,7 +20,7 @@ export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: N
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const timestamp = (value: string | null | undefined) =>
-    value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} in="user" /> : null;
+    value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} /> : null;
   const items = [
     { label: t('notifications.inbox.columns.received', 'Received'), value: timestamp(log.created_at) },
     { label: t('notifications.inbox.detail.sent', 'Sent'), value: timestamp(log.sent_at) },

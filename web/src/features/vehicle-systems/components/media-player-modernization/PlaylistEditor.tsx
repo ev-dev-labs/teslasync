@@ -24,7 +24,7 @@ interface Props {
 export function PlaylistEditor({ draft, disabled, connected, initialSelection, onOrderChange, inputs, onInputsChange, onSave }: Props) {
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const options = draft.candidates ?? [];
   const [selected, setSelected] = useState(() => initialSelection ?? options.filter(option => option.suggested));
   const { links, name } = inputs;

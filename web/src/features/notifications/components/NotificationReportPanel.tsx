@@ -54,18 +54,23 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
     { key: 'channel', title: t('notifications.report.channels', 'Delivery channels'), rows: report?.by_channel ?? [] },
     { key: 'status', title: t('notifications.report.statuses', 'Delivery outcomes'), rows: report?.by_status ?? [] },
   ];
-  const reportColumns = useMemo<Column<Breakdown[number]>[]>(() => [
-    {
-      key: 'label', header: t('notifications.report.category', 'Category'),
-      defaultWidth: 200, minWidth: 100,
-      render: (row) => <span title={row.key} className="min-w-0 break-all text-[var(--text-secondary)]">{t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key))}</span>,
-    },
-    {
-      key: 'count', header: t('notifications.report.count', 'Count'),
-      defaultWidth: 85, minWidth: 65, align: 'right',
-      render: (row) => fmtInt(row.count),
-    },
-  ], [t, fmtInt]);
+  const reportColumns = useMemo<Column<Breakdown[number]>[]>(() => {
+    const categoryLabel = (row: Breakdown[number]) =>
+      t(`notifications.report.values.${row.key}`, notificationEventTypeFallback(row.key));
+    return [
+      {
+        key: 'label', header: t('notifications.report.category', 'Category'),
+        required: true, filterValue: row => row.key, filterValueLabel: (_, row) => categoryLabel(row),
+        sortValue: categoryLabel, exportValue: categoryLabel,
+        render: row => <Text title={row.key} color="secondary" className="break-words">{categoryLabel(row)}</Text>,
+      },
+      {
+        key: 'count', header: t('notifications.report.count', 'Count'),
+        align: 'right', sortValue: row => row.count, exportValue: row => row.count,
+        render: row => fmtInt(row.count),
+      },
+    ];
+  }, [t, fmtInt]);
   const countNote = t('notifications.report.countNote', 'Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.');
   const httpScope = t('notifications.report.httpScope', 'Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.');
   const scope = formatDateRange(fromInstant, toExclusive);
@@ -144,7 +149,7 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
           </ResponsiveContainer>
         )}
       </ChartContainer>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid items-start gap-3 md:grid-cols-2 2xl:grid-cols-3">
         {breakdowns.map(group => (
           <GlassPanel key={group.key} className="p-4 sm:p-5">
             <PanelTitle>{group.title}</PanelTitle>
@@ -157,16 +162,19 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
             ) : (
               <div className="mt-3 min-w-0">
                 <DataTable
-                  name={group.title}
+                  caption={group.title}
                   tableId={`notifications:report:${group.key}`}
                   data={group.rows}
                   keyExtractor={(row) => row.key}
                   columns={reportColumns}
+                  variant="embedded"
                   density="compact"
+                  showDensityControl={false}
                   resizable
                   columnReorder
+                  enableValueFilters
+                  pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}
                   stickyHeader
-                  maxHeight={256}
                 />
               </div>
             )}

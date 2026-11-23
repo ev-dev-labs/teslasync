@@ -15,7 +15,7 @@ interface Props {
 
 export function SharedTripComparisonCard({ scope, entry, paused, onClose }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const { fmtPercent } = useNumberFormatting()
   const accepted = useSharedTripExpiry(entry.consent_expires_at)
   const upcoming = useSharedTripExpiry(entry.departure_at)

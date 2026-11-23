@@ -22,7 +22,7 @@ interface Props {
 
 export function SmartBackupCharging({ scope, vehicleId, places, disabled, placesUnavailable }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const { formatPower } = useUnits()
   const { hash, search } = useLocation()
   const section = useRef<HTMLElement>(null)

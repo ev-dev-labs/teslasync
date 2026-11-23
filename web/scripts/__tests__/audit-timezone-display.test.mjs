@@ -176,3 +176,10 @@ test('R6: allows offset helpers in .ts labels/timeline helpers', () => {
   );
   assert.deepEqual(timeline, []);
 });
+
+test('R7: shared date components inherit the display preference', () => {
+  const forced = _scanSourceForTest(`<><DateTime value={start} in="utc" /><TimeStamp in={zone} value={end} /></>`);
+  assert.deepEqual(rules(forced), ['R7', 'R7']);
+  const preferred = _scanSourceForTest(`<><DateTime value={start} /><TimeStamp value={end} /><Other in="utc" /></>`);
+  assert.deepEqual(preferred, []);
+});

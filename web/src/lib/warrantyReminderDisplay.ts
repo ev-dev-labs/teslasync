@@ -7,7 +7,7 @@ import type { WarrantyDistanceProjection } from '@/types/warrantyReminders';
 
 export function useWarrantyReminderDisplay(projection?: WarrantyDistanceProjection | null) {
   const { t } = useTranslation();
-  const { formatDate } = useDateFormat('user');
+  const { formatDate } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const { formatDistance } = useUnits();
   return projection ? formatWarrantyReminder(projection, t, formatDate, fmtInt, formatDistance) : null;

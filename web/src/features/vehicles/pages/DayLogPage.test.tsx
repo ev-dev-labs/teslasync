@@ -58,7 +58,8 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
         unit_of_pressure: 'bar',
         decimal_precision: 1,
         locale: 'en-US',
-        timezone_user: '',
+        timezone_user: displayZone.value ?? '',
+        tz_display_default: displayZone.value ? 'user' : 'vehicle',
       },
       isMiles: false,
       isFahrenheit: false,
@@ -69,9 +70,10 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   };
 });
 
-const { useDayLogMock, useSelectedVehicleMock } = vi.hoisted(() => ({
+const { useDayLogMock, useSelectedVehicleMock, displayZone } = vi.hoisted(() => ({
   useDayLogMock: vi.fn(),
   useSelectedVehicleMock: vi.fn(),
+  displayZone: { value: null as string | null },
 }));
 
 vi.mock('@/api/hooks/useDayLog', () => ({
@@ -198,10 +200,21 @@ const mixedEvents: DayLogEvent[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  displayZone.value = null;
   useSelectedVehicleMock.mockReturnValue(oneCarFleet);
 });
 
 describe('DayLogPage', () => {
+  it('uses Settings local time for the request and timeline even when retained data reports another zone', () => {
+    displayZone.value = 'America/Los_Angeles';
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse([mixedEvents[0]]) }));
+    renderPage();
+    expect(useDayLogMock).toHaveBeenLastCalledWith({ vehicleId: 1, date: '2026-09-14', timezone: 'America/Los_Angeles' });
+    expect(screen.getByText('8:00 AM')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-event-drive:7:start')).toHaveTextContent('08:04:05 AM');
+    expect(screen.getByTestId('daylog-list')).not.toHaveTextContent('GMT');
+  });
+
   it('keeps historical events, search and business-date controls after a retained refresh failure', () => {
     const refetch = vi.fn();
     useDayLogMock.mockReturnValue(queryState({

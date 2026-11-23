@@ -75,7 +75,7 @@ export function ApiLogsBackendErrors({ data, state, loading, onRetry }: ApiLogsB
                 <Text as="p" variant="bodySm" className="mt-1 break-words">{entry.last_message || '—'}</Text>
                 <Caption className="mt-1 block">
                   {t('apiLogs.runtime.lastSeen', 'Last seen')}{' '}
-                  {entry.last_seen ? <DateTime value={entry.last_seen} in="utc" /> : '—'}
+                  {entry.last_seen ? <DateTime value={entry.last_seen} /> : '—'}
                 </Caption>
               </li>
             ))}

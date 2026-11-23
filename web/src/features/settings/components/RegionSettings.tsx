@@ -6,11 +6,12 @@ import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { Globe, RefreshCw, Info } from 'lucide-react'
 
 export function RegionSettings() {
   const { t } = useTranslation('settings')
+  const { formatDateTime } = useDateFormat()
   const toast = useToast()
   const { data: regionConfig, isLoading, isError, error, refetch } = useTeslaUserRegion()
   const regionRefresh = useRefreshTeslaRegion()

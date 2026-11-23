@@ -187,7 +187,7 @@ func (r *Repository) SaveSettings(
 }
 
 func (r *Repository) Analyze(
-	ctx context.Context, subject string, vehicleID int64, now time.Time, learner port.Learner,
+	ctx context.Context, subject string, vehicleID int64, timeZone string, now time.Time, learner port.Learner,
 ) error {
 	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := lockActiveVehicle(ctx, tx, vehicleID); err != nil {
@@ -209,6 +209,20 @@ func (r *Repository) Analyze(
 		}
 		if !allowed {
 			return port.ErrDisabled
+		}
+		if timeZone != "" && timeZone != settings.TimeZone {
+			if _, err := tx.Exec(ctx, `
+				UPDATE smart_commute_settings SET time_zone = $3, updated_at = $4
+				WHERE subject = $1 AND vehicle_id = $2`, subject, vehicleID, timeZone, now); err != nil {
+				return fmt.Errorf("update smart commute analysis time zone: %w", err)
+			}
+			if _, err := tx.Exec(ctx, `
+				DELETE FROM smart_commute_routines
+				WHERE subject = $1 AND vehicle_id = $2 AND status = 'suggested'`,
+				subject, vehicleID); err != nil {
+				return fmt.Errorf("invalidate smart commute suggestions: %w", err)
+			}
+			settings.TimeZone = timeZone
 		}
 		return analyzeLocked(ctx, tx, subject, *settings, now, learner)
 	})

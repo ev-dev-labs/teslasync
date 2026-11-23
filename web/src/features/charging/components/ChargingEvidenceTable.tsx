@@ -1,16 +1,17 @@
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, DataTable, DataTableValueFilter, Tooltip, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
+import { Badge, Button, DataTable, DataTableValueFilter, Text, Tooltip, buildTableFilterValues, selectedTableValueKeys, type Column, type PaginationProps } from '@/components/ui';
 import { GridMetricIndicator, RouteDisplay } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { TableControls } from '@/components/forms';
-import { formatDurationMinutes } from '@/lib/dateConvert';
+import { formatDurationMinutes, formatRelativeDayKey } from '@/lib/dateConvert';
+import { formatDayKey } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 
-import { sessionDisplayPowerW, isEstimatedChargingCost, batteryFriendlyScore, durationMinutes, getChargerCategory, type ChargingAnomaly } from '@/lib/chargingAggregation';
+import { sessionDisplayPowerW, isEstimatedChargingCost, batteryFriendlyScore, durationMinutes, getChargerCategory, localDayKey, type ChargingAnomaly } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
@@ -39,19 +40,20 @@ interface ChargingEvidenceTableProps {
   toolbarActions?: ReactNode;
   controls?: TableControls;
   paginationControls?: PaginationProps;
+  emptyContent?: ReactNode;
 }
 
 export function ChargingEvidenceTable({
   sessions, availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear,
   timezone, selectedIds, onSelectionChange, onPreview, anomalies,
-  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls, controls,
+  sortBy, sortDir, onSort, density, toolbarHeading, toolbarActions, paginationControls, controls, emptyContent,
 }: ChargingEvidenceTableProps) {
   const { fmtInt } = useNumberFormatting();
   const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { formatEnergy, formatPower, formatDistance } = useUnits();
   const { formatCurrency } = useFormatting();
-  const columns = useMemo<Column<ChargingSession>[]>(() => {
+  const { columns, valueLabel, costLabel } = useMemo(() => {
     const chargerLabels: Record<string, string> = {
       home: t('charging.chargerTypes.home', 'Home / AC'),
       ac: t('charging.chargerTypes.ac', 'AC'),
@@ -73,6 +75,9 @@ export function ChargingEvidenceTable({
         </GridMetricIndicator>
       );
     };
+    const costLabel = (s: ChargingSession) => s.cost_decimal == null ? '—' : isEstimatedChargingCost(s)
+      ? t('charging.estimatedCostValue', '{{cost}} (estimated)', { cost: formatCurrency(s.cost_decimal) })
+      : s.cost_decimal === 0 ? t('charging.free', 'Free') : formatCurrency(s.cost_decimal);
     const baseColumns: Column<ChargingSession>[] = [
       {
         key: 'date', header: t('charging.grid.started', 'Started'), sortable: true,
@@ -147,11 +152,8 @@ export function ChargingEvidenceTable({
       {
         key: 'cost', header: t('charging.totalCost', 'Cost'), sortable: true,
         defaultWidth: 100, minWidth: 80, align: 'right', groupStart: true,
-        render: (s) => s.cost_decimal == null ? '—' : isEstimatedChargingCost(s)
-          ? t('charging.estimatedCostValue', '{{cost}} (estimated)', { cost: formatCurrency(s.cost_decimal) })
-          : s.cost_decimal === 0
-          ? <Badge variant="success" size="sm">{t('charging.free', 'Free')}</Badge>
-          : formatCurrency(s.cost_decimal),
+        render: (s) => s.cost_decimal === 0 && !isEstimatedChargingCost(s)
+          ? <Badge variant="success" size="sm">{costLabel(s)}</Badge> : costLabel(s),
       },
       {
         key: 'rate', header: t('charging.grid.costPerEnergy', 'Cost per kWh'),
@@ -198,7 +200,7 @@ export function ChargingEvidenceTable({
         default: return String(value);
       }
     };
-    return baseColumns.map((column) => {
+    const columns = baseColumns.map((column) => {
       const key = CHARGING_VALUE_COLUMNS.find((candidate) => candidate === column.key);
       if (!key) return column;
       const options = buildTableFilterValues(availableSessions,
@@ -216,6 +218,7 @@ export function ChargingEvidenceTable({
         />,
       };
     });
+    return { columns, valueLabel, costLabel };
   }, [t, timezone, anomalies, onPreview, formatCurrency, formatEnergy, formatPower, formatDistance,
     availableSessions, valueSelections, invalidValueSelection, onValueSelectionChange, onValueFilterClear, fmtInt, formatDateTime]);
 
@@ -248,6 +251,46 @@ export function ChargingEvidenceTable({
         const field = (['date', 'energy', 'cost', 'duration', 'power'] as const).find((value) => value === key);
         if (field) onSort(field);
       }}
+      mobilePresentation={{
+        cardMaxWidth: 780,
+        roles: { location: 'title', energy: 'primary', date: 'meta', duration: 'meta', cost: 'meta', charger: 'badge' },
+        displayValue: (session, key) => {
+          if (key === 'location') return chargingColumnValue(session, 'location') ?? t('common.unknown', 'Unknown');
+          if (key === 'cost') return costLabel(session);
+          const column = CHARGING_VALUE_COLUMNS.find(candidate => candidate === key);
+          if (!column) return null;
+          const value = chargingColumnValue(session, column);
+          return value == null ? null : valueLabel(column, value);
+        },
+        badgeVariant: session => {
+          const category = getChargerCategory(session);
+          return category === 'supercharger' ? 'danger' : category === 'dc' ? 'warning' : category === 'unknown' ? 'neutral' : 'success';
+        },
+        grouping: sortBy === 'date' ? {
+          key: session => localDayKey(session.started_at, timezone) ?? '',
+          label: day => day ? formatDayKey(day, { style: 'long' }) : t('common.unknown', 'Unknown'),
+          autoExpand: true,
+          summary: (day, sessions) => (
+            <Text as="span" size="sm" color="muted" className="break-words">
+              {day && `${formatRelativeDayKey(day, { tz: timezone })} · `}
+              {fmtInt(sessions.length)} {sessions.length === 1
+                ? t('bulk.noun.session_one', 'session') : t('bulk.noun.session_other', 'sessions')}
+              {' · '}{formatEnergy(sessions.reduce((sum, session) => sum + session.total_energy_added_wh, 0))}
+            </Text>
+          ),
+        } : undefined,
+        rowHref: session => `/charging/${session.id}`,
+        onQuickView: onPreview,
+        quickViewLabel: t('charging.quickView', 'Quick view charging session'),
+        inlineActions: session => <>
+          {session.live && <Badge variant="info" size="sm">{t('charging.sessionCharging', 'Charging')}</Badge>}
+          {anomalies.has(session.id) && <Badge variant="danger" size="sm">{anomalies.get(session.id)?.message}</Badge>}
+        </>,
+        showRowCount: false,
+        columnToolsInPicker: true,
+        compactRows: true,
+      }}
+      emptyContent={emptyContent}
       emptyMessage={t('charging.emptyForCollection', 'No charging sessions in this view')}
       className="border-[var(--border-subtle)] shadow-none [&_tbody_td]:whitespace-nowrap"
       resizable

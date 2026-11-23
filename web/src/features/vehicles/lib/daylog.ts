@@ -1,8 +1,7 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/lib/icons';
-import {browserTimeZone, formatTime, isValidTimeZone, zonedDateParts} from '@/lib/dateFormat'
-import {ymdInTz} from '@/lib/dateConvert'
-import {formatGmtOffset} from '@/lib/dateConvert';
+import { formatTime, isValidTimeZone, zonedDateParts } from '@/lib/dateFormat';
+import { formatGmtOffset, formatHourName, ymdInTz } from '@/lib/dateConvert';
 import { getGlobalLocale } from '@/lib/numberFormat';
 import type { DayLogEvent, DayLogLayer } from '@/api/types';
 import { CHART_SEMANTIC, CHART_NEUTRAL, COLOR, DATA_VISUAL_COLORS } from '@/lib/colors';
@@ -233,38 +232,40 @@ export function categoryOf(type: string): DayLogCategory {
 }
 
 /**
- * Saved-locale clock with seconds and an offset identifying repeated DST
- * hours. The caller retains the original ISO timestamp as provenance.
+ * Saved-locale clock with seconds. Offsets distinguish repeated hours
+ * without adding noise to ordinary event times.
  * Invalid settings retain the raw instant rather than guessing its zone.
  */
-export function formatTimeSeconds(iso: string | null | undefined, tz?: string): string {
+export function formatTimeSeconds(iso: string | null | undefined, tz?: string, locale = getGlobalLocale(), repeated = false): string {
   if (!iso) return formatTime(iso);
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return formatTime(iso);
   if (tz && !isValidTimeZone(tz)) return iso;
   try {
-    const locale = getGlobalLocale();
     const time = formatTime(iso, {
       locale,
       tz: tz || undefined,
       clock: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
     });
-    const offset = formatGmtOffset(d, { locale, tz: tz || undefined });
-    return `${time} ${offset}`;
+    return repeated ? `${time} ${formatGmtOffset(d, { locale, tz })}` : time;
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
     return iso;
   }
 }
 
-/** Hour bucket key (`HH`) in the given timezone for time separators. */
-export function hourKeyInTz(iso: string, tz?: string): string {
+export function dayLogHour(iso: string, tz: string) {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const zone = tz || browserTimeZone();
-  const parts = zonedDateParts(d, zone);
-  if (!parts) return String(d.getUTCHours()).padStart(2, '0');
-  return String(parts.hour).padStart(2, '0');
+  const parts = zonedDateParts(d, tz);
+  if (!parts) return null;
+  const { year, month, day, hour, minute, second } = parts;
+  const wall = Date.UTC(year, month - 1, day, hour, minute, second);
+  return { key: `${year}-${month}-${day}-${hour}`, hour, offset: wall - (d.getTime() - d.getUTCMilliseconds()) };
+}
+
+export function formatDayLogHour(hour: number, iso: string, tz: string, locale: string, repeated: boolean): string {
+  const label = formatHourName(hour, { locale, showMinutes: true });
+  return repeated ? `${label} ${formatGmtOffset(iso, { locale, tz })}` : label;
 }
 
 /**

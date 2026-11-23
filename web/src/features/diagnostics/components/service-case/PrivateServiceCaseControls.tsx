@@ -13,7 +13,7 @@ import { ServiceCaseEvidenceReview } from './ServiceCaseEvidenceReview';
 
 export function PrivateServiceCaseControls({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useServiceCase(scope, vehicleId);
   const source = useDataState(query);

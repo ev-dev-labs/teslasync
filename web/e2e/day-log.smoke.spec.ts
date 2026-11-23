@@ -1,8 +1,55 @@
 import { expect, test } from '@playwright/test';
-import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi';
+import { fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState, waitForHarnessReady } from './mockApi';
 import { expectNoHorizontalOverflow } from './qualityAssertions';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
+const vehicleTimezone = 'America/Argentina/Buenos_Aires';
+const day = '2026-09-14';
+const dayLog = {
+  vehicle_id: 7, date: day, timezone: 'UTC',
+  day_start: `${day}T00:00:00Z`, day_end: '2026-09-15T00:00:00Z',
+  events: [], sources: [], total_events: 0, truncated: false,
+  limit: 2000, offset: 0, layers: [],
+  summary: {
+    drive_count: 0, charge_count: 0, drive_duration_s: null,
+    drive_distance_m: null, energy_added_wh: null, energy_used_wh: null,
+  },
+};
+
+for (const [mode, zone, clock] of [
+  ['vehicle', vehicleTimezone, '01:05:06 AM'],
+  ['user', 'Asia/Tokyo', '01:05:06 PM'],
+  ['utc', 'UTC', '04:05:06 AM'],
+] as const) {
+  test(`day log clocks honor ${mode} display time without ordinary GMT offsets`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await seedBrowserState(page, 'dark', '/day-log');
+    const mocks = await installApiMocks(page, 'populated', 'dark');
+    await page.route('**/api/v1/settings', route => fulfillApiFixture(route, mocks, {
+      json: { ...mockAppSettings, tz_display_default: mode, timezone_user: 'Asia/Tokyo' },
+    }));
+    await page.route('**/api/v1/vehicles', route => fulfillApiFixture(route, mocks, {
+      json: [{ id: 7, display_name: 'Aurora', model: 'Model Y', state: 'online', timezone: vehicleTimezone }],
+    }));
+    const scopes: (string | null)[] = [];
+    await page.route('**/api/v1/day-log?*', route => {
+      scopes.push(new URL(route.request().url()).searchParams.get('timezone'));
+      return fulfillApiFixture(route, mocks, {
+        json: {
+          ...dayLog, total_events: 1,
+          events: [{ id: 'entry', ts: `${day}T04:05:06Z`, type: 'online', layer: 'default', source: 'signal_log', vehicle_id: 7, payload: {} }],
+        },
+      });
+    });
+    await page.goto(`/day-log?date=${day}`);
+    await waitForHarnessReady(page, mocks);
+    await expect.poll(() => scopes).toContain(zone);
+    const timeline = page.getByTestId('daylog-timeline');
+    await expect(timeline.getByTestId('daylog-event-entry')).toContainText(clock);
+    await expect(timeline).not.toContainText(/\bGMT[+-]/);
+  });
+}
 
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [375, 390, 550, 1440]) {
@@ -14,25 +61,13 @@ for (const theme of ['light', 'dark'] as const) {
       const scopes = () => dayRequests.map(url => [
         url.searchParams.get('vehicle_id'), url.searchParams.get('date'), url.searchParams.get('timezone'),
       ]);
-      const timezone = 'America/Argentina/Buenos_Aires';
-      await page.route('**/api/v1/vehicles', (route) => route.fulfill({
+      await page.route('**/api/v1/vehicles', (route) => fulfillApiFixture(route, mocks, {
         json: [{ id: 7, vehicle_id: 7, display_name: 'Aurora', model: 'Model Y',
-          state: 'online', timezone: 'America/Argentina/Buenos_Aires' }],
+          state: 'online', timezone: vehicleTimezone }],
       }));
       await page.route('**/api/v1/day-log?*', (route) => {
         dayRequests.push(new URL(route.request().url()));
-        return route.fulfill({
-        json: {
-          vehicle_id: 1, date: '2026-09-14', timezone: 'UTC',
-          day_start: '2026-09-14T00:00:00Z', day_end: '2026-09-15T00:00:00Z',
-          events: [], sources: [], total_events: 0, truncated: false,
-          limit: 2000, offset: 0, layers: [],
-          summary: {
-            drive_count: 0, charge_count: 0, drive_duration_s: null,
-            drive_distance_m: null, energy_added_wh: null, energy_used_wh: null,
-          },
-        },
-        });
+        return fulfillApiFixture(route, mocks, { json: dayLog });
       });
       await page.goto('/day-log?date=2026-09-14');
       await waitForHarnessReady(page, mocks);
@@ -40,7 +75,7 @@ for (const theme of ['light', 'dark'] as const) {
       const date = header.getByTestId('daylog-date');
       await expect(date).toHaveValue('2026-09-14');
       await expect(header.locator('#daylog-timezone')).toHaveCount(0);
-      await expect.poll(scopes).toContainEqual(['7', '2026-09-14', timezone]);
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-14', vehicleTimezone]);
       await expectNoHorizontalOverflow(page);
       const navigation = header.getByTestId('daylog-date-navigation');
       const navBox = await navigation.boundingBox();
@@ -92,15 +127,15 @@ for (const theme of ['light', 'dark'] as const) {
       }
       await header.getByTestId('daylog-prev').click();
       await expect(date).toHaveValue('2026-09-13');
-      await expect.poll(scopes).toContainEqual(['7', '2026-09-13', timezone]);
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-13', vehicleTimezone]);
       await header.getByTestId('daylog-next').click();
       await expect(date).toHaveValue('2026-09-14');
       await date.fill('2026-09-10');
       await expect(page).toHaveURL(/date=2026-09-10/);
-      await expect.poll(scopes).toContainEqual(['7', '2026-09-10', timezone]);
+      await expect.poll(scopes).toContainEqual(['7', '2026-09-10', vehicleTimezone]);
       await header.getByTestId('daylog-today').click();
       await expect(date).toHaveValue(await date.getAttribute('max') ?? '');
-      await expect.poll(scopes).toContainEqual(['7', await date.inputValue(), timezone]);
+      await expect.poll(scopes).toContainEqual(['7', await date.inputValue(), vehicleTimezone]);
       await header.getByRole('button', { name: /copy link/i }).click();
       await expect(header.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());

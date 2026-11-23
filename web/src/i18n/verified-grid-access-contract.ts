@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto'
 import { expect } from 'vitest'
 import checkpoint from './__fixtures__/verified-grid-access.json'
+import { restoreMobileGridSource } from './verified-mobile-grid-source-contract'
 import { restoreUiControlsPresentationSource } from './verified-ui-controls-presentation-contract'
+import { catalogBeforeWorkspaceDisplay, restoreWorkspaceDisplaySource } from './verified-workspace-display-contract'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned grid/access delta')
@@ -13,7 +15,7 @@ export function gridAccessRemovedSource(file: string): boolean {
 }
 
 export function restoreGridAccessSource(file: string, source: string): string {
-  source = restoreUiControlsPresentationSource(file, source)
+  source = restoreUiControlsPresentationSource(file, restoreMobileGridSource(file, restoreWorkspaceDisplaySource(file, source)))
   const patch = sourcePatches.get(file)
   if (!patch) return source
   expect(hash(source), file + ': reviewed grid/access successor').toBe(patch.after)
@@ -27,7 +29,7 @@ export function restoreGridAccessSource(file: string, source: string): string {
 }
 
 export function catalogBeforeGridAccess<T extends Record<string, unknown>>(catalog: T): T {
-  const previous = structuredClone(catalog)
+  const previous = catalogBeforeWorkspaceDisplay(catalog)
   for (const change of checkpoint.copy) {
     let parent: Record<string, unknown> = previous
     for (const part of change.path.slice(0, -1)) parent = parent[part] as Record<string, unknown>

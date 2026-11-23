@@ -43,13 +43,13 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
               : t('driveDetail.title', 'Drive Details')}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">
-            {displayVehicle} · <DateTime value={drive.startTs} variant="date" in="vehicle" />
+            {displayVehicle} · <DateTime value={drive.startTs} variant="date" />
             {' · '}
-            <DateTime value={drive.startTs} variant="time" in="vehicle" />
+            <DateTime value={drive.startTs} variant="time" />
             {drive.endTs && (
               <>
                 {' → '}
-                <DateTime value={drive.endTs} variant="time" in="vehicle" />
+                <DateTime value={drive.endTs} variant="time" />
               </>
             )}
           </p>

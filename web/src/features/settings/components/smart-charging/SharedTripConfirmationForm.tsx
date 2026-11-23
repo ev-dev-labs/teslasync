@@ -20,7 +20,7 @@ function percentage(value: string) {
 
 export function SharedTripConfirmationForm({ entry, disabled, pending, onClose, onSave }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const upcoming = useSharedTripExpiry(entry.departure_at)
   const [tripUseLow, setTripUseLow] = useState('')
   const [tripUseHigh, setTripUseHigh] = useState('')

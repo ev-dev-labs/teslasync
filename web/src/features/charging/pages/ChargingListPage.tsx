@@ -2,25 +2,20 @@ import { useMemo, useState, useCallback, useEffect, useRef, useDeferredValue, ty
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, Plug,
+  AlertTriangle,
   Trash2, Battery,
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageLayout, PageHeaderSticky } from '@/components/layout';
-import { Badge, Button, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { Badge, Button, GlassPanel, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
+import { FadeIn } from '@/components/motion';
 import {
   DataStateNotice, QueryError, StaleRefreshWarning,
   EmptyState, EmptyStateGuidanceDetails, InlineCallout, Skeleton,
 } from '@/components/feedback';
-import {
-  FilterBar, ActiveFilterChips, type FilterChipDescriptor, ListExportMenu,
-} from '@/components/forms';
-import { DensityToggle, type Density } from '@/components/forms/DensityToggle';
-import { SortControl, type SortDirection } from '@/components/forms/SortControl';
+import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import {
   SavedViewMenu,
-  DateGroupedList, type DateGroupedListGroup,
   BulkActionsToolbar, DataProvenanceBadge, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
@@ -42,26 +37,23 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
-import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import {formatDateTime, formatDayKey, formatTime} from '@/lib/dateFormat'
-import {formatRelativeDayKey} from '@/lib/dateConvert'
 import {formatDurationMinutes} from '@/lib/dateConvert';
 import { matchPresetId, getDatePreset, isAllTimeRange } from '@/lib/datePresets';
 
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
-import { ChargingSessionCard } from '../components/ChargingSessionCard';
 import { ChargingEvidenceTable } from '../components/ChargingEvidenceTable';
 import { CHARGING_VALUE_COLUMNS, chargingColumnValue, parseChargingValueSelections, type ChargingValueColumn } from '../components/chargingGridValues';
 import { ChargingInsights } from '../components/charging-list/ChargingInsights';
-import { ChargingSearchControl } from '../components/charging-list/ChargingSearchControl';
 import { ChargeQueuePlanner } from '../components/ChargeQueuePlanner';
 import { ChargingOverviewStats } from '../components/stat-modernization';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
   detectNotableSessions, dailyChargingTrend, getChargerCategory,
-  durationMinutes, avgPowerW, sessionAveragePowerW, blendedRecordedCostPerKwh, localDayKey, isEstimatedChargingCost,
+  durationMinutes, avgPowerW, sessionAveragePowerW, sessionDisplayPowerW, blendedRecordedCostPerKwh, localDayKey, isEstimatedChargingCost,
   type ChargingTrendMetric, type ChargingPeriodStats, type ChargingAnomaly,
 } from '@/lib/chargingAggregation';
 import {
@@ -101,12 +93,7 @@ export default function ChargingListPage() {
   /* ── Data ─────────────────────────────────────────────────────── */
   const { vehicleId } = useSelectedVehicle();
   const { tz } = useDateFormat();
-  const { unitPrefs, formatEnergy } = useUnits();
-  const distanceUnit = unitPrefs.distance;
-  const toDistanceDisplay = useCallback(
-    (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
-    [unitPrefs.distance],
-  );
+  const { unitPrefs, formatEnergy, formatPower, formatDistance } = useUnits();
   const { formatCurrency, currencySymbol } = useFormatting();
   const chartPalette = useChartPalette();
   const { asOf } = useAsOfDate();
@@ -119,9 +106,9 @@ export default function ChargingListPage() {
   const [search] = useUrlString('q', '');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<ChargingTrendMetric>('trend', TREND_METRICS, 'sessions');
-  const [sortBy, setSortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');
+  const [sortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');
   const [sortDesc, setSortDesc] = useUrlBoolean('sort_desc', true);
-  const [density, setDensity] = useUrlEnum<Density>('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');
+  const [density, setDensity] = useUrlEnum('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');
   const [requestedPage, setPage] = useUrlNumber('page', 1);
   const [requestedPageSize] = useUrlNumber('size', 50);
   const pageSize = Number.isSafeInteger(requestedPageSize) && requestedPageSize > 0 ? requestedPageSize : 50;
@@ -392,36 +379,6 @@ export default function ChargingListPage() {
     return sortedSessions.slice(start, start + pageSize);
   }, [sortedSessions, page, pageSize]);
 
-  /* ── Date-grouped view of the paginated list ─────────────────── */
-  const groupedSessions = useMemo<DateGroupedListGroup<ChargingSession>[]>(() => {
-    const buckets = new Map<string, ChargingSession[]>();
-    for (const s of paginatedSessions) {
-      const key = localDayKey(s.started_at, tz);
-      if (!key) continue;
-      const list = buckets.get(key) ?? [];
-      list.push(s);
-      buckets.set(key, list);
-    }
-    return Array.from(buckets.entries())
-      .sort(([a], [b]) => (sortDesc ? b.localeCompare(a) : a.localeCompare(b)))
-      .map(([dateKey, items]) => {
-        const totalEnergy = convertEnergyFromSI(
-          items.reduce((acc, s) => acc + s.total_energy_added_wh, 0),
-          'kWh',
-        );
-        const noun = items.length === 1
-          ? t('bulk.noun.session_one', 'session')
-          : t('bulk.noun.session_other', 'sessions');
-        return {
-          dateKey,
-          dateLabel: formatDayKey(dateKey, { style: 'long' }),
-          relativeLabel: formatRelativeDayKey(dateKey, { tz }),
-          summary: `${items.length} ${noun} · ${fmtNumber(totalEnergy)} kWh`,
-          items,
-        };
-      });
-  }, [paginatedSessions, t, tz, sortDesc, fmtNumber]);
-
   /* ── Trend chart series ──────────────────────────────────────── */
   const trendSeries = useMemo(() => ({
     sessions: dailyChargingTrend(dateFilteredSessions, 'sessions', tz),
@@ -457,13 +414,6 @@ export default function ChargingListPage() {
       return next.size === prev.size ? prev : next;
     });
   }, [filteredSessions]);
-  const toggleSessionSelected = useCallback((id: number, on: boolean) => {
-    setBulkSelected(prev => {
-      const n = new Set(prev);
-      if (on) n.add(id); else n.delete(id);
-      return n;
-    });
-  }, []);
   const clearBulk = useCallback(() => setBulkSelected(new Set()), []);
   useEffect(() => {
     setPreviewSession(null);
@@ -647,15 +597,6 @@ export default function ChargingListPage() {
       )}
     </>
   );
-
-  /* ── Sort options ────────────────────────────────────────────── */
-  const sortOptions = useMemo(() => [
-    { value: 'date' as const,     label: t('charging.sort.date', 'Date') },
-    { value: 'energy' as const,   label: t('charging.sort.energy', 'Energy') },
-    { value: 'cost' as const,     label: t('charging.sort.cost', 'Cost') },
-    { value: 'duration' as const, label: t('charging.sort.duration', 'Duration') },
-    { value: 'power' as const,    label: t('charging.sort.power', 'Power') },
-  ], [t]);
 
   /* ── Conditional sections ─ pre-computed inputs ──────────────── */
   const acDcBreakdown = useMemo(() => sessions ? computeAcDcBreakdown(sessions) : null, [sessions]);
@@ -890,20 +831,9 @@ export default function ChargingListPage() {
     previewSession?.ended_at ?? previewSession?.started_at,
     tz,
   ) ?? previewFrom;
-  const renderSession = (session: ChargingSession) => (
-    <StaggerItem key={session.id}>
-      <ChargingSessionCard
-        session={session}
-        toDistanceDisplay={toDistanceDisplay}
-        distanceUnit={distanceUnit}
-        selected={bulkSelected.has(session.id)}
-        onToggleSelect={toggleSessionSelected}
-        anomaly={anomalyById.get(session.id)}
-        density={density === 'compact' ? 'compact' : 'comfortable'}
-        onPreview={setPreviewSession}
-      />
-    </StaggerItem>
-  );
+  const previewRate = previewSession == null ? null : chargingColumnValue(previewSession, 'rate');
+  const previewScore = previewSession == null ? null : chargingColumnValue(previewSession, 'score');
+  const previewRange = previewSession == null ? null : chargingColumnValue(previewSession, 'range');
 
   return (
     <PageLayout
@@ -960,16 +890,9 @@ export default function ChargingListPage() {
         )}
 
 
-        {/* Search + active filter chips */}
+        {/* Active filters for the shared evidence grid */}
         <FadeIn>
           <section aria-label={t('charging.section.filters', 'Search and filters')}>
-          {!isDesktopEvidence && <FilterBar>
-            <ChargingSearchControl
-              value={search}
-              onChange={(value) => setUrlBatch({ q: value || null, page: null })}
-              pending={isSearchPending}
-            />
-          </FilterBar>}
           <ActiveFilterChips
             className="mt-3"
             filters={
@@ -1056,14 +979,12 @@ export default function ChargingListPage() {
         </div>
 
         {/* Session list — full-width detail band */}
-        {(valueFilter.invalid || (!isDesktopEvidence && hasValueFilters)) && (
+        {valueFilter.invalid && (
           <InlineCallout
-            variant={valueFilter.invalid ? 'warning' : 'info'}
+            variant="warning"
             action={{ label: t('table.filter.clear', 'Clear'), onClick: () => setUrlBatch({ grid_values: null, page: null }) }}
           >
-            {valueFilter.invalid
-              ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')
-              : t('table.filter.mobileValues', 'Column value filters are active. Open the desktop grid to edit them, or clear them here.')}
+            {t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')}
           </InlineCallout>
         )}
         <FadeIn delay={0.2}>
@@ -1072,46 +993,6 @@ export default function ChargingListPage() {
             className="space-y-3"
             data-tour="charging-list"
           >
-            {!isDesktopEvidence && sortedSessions.length > 0 && (
-              <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-                <SectionTitle className="flex items-center gap-2">
-                  <Icon icon={Plug} size="md" className="text-[var(--text-secondary)]" />
-                  {t('charging.allSessions', 'All sessions')}
-                  <Text as="span" size="xs" weight="regular" color="muted">
-                    ({fmtCompact(sortedSessions.length)})
-                  </Text>
-                </SectionTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  <SortControl<SortField>
-                    field={sortBy}
-                    direction={sortDesc ? 'desc' : 'asc'}
-                    options={sortOptions}
-                    onFieldChange={setSortBy}
-                    onDirectionChange={(d: SortDirection) => setSortDesc(d === 'desc')}
-                    testId="charging-sort"
-                  />
-                  <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
-                  <DensityToggle
-                    value={density}
-                    onChange={setDensity}
-                    options={['compact', 'comfortable']}
-                    testId="charging-density"
-                  />
-                  <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
-                  <ListExportMenu
-                    onExportCsv={handleExportCsv}
-                    onExportJson={handleExportJson}
-                    selectedCount={bulkSelected.size}
-                    visibleCount={sortedSessions.length}
-                    testId="charging-export"
-                  />
-                </div>
-              </div>
-            )}
-            {!isDesktopEvidence && (
-              <Text as="p" variant="bodySm">{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Text>
-            )}
-
             <BulkActionsToolbar
               selectedIds={Array.from(bulkSelected)}
               total={filteredSessions.length}
@@ -1123,7 +1004,11 @@ export default function ChargingListPage() {
                 other: t('bulk.noun.session_other', 'sessions'),
               }}
             />
-            {isDesktopEvidence && !isLoading && historyAvailable && (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
+              </div>
+            ) : historyAvailable ? (
               <ChargingEvidenceTable
                 sessions={paginatedSessions}
                 availableSessions={dateFilteredSessions}
@@ -1164,7 +1049,12 @@ export default function ChargingListPage() {
                     placeholder: t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"'),
                     historyScope: 'charging',
                   },
-                  density: { value: density, onChange: setDensity, options: ['compact', 'comfortable'], testId: 'charging-density' },
+                  density: {
+                    value: density,
+                    onChange: value => { if (value !== 'table') setDensity(value); },
+                    options: ['compact', 'comfortable'],
+                    testId: 'charging-density',
+                  },
                   exports: {
                     onExportCsv: handleExportCsv,
                     onExportJson: handleExportJson,
@@ -1173,61 +1063,27 @@ export default function ChargingListPage() {
                     testId: 'charging-export',
                   },
                 }}
+                emptyContent={
+                  <>
+                    <EmptyState
+                      icon={<Battery className="h-8 w-8" />}
+                      title={hasListFilters
+                        ? t('charging.emptyForCollection', 'No charging sessions in this view')
+                        : t('charging.emptyTitle', 'No charging sessions yet')}
+                      message={hasListFilters
+                        ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')
+                        : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')}
+                      action={{
+                        label: t('charging.empty.cta', 'Reset filters'),
+                        onClick: () => setUrlBatch({ q: null, from: null, to: null, coll: null, grid_values: null, sort: null, page: null }),
+                      }}
+                    />
+                    {!hasListFilters && <EmptyStateGuidanceDetails guidanceId="charging.list" className="mx-auto" />}
+                  </>
+                }
               />
-            )}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
-              </div>
-            ) : paginatedSessions.length > 0 ? (
-              <>
-                {!isDesktopEvidence && <StaggerContainer>
-                  {sortBy === 'date' ? <DateGroupedList
-                    groups={groupedSessions}
-                    itemKey={(s) => s.id}
-                    renderItem={renderSession}
-                  /> : <div className="space-y-3">{paginatedSessions.map(renderSession)}</div>}
-                </StaggerContainer>}
-                {!isDesktopEvidence && <Pagination
-                  page={page}
-                  pageSize={pageSize}
-                  total={sortedSessions.length}
-                  onPageChange={setPage}
-                  onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
-                />}
-              </>
-            ) : chargingState.fatalError != null ? (
-              <QueryError error={chargingState.fatalError} onRetry={refetch} />
-            ) : historyPending ? (
-              <Text color="secondary">{t('common.loading', 'Loading...')}</Text>
             ) : (
-              <>
-                <EmptyState
-                  icon={<Battery className="h-8 w-8" />}
-                  title={
-                    hasListFilters
-                      ? t('charging.emptyForCollection', 'No charging sessions in this view')
-                      : t('charging.emptyTitle', 'No charging sessions yet')
-                  }
-                  message={
-                    hasListFilters
-                      ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')
-                      : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
-                  }
-                  action={{
-                    label: t('charging.empty.cta', 'Reset filters'),
-                    onClick: () => {
-                      setUrlBatch({ q: null, from: null, to: null, coll: null, grid_values: null, sort: null, page: null });
-                    },
-                  }}
-                />
-                {/* HELP-02 — governed prerequisite + likely cause. Only for
-                    the unfiltered view; the filtered branch above already
-                    tells the user to clear filters. */}
-                {!hasListFilters && (
-                  <EmptyStateGuidanceDetails guidanceId="charging.list" className="mx-auto" />
-                )}
-              </>
+              <QueryError error={chargingState.fatalError} onRetry={refetch} />
             )}
           </section>
         </FadeIn>
@@ -1517,6 +1373,27 @@ export default function ChargingListPage() {
                     value: previewSession.peak_power_w != null
                       ? `${fmtNumber(convertPowerFromSI(previewSession.peak_power_w, 'kW'))} kW`
                       : '—',
+                  },
+                  {
+                    key: 'power',
+                    label: previewSession.live
+                      ? t('charging.currentPower', 'Current power') : t('charging.grid.averagePower', 'Average power'),
+                    value: formatPower(sessionDisplayPowerW(previewSession)),
+                  },
+                  {
+                    key: 'range',
+                    label: t('charging.grid.rangeAdded', 'Range added'),
+                    value: typeof previewRange === 'number' ? formatDistance(previewRange) : '—',
+                  },
+                  {
+                    key: 'rate',
+                    label: t('charging.grid.costPerEnergy', 'Cost per kWh'),
+                    value: typeof previewRate === 'number' ? formatCurrency(previewRate) : '—',
+                  },
+                  {
+                    key: 'battery-score',
+                    label: t('charging.grid.batteryScore', 'Battery-friendly score'),
+                    value: typeof previewScore === 'number' ? `${fmtInt(previewScore)}/100` : '—',
                   },
                   {
                     key: 'charger',

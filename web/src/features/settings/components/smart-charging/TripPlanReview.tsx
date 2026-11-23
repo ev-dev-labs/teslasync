@@ -26,7 +26,7 @@ interface Props {
 
 export function TripPlanReview({ scope, plan, places, disabled, placesUnavailable }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const { fmtNumber } = useNumberFormatting()
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)

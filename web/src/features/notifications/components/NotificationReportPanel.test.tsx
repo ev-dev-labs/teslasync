@@ -180,6 +180,10 @@ describe('NotificationReportPanel', () => {
     expect(within(sources).getAllByRole('row')).toHaveLength(report.by_source.length + 1);
     expect(within(sources).getByRole('cell', { name: 'System' })).toBeInTheDocument();
     expect(within(sources).getByRole('cell', { name: '2' })).toHaveClass('text-right', 'tabular-nums');
+    expect(sources.closest('[data-grid-variant]')).toHaveAttribute('data-grid-variant', 'embedded');
+    const eventTypes = screen.getByRole('table', { name: 'Event types' });
+    expect(within(eventTypes).getByRole('cell', { name: 'Alert triggered' })).toBeInTheDocument();
+    expect(within(eventTypes).getByRole('cell', { name: 'System MQTT outage' })).toBeInTheDocument();
   });
 
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {

@@ -51,7 +51,7 @@ export function NotificationInboxTable({
 }: NotificationInboxTableProps) {
   const { t } = useTranslation();
   const { fmtInt } = useNumberFormatting();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const severityLabels: Record<string, string> = {
     "info": t("notifications.inbox.filter.severity.info", "Info"),
     "warn": t("notifications.inbox.filter.severity.warn", "Warn"),
@@ -76,7 +76,7 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.received', 'Received'),
       defaultWidth: 190,
       minWidth: 160,
-      render: log => log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in="user" className="whitespace-nowrap tabular-nums" /> : null,
+      render: log => log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} className="whitespace-nowrap tabular-nums" /> : null,
     },
     {
       key: 'title',
@@ -171,7 +171,7 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.delivery', 'Delivery'),
       defaultVisible: false,
       defaultWidth: 190,
-      render: log => log.sent_at ? <DateTime value={log.sent_at} in="user" /> : log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : null,
+      render: log => log.sent_at ? <DateTime value={log.sent_at} /> : log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : null,
     },
     {
       key: 'read',

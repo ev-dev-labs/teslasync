@@ -71,7 +71,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const { tz, locale } = useDateFormat('vehicle');
+  const { tz, locale } = useDateFormat();
   const distanceUnit = unitPrefs.distance;
   // convertDistanceFromSI expects SI meters and maps to the user's unit.
   // Memoised so the chartData derive only recomputes when the source data or

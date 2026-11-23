@@ -6,7 +6,7 @@ import type { SmartSolarDecision } from '@/types/smartCharging'
 
 export function useSolarChargingDisplay(decision: SmartSolarDecision | null | undefined) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting()
   const { formatPower } = useUnits()
   if (!decision) return null

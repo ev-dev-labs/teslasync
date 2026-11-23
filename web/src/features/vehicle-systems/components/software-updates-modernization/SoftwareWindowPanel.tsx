@@ -27,7 +27,7 @@ export function SoftwareWindowPanel({ vehicleId }: { vehicleId: number | null })
 
 function SoftwareWindowReview({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useSoftwareWindow(scope, vehicleId);
   const change = useSoftwareWindowChange(scope, vehicleId);

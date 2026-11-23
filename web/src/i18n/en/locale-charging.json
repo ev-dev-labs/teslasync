@@ -3340,7 +3340,6 @@
       "exportCsv": "Export CSV"
     },
     "filter": {
-      "mobileValues": "Column value filters are active. Open the desktop grid to edit them, or clear them here.",
       "noValue": "(Not recorded)"
     }
   },

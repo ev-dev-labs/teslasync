@@ -14,7 +14,7 @@ interface Props {
 
 export function SharedTripInvitationRow({ entry, disabled, onConfirm, onWithdraw, onCompare }: Props) {
   const { t } = useTranslation()
-  const { formatDateTime } = useDateFormat('user')
+  const { formatDateTime } = useDateFormat()
   const accepted = useSharedTripExpiry(entry.consent_expires_at)
   const upcoming = useSharedTripExpiry(entry.departure_at)
   return (

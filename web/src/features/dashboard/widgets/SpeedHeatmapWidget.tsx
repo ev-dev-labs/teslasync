@@ -7,7 +7,7 @@ import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDashboardDriveHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
@@ -109,7 +109,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size, config }: WidgetPr
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
 
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } =
     useDashboardDriveHistory(id, { kind: 'heatmap', range: config?.timeRange });

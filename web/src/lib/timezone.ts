@@ -77,10 +77,10 @@ export function resolveTimezone(
  * override from `useSettings()`. Only call inside provider-mounted
  * components — pure rendering paths should use `resolveTimezone()`.
  */
-export function useTimezone(mode: TzMode = 'vehicle'): string {
+export function useTimezone(mode: TzMode = 'vehicle', vehicleTimezone?: string | null): string {
   const { vehicle } = useSelectedVehicle();
   const { settings } = useSettings();
-  return resolveTimezone(mode, vehicle?.timezone, settings.timezone_user);
+  return resolveTimezone(mode, vehicleTimezone === undefined ? vehicle?.timezone : vehicleTimezone, settings.timezone_user);
 }
 
 

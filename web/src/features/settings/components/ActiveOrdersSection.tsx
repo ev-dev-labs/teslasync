@@ -6,7 +6,6 @@ import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { ShoppingCart, RefreshCw, Info, Package, Calendar } from 'lucide-react'
 
@@ -31,7 +30,7 @@ function formatOrderStatus(status: string | undefined | null): string {
 export function ActiveOrdersSection() {
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const { formatDate: formatDeliveryDate } = useDateFormat()
+  const { formatDate: formatDeliveryDate, formatDateTime } = useDateFormat()
   const { data: ordersData, isLoading, isError, error, refetch } = useTeslaUserOrders()
   const ordersRefresh = useRefreshTeslaOrders()
 

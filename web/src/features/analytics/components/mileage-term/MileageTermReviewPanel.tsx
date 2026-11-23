@@ -27,7 +27,8 @@ export function MileageTermReviewPanel({ vehicleId }: { vehicleId: number | null
 
 function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useMileageTermReview(scope, vehicleId);
   const source = useDataState(query);
@@ -79,7 +80,7 @@ function Details({ scope, vehicleId, identityPending }: PrivateVehicleReviewScop
     <Text as="p" role="status" variant="bodySm">{status}</Text>
     {settings && review.next_check_at && <Text as="p" variant="caption">
       {t('mileageBudget.review.next', 'Next check: {{date}}.', {
-        date: formatDateTime(review.next_check_at, { tz: settings.time_zone }),
+        date: formatDateTime(review.next_check_at),
       })}
     </Text>}
     {digest && settings && !settings.paused && <div className="space-y-3">

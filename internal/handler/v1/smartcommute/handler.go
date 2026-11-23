@@ -26,7 +26,7 @@ import (
 type service interface {
 	Get(context.Context, string, int64) (*domain.Snapshot, error)
 	SaveSettings(context.Context, string, domain.Settings) error
-	Analyze(context.Context, string, int64) error
+	Analyze(context.Context, string, int64, string) error
 	CreateRoutine(context.Context, string, domain.RoutineInput) (*domain.Routine, error)
 	ConfirmRoutine(context.Context, string, int64, domain.RoutineInput) (*domain.Routine, error)
 	DeclineRoutine(context.Context, string, int64, int64) error
@@ -134,12 +134,15 @@ func (h *Handler) Analyze(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	request, err := decode[vehicleRequest](w, r)
+	request, err := decode[struct {
+		VehicleID int64  `json:"vehicle_id"`
+		TimeZone  string `json:"time_zone"`
+	}](w, r)
 	if err != nil {
 		h.handleError(w, span, smartcommutesvc.ErrInvalidInput)
 		return
 	}
-	if err := h.service.Analyze(ctx, subject, request.VehicleID); err != nil {
+	if err := h.service.Analyze(ctx, subject, request.VehicleID, strings.TrimSpace(request.TimeZone)); err != nil {
 		h.handleError(w, span, err)
 		return
 	}

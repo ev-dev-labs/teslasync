@@ -7,7 +7,7 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { StatCard, KVList } from '@/components/data-display';
 import { Skeleton, AlertBanner } from '@/components/feedback';
 
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import { useConnectionPool } from '@/api/hooks/useAdmin';
 import { getExtendedHealth, getVersionInfo } from '@/api/devtools';
@@ -25,6 +25,7 @@ interface ComponentRow {
 
 export function BackendStatusSection() {
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
 
   const { data: extHealth, isLoading: extLoading, isError: extError } = useQuery({
@@ -105,7 +106,7 @@ export function BackendStatusSection() {
         render: (row) => (row.lastCheck ? formatDateTime(row.lastCheck) : '—'),
       },
     ],
-    [t, fmtNumber, fmtInt],
+    [t, fmtNumber, fmtInt, formatDateTime],
   );
 
   const okCount = useMemo(

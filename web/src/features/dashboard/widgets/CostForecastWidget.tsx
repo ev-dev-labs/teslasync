@@ -15,7 +15,7 @@ import InstrumentPresentation from './designPacks/InstrumentPresentation';
 import type { WidgetProps } from './types';
 import type { CostHistoricalMonth, CostForecastMonth } from '@/types/charging';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useTimezone } from '@/lib/timezone';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDateLabels } from '@/hooks/useDateLabels';
 
 interface BarDatum extends ChartDataRow {
@@ -50,7 +50,7 @@ export default function CostForecastWidget({ vehicleId, config, size }: WidgetPr
   const { t } = useTranslation('dashboard');
   const vehiclesQuery = useVehicles();
   const vid = vehicleId ?? config?.vehicleId ?? vehiclesQuery.data?.[0]?.id ?? null;
-  const timezone = useTimezone('vehicle');
+  const { tz: timezone } = useDateFormat();
   const { formatMonthName } = useDateLabels('vehicle');
 
   const {

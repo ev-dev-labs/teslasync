@@ -7,6 +7,7 @@ import { Modal } from './Modal'
 import { Text } from './Typography'
 import { MobileReferenceRow } from './mobile-grid-reference/MobileReferenceRow'
 import { MobileReferenceState } from './mobile-grid-reference/MobileReferenceState'
+import { defaultMobileRoles } from './mobile-grid-reference/helpers'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import type { MobileRow } from './mobile-grid-reference/types'
@@ -43,8 +44,11 @@ interface Props<T> {
   allColumns: readonly Column<T>[]
   keyExtractor: (row: T) => MobileTableRowKey
   presentation: MobileDataTablePresentation<T>
+  renderColumnCells?: boolean
+  mobileColumns?: ReadonlySet<string> | null
   label: string
   rowLabel?: (row: T) => string
+  rowClassName?: (row: T) => string | undefined
   selectedKeys: ReadonlySet<MobileTableRowKey>
   selectable: boolean
   multiSelect: boolean
@@ -72,7 +76,7 @@ interface Props<T> {
 
 /** A presentation of processed rows, not a query/filter/export controller. */
 export function MobileDataTableAdapter<T>({
-  rows, columns, allColumns, keyExtractor, presentation, label, rowLabel, selectedKeys,
+  rows, columns, allColumns, keyExtractor, presentation, renderColumnCells, mobileColumns, label, rowLabel, rowClassName, selectedKeys,
   selectable, multiSelect, allSelected, someSelected, onToggleAll, onToggle,
   controls, count, onLoadMore, nextCount, onClear, emptyMessage, expandedContent,
   expandedKeys, onToggleExpanded, rowActions, grouping, compact = false,
@@ -95,6 +99,21 @@ export function MobileDataTableAdapter<T>({
   )
   const actionColumns = groupedActions ? columns.filter(column => groupedActions[column.key]) : []
   const visibleKeys = useMemo(() => new Set(columns.map(column => column.key)), [columns])
+  const fallback = useMemo(() => {
+    if (!renderColumnCells) return null
+    const eligible = columns.filter(column => column.key !== 'actions' && !column.headerAction
+      && (!mobileColumns || mobileColumns.has(column.key)))
+    const identity = eligible.find(column => column.pinned) ?? eligible.find(column => column.required)
+    const summary = identity ? [identity, ...eligible.filter(column => column !== identity)] : eligible
+    const roles = defaultMobileRoles(summary.map(column => ({ key: column.key, numeric: column.align === 'right' })))
+    return {
+      title: summary.find(column => roles.get(column.key) === 'title'),
+      primary: summary.find(column => roles.get(column.key) === 'primary'),
+      meta: summary.filter(column => roles.get(column.key) === 'meta'),
+      actions: columns.filter(column => column.key === 'actions' || column.headerAction),
+    }
+  }, [columns, mobileColumns, renderColumnCells])
+  const renderCell = (column: Column<T>, row: T) => column.render(row) ?? '—'
   const actionCell = (column: Column<T>, content: ReactNode) => (
     <div key={column.key} data-mobile-action-column={column.key}
       style={column.mobileActionWidth == null ? undefined : { width: column.mobileActionWidth }}
@@ -104,9 +123,12 @@ export function MobileDataTableAdapter<T>({
   )
   const renderRow = (row: T) => {
     const key = keyExtractor(row)
-    const mobileRow = buildMobileTableRow(row, key, columns, presentation, label)
-    const humanLabel = rowLabel?.(row) ?? mobileRow.title
-    return <div key={`${typeof key}:${key}`}>
+    const configuredLabel = rowLabel?.(row)
+    const mobileRow = fallback
+      ? { key, title: configuredLabel ?? label, primary: '', meta: [], details: [] }
+      : buildMobileTableRow(row, key, columns, presentation, label)
+    const humanLabel = configuredLabel ?? mobileRow.title
+    return <div key={`${typeof key}:${key}`} data-mobile-row-key={key} className={rowClassName?.(row)}>
       <div className="flex min-w-0 items-center">
         <div className="min-w-0 flex-1">
           <MobileReferenceRow
@@ -121,12 +143,20 @@ export function MobileDataTableAdapter<T>({
             href={presentation.rowHref?.(row)}
             onToggle={() => {}}
             onSelectionEvent={event => onToggle(key, event)}
+            cells={fallback ? {
+              title: fallback.title && renderCell(fallback.title, row),
+              primary: fallback.primary && renderCell(fallback.primary, row),
+              meta: fallback.meta.map(column => ({ key: column.key, label: column.header, value: renderCell(column, row) })),
+            } : undefined}
           />
         </div>
         {actionColumns.map(column => actionCell(column, column.render(row)))}
       </div>
-      {(!grouping || presentation.inlineActions || rowActions || onToggleExpanded) && (
+      {(!grouping || fallback || presentation.inlineActions || presentation.onQuickView || rowActions || onToggleExpanded) && (
         <div data-mobile-row-actions="" className="flex w-full min-w-0 flex-wrap items-center gap-2 px-3 pb-3 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words">
+          {fallback?.actions.filter(column => !groupedActions?.[column.key]).map(column => (
+            <div key={column.key} className="min-w-0 max-w-full">{column.render(row)}</div>
+          ))}
           {presentation.inlineActions?.(row, visibleKeys)}
           {rowActions?.(row)}
           {onToggleExpanded && <Button size="sm" variant="ghost" wrapLabel
@@ -168,6 +198,16 @@ export function MobileDataTableAdapter<T>({
         <MobileReferenceState production state={state} callbacks={{
           onRetry: presentation.onRetry, onClear,
         }} />
+        {showRows && fallback && fallback.actions.some(column => column.headerAction != null && !groupedActions?.[column.key]) && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] p-3">
+            {fallback.actions.filter(column => column.headerAction != null && !groupedActions?.[column.key]).map(column => (
+              <div key={column.key} className="flex min-w-0 flex-wrap items-center gap-2">
+                <Text size="sm" color="secondary">{column.header}</Text>
+                {column.headerAction}
+              </div>
+            ))}
+          </div>
+        )}
         {showRows && actionColumns.some(column => column.headerAction) && (
           <div className="flex min-w-0 items-center border-b border-[var(--border-subtle)] py-2">
             <div className="min-w-0 flex-1" />
@@ -209,7 +249,8 @@ export function MobileDataTableAdapter<T>({
         title={detailRow != null ? rowLabel?.(detailRow) ?? label : label} size="lg"
         footer={<Button className="min-h-11 min-w-11" wrapLabel onClick={close}>{t('common.close', 'Close')}</Button>}>
         {detailRow != null && <dl className="min-w-0 space-y-3">
-          {allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => (
+          {(fallback ? columns.filter(column => !fallback.actions.includes(column)) : allColumns)
+            .filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => (
             <div data-app-part="table-cell" key={column.key} className="min-w-0 space-y-1 break-words">
               <Text as="dt" variant="caption">{column.header}</Text>
               <Text as="dd" variant="body" className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow) ?? '—'}</Text>

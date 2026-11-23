@@ -4,11 +4,11 @@ import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import {
   addDaysYmd,
   categoryOf,
+  dayLogHour,
   eventAccent,
   eventHref,
   eventKeywords,
   formatTimeSeconds,
-  hourKeyInTz,
   isValidYmd,
 } from './daylog';
 import type { DayLogEvent } from '@/api/types';
@@ -34,31 +34,30 @@ describe('daylog lib', () => {
 
   it('formats seconds in the queried timezone', () => {
     setGlobalLocale('en-GB');
-    // ICU spells the UTC offset as 'GMT' or 'GMT+0' depending on the runtime.
-    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'UTC')).toMatch(/^15:04:05 GMT(?:\+0)?$/);
-    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'America/Los_Angeles')).toBe('08:04:05 GMT-7');
+    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'UTC')).toBe('15:04:05');
+    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'America/Los_Angeles')).toBe('08:04:05');
   });
 
   it('uses the saved locale instead of a fixed clock convention', () => {
     setGlobalLocale('de-DE');
-    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'Asia/Kolkata')).toBe('20:34:05 GMT+5:30');
+    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'Asia/Kolkata')).toBe('20:34:05');
     setGlobalLocale('en-US');
-    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'Asia/Kolkata')).toBe('08:34:05 PM GMT+5:30');
+    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'Asia/Kolkata')).toBe('08:34:05 PM');
   });
 
   it('renders instants across both local day boundaries without changing ISO provenance', () => {
     setGlobalLocale('en-GB');
     const iso = '2026-09-14T00:04:05Z';
-    expect(formatTimeSeconds(iso, 'America/Los_Angeles')).toBe('17:04:05 GMT-7');
+    expect(formatTimeSeconds(iso, 'America/Los_Angeles')).toBe('17:04:05');
     expect(iso).toBe('2026-09-14T00:04:05Z');
-    expect(formatTimeSeconds('2026-09-14T23:04:05Z', 'Asia/Tokyo')).toBe('08:04:05 GMT+9');
-    expect(formatTimeSeconds('2026-09-14T07:00:00Z', 'America/Los_Angeles')).toBe('00:00:00 GMT-7');
+    expect(formatTimeSeconds('2026-09-14T23:04:05Z', 'Asia/Tokyo')).toBe('08:04:05');
+    expect(formatTimeSeconds('2026-09-14T07:00:00Z', 'America/Los_Angeles')).toBe('00:00:00');
   });
 
   it('distinguishes repeated wall-clock seconds at the DST fall-back', () => {
     setGlobalLocale('en-GB');
-    expect(formatTimeSeconds('2026-11-01T08:30:05Z', 'America/Los_Angeles')).toBe('01:30:05 GMT-7');
-    expect(formatTimeSeconds('2026-11-01T09:30:05Z', 'America/Los_Angeles')).toBe('01:30:05 GMT-8');
+    expect(formatTimeSeconds('2026-11-01T08:30:05Z', 'America/Los_Angeles', 'en-GB', true)).toBe('01:30:05 GMT-7');
+    expect(formatTimeSeconds('2026-11-01T09:30:05Z', 'America/Los_Angeles', 'en-GB', true)).toBe('01:30:05 GMT-8');
   });
 
   it('uses the shared placeholder for invalid or missing dates', () => {
@@ -75,9 +74,9 @@ describe('daylog lib', () => {
   });
 
   it('buckets hours in the queried timezone', () => {
-    expect(hourKeyInTz('2026-09-14T15:04:05Z', 'UTC')).toBe('15');
-    expect(hourKeyInTz('2026-09-14T15:04:05Z', 'America/Los_Angeles')).toBe('08');
-    expect(hourKeyInTz('junk', 'UTC')).toBe('');
+    expect(dayLogHour('2026-09-14T15:04:05Z', 'UTC')).toMatchObject({ hour: 15 });
+    expect(dayLogHour('2026-09-14T15:04:05Z', 'America/Los_Angeles')).toMatchObject({ hour: 8 });
+    expect(dayLogHour('junk', 'UTC')).toBeNull();
   });
 
   it('maps types to categories with an other fallback', () => {

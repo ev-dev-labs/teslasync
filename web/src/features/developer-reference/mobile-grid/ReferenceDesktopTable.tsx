@@ -36,6 +36,7 @@ export function ReferenceDesktopTable({ model, callbacks, rows, definitions, dis
         tableId={`developer-reference:${model.id}`}
         caption={model.label}
         variant="embedded"
+        mobilePresentation={false}
         columns={columns}
         data={rows}
         keyExtractor={row => row.id}

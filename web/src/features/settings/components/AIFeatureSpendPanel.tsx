@@ -18,7 +18,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('settings')
   const { formatCurrency } = useFormatting()
-  const { formatDateTime } = useDateFormat('utc')
+  const { formatDateTime } = useDateFormat()
   const breakdownQuery = useAiUsageByFeature(undefined, { enabled })
   const recentQuery = useAiUsageRecent(50, { enabled })
   const breakdown = useDataState(breakdownQuery, { provenance: 'historical' })
@@ -110,7 +110,7 @@ export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
                       <div className="min-w-0">
                         <Text as="span" variant="bodySm" className="block font-medium">{name}</Text>
                         <Caption className="block">
-                          {t('ai.settings.featureSpend.callsTokens', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}} UTC', {
+                          {t('ai.settings.featureSpend.callsTokensLocalized', '{{calls}} calls · {{input}} in / {{output}} out · last call {{last}}', {
                             calls: fmtInt(row.call_count),
                             input: fmtInt(row.input_tokens),
                             output: fmtInt(row.output_tokens),

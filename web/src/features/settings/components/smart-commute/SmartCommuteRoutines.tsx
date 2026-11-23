@@ -70,14 +70,14 @@ export function SmartCommuteRoutines({ vehicleId, timeZone, enabled, disabled, s
                 count: routine.evidence.matching_days,
                 start: formatCommuteClock(routine.evidence.window_start_s),
                 end: formatCommuteClock(routine.evidence.window_end_s),
-                last: formatDate(routine.evidence.last_observed_at, { tz: routine.time_zone }),
+                last: formatDate(routine.evidence.last_observed_at, { tz: timeZone }),
               })}
             </Text>
           )}
           {routine.snoozed_until && (
             <Text as="p" variant="bodySm">
               {t('smartCommute.snoozedUntil', 'Snoozed until {{until}}.', {
-                until: formatDateTime(routine.snoozed_until, { tz: routine.time_zone }),
+                until: formatDateTime(routine.snoozed_until, { tz: timeZone }),
               })}
             </Text>
           )}
@@ -141,7 +141,7 @@ export function SmartCommuteRoutines({ vehicleId, timeZone, enabled, disabled, s
             )}
           </div>
           {canSetUpTraffic && trafficRoutine === routine.id && (
-            <SmartCommuteTrafficReview key={`${routine.id}:${routine.updated_at}`} scope={scope}
+            <SmartCommuteTrafficReview key={`${routine.id}:${routine.updated_at}`} scope={scope} displayZone={timeZone}
               routine={routine} disabled={disabled} onChange={onChange} onClose={() => setTrafficRoutine(null)} />
           )}
         </article>

@@ -25,9 +25,10 @@ const EVENT_TYPE_FALLBACKS: Readonly<Record<string, string>> = {
 };
 
 export function notificationEventTypeFallback(value: string): string {
+  const label = value.replace(/[._-]+/g, ' ').trim();
   return Object.prototype.hasOwnProperty.call(EVENT_TYPE_FALLBACKS, value)
     ? EVENT_TYPE_FALLBACKS[value]
-    : 'Other';
+    : label ? label[0].toUpperCase() + label.slice(1) : value;
 }
 
 export function notificationEventTypeLabel(value: string | null | undefined, t: TFunction): string {

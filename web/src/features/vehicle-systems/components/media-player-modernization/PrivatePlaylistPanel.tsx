@@ -34,7 +34,7 @@ export function PrivatePlaylistPanel({ vehicleId }: { vehicleId: number | null }
 function PlaylistReview({ scope, vehicleId, identityPending }: PrivateVehicleReviewScope) {
   const { t } = useTranslation();
   const { search } = useLocation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = usePrivatePlaylist(scope, vehicleId);
   const change = usePrivatePlaylistChange(scope, vehicleId);

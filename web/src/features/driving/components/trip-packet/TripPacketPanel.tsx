@@ -51,7 +51,8 @@ export function TripPacketPanel({ vehicleId, drives }: { vehicleId: number; driv
 
 function Details({ scope, vehicleId, identityPending, drives }: PrivateVehicleReviewScope & { drives: readonly Drive[] }) {
   const { t } = useTranslation();
-  const { formatDateTime, tz } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
+  const { tz } = useDateFormat('user');
   const { canWrite, writeBlockReason } = useOperationalMode();
   const query = useTripPacket(scope, vehicleId);
   const source = useDataState(query);
@@ -97,7 +98,7 @@ function Details({ scope, vehicleId, identityPending, drives }: PrivateVehicleRe
   for (const row of drives) {
     if (row.vehicleId === vehicleId && row.endTs && !options.has(row.id)) {
       options.set(row.id, t('logbook.packet.driveOption', 'Drive {{id}} on {{date}}', {
-        id: row.id, date: formatDateTime(row.startTs, { tz: plan?.time_zone }),
+        id: row.id, date: formatDateTime(row.startTs),
       }));
     }
   }
@@ -112,7 +113,7 @@ function Details({ scope, vehicleId, identityPending, drives }: PrivateVehicleRe
         : packet ? t('logbook.packet.active', 'Active. A private packet is ready.')
           : t('logbook.packet.waiting', 'Active. Waiting for the monthly check or sufficient confirmed evidence.')}</Text>
     {plan?.next_check_at && <Text variant="caption">{t('logbook.packet.next', 'Next check: {{date}}.', {
-      date: formatDateTime(plan.next_check_at, { tz: plan.time_zone }),
+      date: formatDateTime(plan.next_check_at),
     })}</Text>}
     {change.error && <QueryError error={change.error} />}
     {!canWrite && writeBlockReason && <Text as="p" variant="bodySm">{writeBlockReason}</Text>}

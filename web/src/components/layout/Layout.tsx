@@ -9,7 +9,7 @@ import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { ActionConfirmationRoot } from '../feedback/ActionConfirmationRoot'
 import { AnnouncerRegion } from '@/components/a11y'
-import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
@@ -78,6 +78,8 @@ import { navRouteIcons } from '@/lib/navRouteIcons';
 import { HelixMark } from '@/components/branding/HelixMark';
 import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { setWorkspaceDisplayTimezone } from '@/lib/dateFormat';
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 
@@ -549,6 +551,12 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
 }
 
 export default function Layout() {
+  const { tz } = useDateFormat()
+  useLayoutEffect(() => {
+    setWorkspaceDisplayTimezone(tz)
+    return () => setWorkspaceDisplayTimezone()
+  }, [tz])
+
   const presentation = usePresentationMode()
   const horizontal = appNavigationOrientation(useContext(ActiveAppNavigation)) === 'horizontal'
   const { preferences: productPreferences } = useProductPreferences()

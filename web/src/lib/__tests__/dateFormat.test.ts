@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import {formatDateTime, formatDate, formatTime, formatDateShort, formatDayKey, isValidTimeZone, browserTimeZone, zonedDateParts, formatDateWithDay, formatRelativeTime, formatDateRange} from '../dateFormat'
+import {formatDateTime, formatDate, formatTime, formatDateShort, formatDayKey, isValidTimeZone, browserTimeZone, zonedDateParts, formatDateWithDay, formatRelativeTime, formatDateRange, setWorkspaceDisplayTimezone} from '../dateFormat'
 import {formatRelativeDays, formatRelativeDayKey, ymdInTz} from '../dateConvert'
 import {formatMonthYear, formatMonthName, formatWeekdayName, formatMonthDayHour} from '../dateConvert'
 import {tzAbbreviation, formatChartInstant, formatHourName, toIsoString, formatGmtOffset, supportedTimeZones, isoUtcToLocalDatetimeInput, localDatetimeInputToIso, formatDurationMs, formatDurationMsCompact, formatDurationMsLong, formatDurationSecondsAsMinutes, formatDurationMinutes, formatDurationRange, formatDurationClock} from '../dateConvert';
@@ -120,6 +120,24 @@ describe('elapsed duration validity', () => {
 });
 
 describe('dateFormat — tz override', () => {
+  it('uses the latest workspace timezone for instants without moving calendar days', () => {
+    const instant = '2026-04-05T02:30:00Z';
+    const opts = { locale: 'en-US' };
+    try {
+      setWorkspaceDisplayTimezone('America/Los_Angeles');
+      expect(formatDateTime(instant, opts)).toBe('Apr 4, 2026, 07:30 PM');
+      expect(formatTime(instant, opts)).toBe('07:30 PM');
+      expect(formatDate('2026-04-05', opts)).toBe('Apr 5, 2026');
+      expect(formatDateTime(instant, { ...opts, tz: 'UTC' })).toBe('Apr 5, 2026, 02:30 AM');
+
+      setWorkspaceDisplayTimezone('Asia/Tokyo');
+      expect(formatTime(instant, opts)).toBe('11:30 AM');
+      expect(formatDateTime(instant, opts)).toBe('Apr 5, 2026, 11:30 AM');
+    } finally {
+      setWorkspaceDisplayTimezone();
+    }
+  });
+
   it('localizes publication days without converting them into zoned instants', () => {
     for (const tz of ['America/Los_Angeles', 'Pacific/Kiritimati']) {
       expect(formatDayKey('2026-07-02', { tz, locale: 'en-US' })).toBe('Jul 2, 2026');

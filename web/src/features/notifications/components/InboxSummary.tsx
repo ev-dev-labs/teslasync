@@ -43,7 +43,7 @@ interface InboxStats {
 /** Compact backlog context; complete period aggregates remain in the report. */
 export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
   const { t } = useTranslation();
-  const { formatRelativeTime, formatDateTime } = useDateFormat('user');
+  const { formatRelativeTime, formatDateTime } = useDateFormat();
   const state = useDataState({ ...query, data: query.data ?? undefined });
   const rows = useMemo(() => query.data ?? [], [query.data]);
 

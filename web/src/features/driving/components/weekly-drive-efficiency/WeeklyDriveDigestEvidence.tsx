@@ -9,14 +9,13 @@ import type { WeeklyDriveDigest } from '@/types/weeklyDriveEfficiency';
 
 interface Props {
   digest: WeeklyDriveDigest;
-  timeZone: string;
   canOpenDrive: boolean;
   onOpenDrive: () => void;
 }
 
-export function WeeklyDriveDigestEvidence({ digest, timeZone, canOpenDrive, onOpenDrive }: Props) {
+export function WeeklyDriveDigestEvidence({ digest, canOpenDrive, onOpenDrive }: Props) {
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat('user');
+  const { formatDateTime } = useDateFormat();
   const { fmtInt } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const bound = (n: number) => formatEnergyPerDistance(n, unitPrefs, { precision: 0 });
@@ -29,7 +28,7 @@ export function WeeklyDriveDigestEvidence({ digest, timeZone, canOpenDrive, onOp
     <KVList items={[
       { label: t('routeEfficiency.weekly.baseline', 'Earlier matched drives'), value: range(digest.baseline) },
       { label: t('routeEfficiency.weekly.recent', 'Last week’s matched drives'), value: range(digest.recent) },
-      { label: t('routeEfficiency.weekly.last', 'Latest matching drive ended'), value: formatDateTime(digest.observed_until, { tz: timeZone }) },
+      { label: t('routeEfficiency.weekly.last', 'Latest matching drive ended'), value: formatDateTime(digest.observed_until) },
     ]} />
     <Text as="p" variant="caption">{t('routeEfficiency.weekly.coverage', '{{recent}} observed days last week, compared with {{baseline}} earlier days. Review uses the saved time zone, not the page date range.', {
       recent: fmtInt(digest.recent_days), baseline: fmtInt(digest.baseline_days),

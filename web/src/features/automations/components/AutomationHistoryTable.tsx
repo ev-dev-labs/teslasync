@@ -16,7 +16,7 @@ export function AutomationHistoryTable({ rows, onOpen }: {
     row.automation_name || t('automations.historyPage.ruleId', 'Rule #{{id}}', { id: row.automation_id });
   const executionLabel = (row: AutomationHistory) => `${ruleName(row)} #${row.id}`;
   const columns = useMemo<Column<AutomationHistory>[]>(() => [
-    { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} in="user" /> },
+    { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} /> },
     { key: 'rule', header: t('automations.historyPage.rule', 'Automation'), visibleOnMobile: true, render: (row) =>
       <Button variant="ghost" wrapLabel className="min-h-11 min-w-11 justify-start text-left" onClick={() => onOpen(row.id)}>
         {row.automation_name || t('automations.historyPage.ruleId', 'Rule #{{id}}', { id: row.automation_id })}

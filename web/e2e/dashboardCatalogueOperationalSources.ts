@@ -120,11 +120,14 @@ export function catalogueOperationalSources(now: string): CatalogueSources {
     alertOnEntry: true, alertOnExit: true, enabled: true, origin: 'manual',
     needsReview: false, createdAt: earlier,
   }];
-  const positions: Position[] = [0, 0, 0.01].map((delta, index) => ({
-    vehicle_id: 7, ts: new Date(Date.parse(earlier) + index * 60_000).toISOString(),
-    latitude: 37.4 + delta, longitude: -122.1 + delta, heading: 90,
-    speed_mph: null, elevation_m: 30, gps_state: 'Active', source: 'telemetry',
-  }));
+  const positions = [0, 0, 0.01].map((delta, index) => {
+    const ts = new Date(Date.parse(earlier) + index * 60_000).toISOString();
+    return {
+      id: ts, created_at: ts, speed: null,
+      vehicle_id: 7, ts, latitude: 37.4 + delta, longitude: -122.1 + delta, heading: 90,
+      speed_mph: null, elevation_m: 30, gps_state: 'Active', source: 'telemetry',
+    } satisfies Position & { id: string; created_at: string; speed: number | null };
+  });
   const commands: CommandLogEntry[] = [{
     id: 1, vehicle_id: 7, command: 'flash_lights', params: '{}',
     status: 'success', error: '', created_at: now,

@@ -127,7 +127,7 @@ export default function DayLogPage() {
           <FadeIn delay={0.1}>
             <DayLogTimeline
               events={data?.events ?? null}
-              timezone={data?.timezone ?? timezone}
+              timezone={timezone}
               vehicleId={vehicleId}
               truncated={data?.truncated ?? false}
               isLoading={isLoading}

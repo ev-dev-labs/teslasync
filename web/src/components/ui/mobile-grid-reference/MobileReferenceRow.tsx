@@ -7,7 +7,7 @@ import { Text } from '../Typography';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { cn } from '@/lib/cn';
 import { rowMappingIssues, safeProgress } from './helpers';
-import type { MobileRow, MobileVariant } from './types';
+import type { MobileField, MobileRow, MobileVariant } from './types';
 
 interface Props {
   row: MobileRow<string | number>;
@@ -21,12 +21,19 @@ interface Props {
   onSelectionEvent?: (event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent) => void;
   selectionLabel?: string;
   compact?: boolean;
+  cells?: {
+    title?: ReactNode;
+    primary?: ReactNode;
+    meta: readonly (Omit<MobileField, 'value'> & { value: ReactNode })[];
+  };
 }
-export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, href, actions, onSelectionEvent, selectionLabel, compact = false }: Props) {
+export function MobileReferenceRow({ row, variant, selecting, selected, onActivate, onToggle, href, actions, onSelectionEvent, selectionLabel, compact = false, cells }: Props) {
   const { t } = useTranslation();
   const activate = selecting ? onToggle : onActivate;
   const keyValue = variant === 'keyValue';
-  const cardClass = cn('mgr-row min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
+  const cardClass = cn('mgr-row min-w-0 flex-1',
+    cells ? '[overflow-wrap:anywhere] [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center'
+      : 'cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]',
     keyValue ? 'mgr-kv' : 'mgr-card', !keyValue && compact && '!min-h-16 !py-2');
   const cardData = {
     'data-app-part': 'card',
@@ -43,18 +50,24 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
   const contents = <>
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0 flex-1">
-          <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>
+          {cells
+            ? <div data-card-label="" className="mgr-title">{cells.title ?? row.title}</div>
+            : <Text data-card-label="" title={row.title} className="mgr-title block truncate">{row.title}</Text>}
           {keyValue && row.rawLabel && <Text variant="caption" mono className="block truncate" title={row.rawLabel}>{row.rawLabel}</Text>}
         </div>
         {!keyValue && row.tag && <Badge variant="neutral" className="max-w-20 truncate">{row.tag}</Badge>}
-        <Text data-card-primary="" title={row.primary} className="mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{row.primary}</Text>
+        {cells
+          ? cells.primary != null && <div data-card-primary="" className="mgr-primary max-w-[45%] text-end">{cells.primary}</div>
+          : <Text data-card-primary="" title={row.primary} className="mgr-primary max-w-[45%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{row.primary}</Text>}
       </div>
       {!keyValue && (
         <div className="mgr-card-metadata mt-2 flex min-w-0 items-start gap-2">
-          {row.meta.map(field => (
+          {(cells?.meta ?? row.meta).map(field => (
             <div data-app-part="table-cell" key={field.key} data-card-meta="" data-field-key={field.key} className="min-w-0 flex-1">
               <Text className="mgr-meta-label block truncate">{field.label}</Text>
-              <Text title={field.value} className="mgr-meta-value block truncate">{field.value}</Text>
+              {cells
+                ? <div className="mgr-meta-value">{field.value}</div>
+                : <Text title={typeof field.value === 'string' ? field.value : undefined} className="mgr-meta-value block truncate">{field.value}</Text>}
             </div>
           ))}
           {row.badge && <Badge variant={row.badge.variant ?? 'neutral'} aria-label={row.badge.label} className="max-w-[45%] shrink-0 truncate">{row.badge.value}</Badge>}
@@ -84,7 +97,7 @@ export function MobileReferenceRow({ row, variant, selecting, selected, onActiva
           aria-label={selectionLabel ?? t('developerReference.mobileGrid.selection.row', 'Select {{title}}', { title: row.title })}
           className="mgr-checkbox min-h-11 min-w-11 justify-center" />
       )}
-      {href && !selecting ? <Link {...cardData} to={href}>{contents}</Link> : (
+      {cells ? <div {...cardData}>{contents}</div> : href && !selecting ? <Link {...cardData} to={href}>{contents}</Link> : (
         <div {...cardData} role="button" tabIndex={0} aria-label={row.title} aria-pressed={selecting ? selected : undefined}
           onClick={event => selecting && onSelectionEvent ? onSelectionEvent(event) : activate()}
           onKeyDown={event => {
