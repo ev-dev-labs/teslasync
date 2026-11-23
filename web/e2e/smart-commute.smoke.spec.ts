@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { ActionCenterRecommendation, ActionCenterResponse } from '../src/types/actionCenter'
 import type { SmartCommuteRoutine, SmartCommuteSettings } from '../src/types/smartCommute'
 import {
-  assertMockApiComplete, closeMockApiFixtures, forwardLocalApiFixture, fulfillApiFixture, installApiMocks,
+  assertMockApiComplete, closeMockApiFixtures, forwardLocalApiFixture, fulfillApiFixture, installApiMocks, mockAppSettings,
   seedBrowserState, waitForHarnessReady,
 } from './mockApi'
 
@@ -32,6 +32,9 @@ test(`commute journey stays within its selected ownership scope: ${variant.name}
   let openMode: boolean = variant.open
   const scopeKey = () => openMode ? 'shared-open' : subject
   const expectedPrincipal = () => openMode ? 'open' : `subject:${subject}`
+  await page.route('**/api/v1/settings', route => fulfillApiFixture(route, api, {
+    json: { ...mockAppSettings, tz_display_default: 'user', timezone_user: 'America/Los_Angeles' },
+  }))
   await page.route(url => url.pathname === '/api/v1/settings/widget-design-pack' && !url.search, route => {
     if (route.request().method() !== 'GET') return route.fallback()
     return fulfillApiFixture(route, api, {
@@ -201,7 +204,7 @@ test(`commute journey stays within its selected ownership scope: ${variant.name}
   }
   expect(writes).toEqual([])
 
-  await page.getByLabel('Time zone for local analysis').fill('America/Los_Angeles')
+  await expect(page.getByLabel('Time zone for local analysis')).toHaveCount(0)
   await enable.click()
   await expect(analysis).toBeEnabled()
   await expect(analysis).not.toBeChecked()

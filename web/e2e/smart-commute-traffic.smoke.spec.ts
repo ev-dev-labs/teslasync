@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import {
-  assertMockApiComplete, closeMockApiFixtures, forwardLocalApiFixture, fulfillApiFixture, installApiMocks, seedBrowserState,
+  assertMockApiComplete, closeMockApiFixtures, forwardLocalApiFixture, fulfillApiFixture, installApiMocks, mockAppSettings, seedBrowserState,
 } from './mockApi'
 import { clearNotifications, dispatchPush, installSyntheticSubscription, notifications } from './personalDeliveryFixture'
 
@@ -47,6 +47,9 @@ test('reviewed commute checks deliver only the intended private decision', async
     if (!api) throw new Error('Missing isolated API fixtures')
     await tab.route('**/api/v1/system/auth-mode', route => fulfillApiFixture(route, api, {
       json: { mode: 'forward_auth', subject_header: 'X-Test-Subject', subject, capabilities: {} },
+    }))
+    await tab.route('**/api/v1/settings', route => fulfillApiFixture(route, api, {
+      json: { ...mockAppSettings, tz_display_default: 'user', timezone_user: 'America/Los_Angeles' },
     }))
     await tab.route(url => url.pathname === '/api/v1/settings/widget-design-pack' && !url.search, route => {
       if (route.request().method() !== 'GET') return route.fallback()
@@ -94,7 +97,7 @@ test('reviewed commute checks deliver only the intended private decision', async
   await expect(pushConsent).toBeChecked()
   const enabled = page.getByRole('switch', { name: /Enable Smart Commute/ })
   await expect(enabled).not.toBeChecked()
-  await page.getByLabel('Time zone for local analysis').fill('America/Los_Angeles')
+  await expect(page.getByLabel('Time zone for local analysis')).toHaveCount(0)
   await enabled.click()
   await page.getByRole('switch', { name: /Allow local analysis/ }).click()
   await page.getByRole('button', { name: 'Use routine', exact: true }).click()
