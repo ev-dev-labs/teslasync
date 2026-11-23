@@ -2775,12 +2775,12 @@
     {
       "file": "web/src/hooks/useDateFormat.ts",
       "before": "2db2c4fd92dbb6c7eee33a82791402a23adaa6cca77023950641b6e1f8df9821",
-      "after": "4b6f8c91fe656a6c47541775211b4de69971ac053a4058ad435b2775ddead5d6",
+      "after": "ad76a8c6b305af6018b1c9f884fa4bc5f1b0619fc2696e98d5ceca6fbe3007dc",
       "hunks": [
         {
           "start": 92,
           "current": [
-            "export function useDateFormat(mode?: TzMode, vehicleTimezone?: string | null): UseDateFormatResult {"
+            "export function useDateFormat(mode?: TzMode, ...vehicle: [timezone?: string | null]): UseDateFormatResult {"
           ],
           "previous": [
             "export function useDateFormat(mode?: TzMode): UseDateFormatResult {"
@@ -2789,7 +2789,7 @@
         {
           "start": 102,
           "current": [
-            "  const tz = useTimezone(effectiveMode, vehicleTimezone)"
+            "  const tz = useTimezone(effectiveMode, ...vehicle)"
           ],
           "previous": [
             "  const tz = useTimezone(effectiveMode)"

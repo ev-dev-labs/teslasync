@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { Drive, DriveTelemetryPoint } from '@/types/driving';
+import type { TzMode } from '@/lib/timezone';
 import { resolveChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -25,7 +26,8 @@ const h = vi.hoisted(() => ({
   telemetryHook: vi.fn(),
   locale: 'en-US',
   timeZone: 'America/Los_Angeles',
-  timezoneHook: vi.fn(),
+  timezoneMode: 'vehicle' as TzMode,
+  userTimezone: 'Asia/Tokyo',
   chartPalette: 'cb_safe',
   measureCharts: false,
 }));
@@ -102,19 +104,13 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({
     vehicleId: h.vehicleId,
-    vehicle: null,
+    vehicle: h.vehicleId == null ? null : { timezone: h.timeZone },
     vehicles: [],
     setVehicleId: vi.fn(),
   }),
 }));
 
-vi.mock('@/lib/timezone', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/timezone')>();
-  return { ...actual, useTimezone: (mode: string) => {
-    h.timezoneHook(mode);
-    return h.timeZone;
-  } };
-});
+vi.mock('@/lib/timezone', (importOriginal) => importOriginal());
 
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
@@ -125,7 +121,10 @@ vi.mock('@/hooks/useSettings', async (importOriginal) => {
       return {
         ...result,
         locale: h.locale,
-        settings: { ...result.settings, locale: h.locale, tz_display_default: 'utc' },
+        settings: {
+          ...result.settings, locale: h.locale, tz_display_default: h.timezoneMode,
+          timezone_user: h.userTimezone,
+        },
       };
     },
   };
@@ -321,6 +320,7 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.locale = 'en-US';
   h.timeZone = 'America/Los_Angeles';
+  h.timezoneMode = 'vehicle';
   h.chartPalette = 'cb_safe';
   h.measureCharts = false;
   h.history = query({
@@ -527,7 +527,7 @@ describe('DriveDNAPage', () => {
   it.each([
     ['de-DE', 'Europe/Berlin'],
     ['en-GB', 'America/Los_Angeles'],
-  ])('formats brief dates with saved locale %s and vehicle zone %s without changing raw dates', (locale, timeZone) => {
+  ])('formats brief dates with saved locale %s, starting in vehicle zone %s without changing raw dates', (locale, timeZone) => {
     h.locale = locale;
     h.timeZone = timeZone;
     const selectedDrive = drive({
@@ -536,26 +536,26 @@ describe('DriveDNAPage', () => {
     });
     h.history = query({ data: [selectedDrive] });
     const view = renderPage();
-    const formatted = (value: string) => new Date(value).toLocaleString(h.locale, {
-      timeZone: h.timeZone,
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const expectScope = () => {
+    const expectScope = (expectedTimezone: string) => {
+      const formatted = (value: string) => new Date(value).toLocaleString(h.locale, {
+        timeZone: expectedTimezone,
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
       assertOperationalBriefDisclosure(screen.getByTestId('drive-dna-kpis'),
         `Drive 1 · ${formatted(selectedDrive.startTs)}–${formatted(selectedDrive.endTs!)}; sampled coverage may be incomplete`,
         { contains: true });
       expectEverySection();
     };
-    expectScope();
-    // The brief scope above is formatted in the vehicle zone; shared shell badges may
-    // still follow the user's default display zone ('utc' in this fixture).
-    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    expectScope(timeZone);
 
     h.locale = 'fr-FR';
-    h.timeZone = 'Asia/Tokyo';
+    h.timezoneMode = 'user';
     view.rerenderPage();
-    expectScope();
+    expectScope(h.userTimezone);
+    h.timezoneMode = 'utc';
+    view.rerenderPage();
+    expectScope('UTC');
     expect(selectedDrive.startTs).toBe('2026-02-02T00:15:00Z');
     expect(selectedDrive.endTs).toBe('2026-02-02T00:45:00Z');
   });

@@ -4,8 +4,8 @@ import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react
 import { MemoryRouter } from 'react-router-dom'
 import { NavigationGuardProvider } from '@/components/feedback'
 import { request } from '@/api/client'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type { AlertPack, PackInstallation } from '@/api/hooks/useAlertPacks'
+import { patchMatchMedia, type MatchMediaController } from '@/test/setup'
 import AlertPacksPanel from './AlertPacksPanel'
 import AlertPacksPage from '../../pages/AlertPacksPage'
 import InstallPackDialog from './InstallPackDialog'
@@ -16,7 +16,6 @@ import '@/i18n'
 vi.mock('@/api/client', () => ({ request: vi.fn() }))
 vi.mock('@/api/queryPolicy', () => ({ queryPolicy: () => ({ retry: false }) }))
 vi.mock('@/hooks/useAiEnabled', () => ({ useAiEnabled: () => false }))
-vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: vi.fn(() => true) }))
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ formatTemperature: (value: number) => `${value} C` }) }))
 
 const vehicleRead = vi.hoisted(() => ({ enabled: true }))
@@ -101,9 +100,16 @@ function ruleFields(name: keyof typeof fieldRoles) {
   return screen.getAllByRole(fieldRoles[name], { name })
 }
 
+const desktopQuery = '(min-width: 1024px)'
+let viewport: MatchMediaController
+function setDesktop(desktop: boolean) {
+  viewport.fire(desktopQuery, desktop)
+  viewport.fire('(width < 640px)', !desktop)
+}
+
 beforeEach(() => {
   vehicleRead.enabled = true
-  vi.mocked(useMediaQuery).mockReturnValue(true)
+  viewport = patchMatchMedia(query => query === desktopQuery)
   displayPrefs.locale = 'en-US'
   displayPrefs.tz_display_default = 'vehicle'
   displayPrefs.timezone_user = ''
@@ -123,7 +129,10 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => onlineManager.setOnline(true))
+afterEach(() => {
+  viewport.restore()
+  onlineManager.setOnline(true)
+})
 
 describe('Alert Packs', () => {
   it.each(['paused', 'idle'] as const)('keeps unresolved %s catalog and installations distinct from empty results', status => {
@@ -210,7 +219,7 @@ describe('Alert Packs', () => {
   })
 
   it.each([true, false])('associates numeric errors with the exact selected fields (desktop=%s)', async desktop => {
-    vi.mocked(useMediaQuery).mockReturnValue(desktop)
+    setDesktop(desktop)
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled())
     const threshold = screen.getByLabelText('Threshold (%)')
@@ -359,7 +368,7 @@ describe('Alert Packs', () => {
   })
 
   it.each([true, false])('inherits channel defaults while preserving explicit all/none overrides (desktop=%s)', async desktop => {
-    vi.mocked(useMediaQuery).mockReturnValue(desktop)
+    setDesktop(desktop)
     const threeRules = { ...pack, rules: [...pack.rules, { ...pack.rules[0], id: 'another-rule' }] }
     setup(<InstallPackDialog pack={threeRules} onClose={vi.fn()} />)
     if (!desktop) fireEvent.click(screen.getByRole('button', { name: /Pack defaults/ }))
@@ -489,7 +498,7 @@ describe('Alert Packs', () => {
   })
 
   it('edits mobile cards directly and keeps values through filtering', () => {
-    vi.mocked(useMediaQuery).mockReturnValue(false)
+    setDesktop(false)
     setup(<InstallPackDialog pack={pack} onClose={vi.fn()} />)
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Default cooldown (minutes)')).not.toBeInTheDocument()

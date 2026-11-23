@@ -4,7 +4,7 @@ import checkpoint from './__fixtures__/verified-workspace-display.json'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 expect(hash(JSON.stringify(checkpoint)), 'pinned workspace display delta')
-  .toBe('4d0544aff4204fd606382557c697f3673f109e3ea660748d16a793b3f4a43641')
+  .toBe('1e63b73e750ad5c824cfc2d431452b50fd21412e151d839feb06350f54c055b1')
 const patches = new Map(checkpoint.sources.map(patch => [patch.file, patch]))
 
 export function restoreWorkspaceDisplaySource(file: string, source: string): string {

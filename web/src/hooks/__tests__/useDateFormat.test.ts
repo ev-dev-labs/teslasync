@@ -39,10 +39,9 @@ const H = vi.hoisted(() => {
   }
   // Records the `mode` argument `useDateFormat` threads into `useTimezone`,
   // so the mode-resolution branch can be asserted directly.
-  const timezoneSpy = vi.fn((mode?: string): string => {
-    void mode
-    return state.tz
-  })
+  const timezoneSpy = vi.fn((mode?: TzMode, vehicleTimezone?: string | null): string =>
+    mode === 'vehicle' ? vehicleTimezone ?? state.tz : state.tz,
+  )
   return { state, timezoneSpy }
 })
 
@@ -55,7 +54,7 @@ vi.mock('@/lib/timezone', async () => {
     await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone')
   return {
     ...actual,
-    useTimezone: (mode?: TzMode) => H.timezoneSpy(mode),
+    useTimezone: H.timezoneSpy,
   }
 })
 
@@ -109,6 +108,21 @@ describe('useDateFormat — timezone mode resolution', () => {
   it('threads the settings default (vehicle) into useTimezone when no mode is passed', () => {
     renderHook(() => useDateFormat())
     expect(H.timezoneSpy).toHaveBeenCalledWith('vehicle')
+  })
+
+  it('uses the explicit vehicle zone for a local selection while honoring UTC mode', () => {
+    const instant = '2026-07-04T01:00:00Z'
+    const { result, rerender } = renderHook(() => useDateFormat(undefined, 'America/Los_Angeles'))
+    expect(result.current.formatDate(instant)).toBe('Jul 3, 2026')
+
+    H.state.settings = { tz_display_default: 'utc' }
+    rerender()
+    expect(result.current.formatDate(instant)).toBe('Jul 4, 2026')
+  })
+
+  it('forwards a local selection with no vehicle timezone instead of using the workspace vehicle', () => {
+    renderHook(() => useDateFormat(undefined, null))
+    expect(H.timezoneSpy).toHaveBeenCalledWith('vehicle', null)
   })
 
   it('honours a non-default settings preference (utc)', () => {
